@@ -1,0 +1,2 @@
+# Optional. If unset, the corresponding feature degrades gracefully.
+ADMIN_TOKEN=dev-token-change-me

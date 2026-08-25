@@ -1,0 +1,61 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "decoindex",
+  "main": "src/server/main.ts",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "observability": { "enabled": true },
+
+  "routes": [{ "pattern": "decoindex.com/*", "zone_name": "decoindex.com" }],
+
+  "durable_objects": {
+    "bindings": [{ "name": "STOREFRONT", "class_name": "StorefrontDO" }]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["StorefrontDO"] }
+  ],
+
+  "d1_databases": [
+    { "binding": "DB", "database_name": "decoindex", "database_id": "REPLACE_ME" }
+  ],
+
+  "kv_namespaces": [
+    { "binding": "LOCKS", "id": "REPLACE_ME" }
+  ],
+
+  "r2_buckets": [
+    { "binding": "SNAPSHOTS", "bucket_name": "decoindex-snapshots" }
+  ],
+
+  "queues": {
+    "producers": [{ "binding": "INGEST", "queue": "decoindex-ingest" }],
+    "consumers": [
+      {
+        "queue": "decoindex-ingest",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 2,
+        "dead_letter_queue": "decoindex-ingest-dlq"
+      }
+    ]
+  },
+
+  "ai": { "binding": "AI" },
+
+  "triggers": {
+    // hourly: refresh the stalest storefronts
+    "crons": ["17 * * * *"]
+  },
+
+  "vars": {
+    "PUBLIC_ORIGIN": "https://decoindex.com",
+    "ATTRIBUTION_PARAM": "ref",
+    "ATTRIBUTION_VALUE": "decoindex",
+    "EMBEDDING_MODEL": "@cf/baai/bge-m3"
+  },
+
+  "rules": [
+    { "type": "Text", "globs": ["**/*.md", "**/*.html"], "fallthrough": true }
+  ]
+}
