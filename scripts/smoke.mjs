@@ -187,7 +187,9 @@ await check("second read is served from cache, not the merchant", async () => {
 await check("every page tells the reader how to report it", async () => {
   const { body } = await get(VTEX_PDP);
   assert.match(body, /Something wrong on this page/, "no feedback prompt");
-  assert.match(body, new RegExp(`${BASE.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}/feedback`));
+  // Documents embed PUBLIC_ORIGIN, not whichever host served them — the same
+  // cached document is valid through the custom domain and through workers.dev.
+  assert.match(body, /https:\/\/[\w.-]+\/feedback/, "no feedback endpoint in the footer");
 });
 
 await check("unclaimed storefronts carry the decocms note", async () => {
@@ -250,33 +252,32 @@ await check("a brand write does not break the domain it describes", async () => 
 });
 
 /**
- * ChatGPT's browser refuses text/markdown outright and reports the site as
- * broken. Anything that does not ask for markdown by name must get text/plain,
- * on a cold read and on a cached one.
+ * ChatGPT's browser rejects text/markdown outright and reports the site as
+ * broken. Every markdown document goes out as text/plain, for every client and
+ * from every cache layer — negotiating per Accept cannot work here because
+ * Cloudflare's zone cache ignores Vary.
  */
-await check("clients that can't read markdown get text/plain", async () => {
-  const accepts = [
-    undefined,
-    "*/*",
-    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-  ];
+await check("every client gets a content type it can read", async () => {
+  const accepts = [undefined, "*/*", "text/markdown", "text/html,application/xhtml+xml,*/*;q=0.8"];
   for (const accept of accepts) {
-    // Twice: the second is an edge-cache hit, which must relabel too.
     for (const pass of ["cold", "cached"]) {
       const res = await fetch(BASE + VTEX_PDP, { headers: accept ? { accept } : {} });
       const ct = res.headers.get("content-type") ?? "";
       assert.match(ct, /^text\/plain/, `${pass} accept=${accept ?? "(none)"} got ${ct}`);
     }
   }
-});
-
-await check("clients that ask for markdown still get it", async () => {
-  for (const accept of ["text/markdown", "text/markdown, text/plain;q=0.9"]) {
-    const res = await fetch(BASE + VTEX_PDP, { headers: { accept } });
-    assert.match(res.headers.get("content-type") ?? "", /^text\/markdown/, `accept=${accept}`);
-  }
   const json = await fetch(BASE + VTEX_PDP + ".json");
   assert.match(json.headers.get("content-type") ?? "", /^application\/json/);
+});
+
+await check("a big catalogue shows every top-level category", async () => {
+  const { res, body } = await get("/americanas.com/");
+  assert.equal(res.status, 200);
+  assert.match(body, /^\d+ top-level categories, \d+ including subcategories\./m, "no honest count");
+  const roots = body.split("\n").filter((l) => l.startsWith("- ["));
+  // 46 roots upstream. Depth-first truncation used to show two of them.
+  assert.ok(roots.length > 30, `only ${roots.length} roots listed`);
+  assert.ok(body.includes("  - ["), "no subcategories nested under roots");
 });
 
 console.log(failures ? `\n${failures} check(s) failed` : "\nall checks passed");

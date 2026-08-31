@@ -18,8 +18,12 @@ import {
   type RenderCtx,
 } from "./render/markdown";
 import { SAMPLE, landingHtml } from "./render/landing";
+import { benchmarkHtml, type BenchResults } from "./render/benchmark";
 // Imported as bytes via the "Data" rule in wrangler.jsonc.
 import ogImage from "../../assets/og.png";
+// The committed output of `npm run bench`. Static data — the page makes no
+// upstream call, so the bounded-read invariant is untouched.
+import benchResults from "../../bench/results/latest.json";
 
 type Ctx = { Bindings: Env };
 const app = new Hono<Ctx>();
@@ -35,6 +39,21 @@ const app = new Hono<Ctx>();
  * The KV write is what makes this an index rather than a cache: a URL that was
  * ever asked for stays answerable, and costs us nothing the second time.
  */
+/**
+ * Every markdown document is served as text/plain, deliberately.
+ *
+ * `text/markdown` is the honest label and, in practice, the unreadable one:
+ * ChatGPT's browser rejects it outright — "unsupported content-type" — then
+ * reports decoindex as broken and scrapes the merchant instead.
+ *
+ * Negotiating per Accept was the obvious fix and it does not survive contact
+ * with the edge: Cloudflare's zone cache ignores `Vary`, so within the shared
+ * cache window whichever content type happened to be stored first is served to
+ * everyone. One type, always, is the only version that is correct at every
+ * cache layer — and the bytes are identical either way.
+ */
+const MARKDOWN_TYPE = "text/plain; charset=utf-8";
+
 const TTL = {
   product: { browser: 300, edge: 86_400 },
   listing: { browser: 120, edge: 21_600 },
@@ -62,6 +81,14 @@ app.get("/", async (c) => {
   return c.html(body);
 });
 
+/**
+ * The benchmark. Rendered from the committed `bench/results/latest.json`, so it
+ * is a static page: no KV, no D1, no upstream call.
+ */
+app.get("/benchmark", (c) =>
+  c.html(benchmarkHtml(c.env.PUBLIC_ORIGIN, benchResults as unknown as BenchResults)),
+);
+
 /** Social preview. Immutable: regenerating it is a deploy, so cache it hard. */
 app.get("/og.png", () =>
   new Response(ogImage, {
@@ -87,6 +114,7 @@ app.get("/robots.txt", (c) =>
       "User-agent: Baiduspider",
       "Allow: /$",
       "Allow: /about",
+      "Allow: /benchmark",
       "Allow: /opt-out",
       "Allow: /llms.txt",
       "Allow: /og.png",
@@ -293,14 +321,15 @@ app.get("*", async (c) => {
   const hit = await cache.match(cacheReq);
   if (hit) {
     logRead(c.env, c.executionCtx, c.req.raw, { domain, surface, started, cache: "edge", ext, status: hit.status });
-    return forClient(hit, c.req.header("accept") ?? null);
+    return forClient(hit);
   }
 
   // Layer 2: KV — the persistent index. Serve stale, refresh behind the reader.
   const kvKey = docKey(domain, path, normalizedQuery(url.searchParams)) + (ext === "md" ? "" : `.${ext}`);
   const stored = await readDoc(c.env, kvKey);
   if (stored) {
-    if (isStale(stored, surface)) {
+    const stale = isStale(stored, surface);
+    if (stale) {
       c.executionCtx.waitUntil(
         build(c.env, domain, path, ext, url.searchParams, rctx)
           .then((fresh) => writeDoc(c.env, kvKey, fresh))
@@ -308,9 +337,16 @@ app.get("*", async (c) => {
       );
     }
     const res = toResponse(stored, surface, c.env.PUBLIC_ORIGIN);
-    if (stored.status === 200) c.executionCtx.waitUntil(cache.put(cacheReq, res.clone()));
+    // Deliberately do NOT cache a stale body. It is fine to hand this reader an
+    // old document while the refresh runs behind them, but writing it to the
+    // edge pins it there for the full TTL — and because the cache key carries
+    // RENDER_VERSION, a template change would re-pin the *old* render under the
+    // *new* key and stay wrong for a day. Cache only what came back fresh.
+    if (stored.status === 200 && !stale) {
+      c.executionCtx.waitUntil(cache.put(cacheReq, res.clone()));
+    }
     logRead(c.env, c.executionCtx, c.req.raw, { domain, surface, started, cache: "kv", ext, status: stored.status });
-    return forClient(res, c.req.header("accept") ?? null);
+    return forClient(res);
   }
 
   // Layer 3: resolve it live, once.
@@ -319,7 +355,7 @@ app.get("*", async (c) => {
   c.executionCtx.waitUntil(writeDoc(c.env, kvKey, fresh));
   if (fresh.status === 200) c.executionCtx.waitUntil(cache.put(cacheReq, res.clone()));
   logRead(c.env, c.executionCtx, c.req.raw, { domain, surface, started, cache: "miss", ext, status: fresh.status });
-  return forClient(res, c.req.header("accept") ?? null);
+  return forClient(res);
 });
 
 /**
@@ -338,7 +374,7 @@ async function build(
   const problem = (kind: Parameters<typeof renderProblem>[2], status: number): StoredDoc => ({
     body: renderProblem(domain, path, kind, rctx),
     status,
-    contentType: "text/markdown; charset=utf-8",
+    contentType: MARKDOWN_TYPE,
     canonical: `https://${domain}${path}`,
     renderedAt: new Date().toISOString(),
     renderVersion: RENDER_VERSION,
@@ -430,9 +466,9 @@ async function build(
     if (doc.kind === "upstream_error") return problem("upstream", 502);
     if (doc.kind !== "home") return problem("notfound", 404);
     return {
-      body: renderLlmsTxt(shop, doc.categories, rctx),
+      body: renderLlmsTxt(shop, doc.categories, rctx, doc.totalCategories),
       status: 200,
-      contentType: "text/plain; charset=utf-8",
+      contentType: MARKDOWN_TYPE,
       canonical: `https://${domain}/`,
       renderedAt: new Date().toISOString(),
       renderVersion: RENDER_VERSION,
@@ -446,8 +482,7 @@ async function build(
   return {
     body: ext === "json" ? JSON.stringify({ shop, ...doc }, null, 2) : renderMarkdown(shop, doc, path, rctx),
     status: 200,
-    contentType:
-      ext === "json" ? "application/json; charset=utf-8" : "text/markdown; charset=utf-8",
+    contentType: ext === "json" ? "application/json; charset=utf-8" : MARKDOWN_TYPE,
     canonical:
       doc.kind === "product"
         ? canonicalUrl(domain, doc.product.slug, rctx.attribution)
@@ -464,7 +499,7 @@ function renderMarkdown(shop: Storefront, doc: Doc, path: string, rctx: RenderCt
     case "listing":
       return renderListing(shop, doc, path, rctx);
     case "home":
-      return renderHome(shop, doc.categories, rctx);
+      return renderHome(shop, doc.categories, rctx, doc.totalCategories);
     case "upstream_error":
       return renderProblem(shop.domain, path, "upstream", rctx);
     default:
@@ -475,30 +510,22 @@ function renderMarkdown(shop: Storefront, doc: Doc, path: string, rctx: RenderCt
 // ------------------------------------------------------------------ responses
 
 /**
- * `text/markdown` is the honest label and it is also, in practice, unreadable.
+ * Last stop before the caller: shorten the *shared* TTL. On a Workers custom domain, Cloudflare's zone
+ * cache sits in front of the Worker and honours s-maxage, so a long one means
+ * the public URL is answered without the Worker ever running — and RENDER_VERSION,
+ * which only exists inside our own cache key, cannot reach it. A category fix
+ * stayed invisible on decoindex.com for hours while being correct on workers.dev,
+ * with `cf-cache-status: HIT, age: 322` as the giveaway.
  *
- * ChatGPT's browser refuses it outright — "unsupported content-type" — and then
- * tells the user decoindex is broken. Other fetchers download it instead of
- * showing it. A service whose whole point is being readable by agents cannot
- * ship a MIME type the largest agent rejects, however correct that type is.
- *
- * So: markdown only for clients that ask for it by name; `text/plain` for
- * everyone else. The bytes are identical either way — this changes the envelope,
- * not the document.
+ * The long TTL still applies to what we store in the Cache API ourselves, where
+ * the key is versioned and a deploy busts it. The zone layer keeps 60 seconds,
+ * which is plenty of protection against a stampede and short enough that a fix
+ * is live within a minute.
  */
-function negotiate(stored: string, accept: string | null): string {
-  if (!stored.startsWith("text/markdown")) return stored;
-  return /text\/(x-)?markdown/i.test(accept ?? "") ? stored : "text/plain; charset=utf-8";
-}
-
-/**
- * The cache always holds the canonical `text/markdown` document; this relabels
- * it for the caller on the way out. Storing one entry per Accept would multiply
- * the index for zero difference in bytes.
- */
-function forClient(res: Response, accept: string | null): Response {
+function forClient(res: Response): Response {
   const out = new Response(res.body, res);
-  out.headers.set("content-type", negotiate(res.headers.get("content-type") ?? "", accept));
+  const browser = /max-age=(\d+)/.exec(res.headers.get("cache-control") ?? "")?.[1] ?? "300";
+  out.headers.set("cache-control", `public, max-age=${browser}, s-maxage=60`);
   return out;
 }
 
@@ -507,7 +534,9 @@ function toResponse(doc: StoredDoc, surface: string, origin: string): Response {
   return new Response(doc.body, {
     status: doc.status,
     headers: {
-      "content-type": doc.contentType,
+      // Documents stored before the switch still carry `text/markdown`; correct
+      // it here rather than waiting for every one of them to re-render.
+      "content-type": doc.contentType.startsWith("text/markdown") ? MARKDOWN_TYPE : doc.contentType,
       "cache-control": `public, max-age=${ttl.browser}, s-maxage=${ttl.edge}`,
       // Invariant 3: a mirror, not a competitor for the merchant's SEO — but
       // only `noindex`. `nofollow` was also telling every crawler not to follow
@@ -515,9 +544,6 @@ function toResponse(doc: StoredDoc, surface: string, origin: string): Response {
       // suppressed exactly the traffic this service exists to send them.
       "x-robots-tag": "noindex",
       "access-control-allow-origin": "*",
-      // The body is identical but the content-type is negotiated, so a shared
-      // cache must not hand a markdown-typed response to a client that cannot read it.
-      vary: "Accept",
       link: [
         `<${doc.canonical}>; rel="canonical"`,
         `<${origin}/llms.txt>; rel="llms-txt"; type="text/plain"`,
