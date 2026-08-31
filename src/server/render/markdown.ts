@@ -13,7 +13,71 @@ import { canonicalUrl } from "../lib/url";
 
 const MAX_VARIANTS = 40;
 const MAX_CLAIMS = 30;
-const MAX_CATEGORIES = 60;
+/** Category lines on an overview. Roots are never counted against it. */
+const CHILD_BUDGET = 90;
+/** Most children shown under any one root, so no single branch eats the budget. */
+const MAX_CHILDREN_PER_ROOT = 8;
+
+/**
+ * A category list has to stay useful for a 5-category boutique and a 46-root
+ * general retailer, and the naive answer fails the second badly: emitting the
+ * tree depth-first and truncating meant americanas.com — which sells phones and
+ * chocolate — advertised itself as two roots deep in farm equipment and crafts,
+ * because "Agro" and "Artes" come first alphabetically and their subcategories
+ * consumed the entire list.
+ *
+ * So: every root, always. Children then fill what's left, spread round-robin
+ * across roots rather than draining the first one. And whatever is cut is
+ * declared, because an agent that thinks it has seen the whole catalogue when it
+ * has seen 3% will confidently tell a shopper the store does not stock something.
+ */
+function renderCategories(all: CategoryRef[], total: number | undefined, base: string): string[] {
+  const roots = all.filter((c) => c.depth === 0);
+  const childrenOf = new Map<string, CategoryRef[]>();
+  for (const c of all) {
+    if (c.depth === 0 || !c.parent) continue;
+    const bucket = childrenOf.get(c.parent) ?? [];
+    bucket.push(c);
+    childrenOf.set(c.parent, bucket);
+  }
+
+  // Round-robin: one child from each root per pass, until the budget runs out.
+  const shown = new Map<string, CategoryRef[]>();
+  let spent = 0;
+  for (let round = 0; round < MAX_CHILDREN_PER_ROOT && spent < CHILD_BUDGET; round++) {
+    for (const root of roots) {
+      if (spent >= CHILD_BUDGET) break;
+      const child = childrenOf.get(root.name)?.[round];
+      if (!child) continue;
+      const picked = shown.get(root.name) ?? [];
+      picked.push(child);
+      shown.set(root.name, picked);
+      spent++;
+    }
+  }
+
+  const out = [`## Categories\n`];
+  const totalKnown = total ?? all.length;
+  out.push(
+    `${roots.length} top-level ${roots.length === 1 ? "category" : "categories"}` +
+      (totalKnown > roots.length ? `, ${totalKnown} including subcategories.` : ".") +
+      ` Every category page lists its products; append \`?page=N\` to paginate.\n`,
+  );
+
+  for (const root of roots) {
+    const kids = shown.get(root.name) ?? [];
+    const totalKids = childrenOf.get(root.name)?.length ?? 0;
+    out.push(`- [${root.name}](${base}${root.path})${root.count ? ` (${root.count})` : ""}`);
+    for (const kid of kids) {
+      out.push(`  - [${kid.name}](${base}${kid.path})${kid.count ? ` (${kid.count})` : ""}`);
+    }
+    if (totalKids > kids.length) {
+      out.push(`  - _${totalKids - kids.length} more under ${root.name}, not listed here._`);
+    }
+  }
+  out.push("");
+  return out;
+}
 
 export interface RenderCtx {
   publicOrigin: string;
@@ -248,7 +312,12 @@ export function renderListing(
   return out.join("\n");
 }
 
-export function renderHome(shop: Storefront, categories: CategoryRef[], ctx: RenderCtx): string {
+export function renderHome(
+  shop: Storefront,
+  categories: CategoryRef[],
+  ctx: RenderCtx,
+  total?: number,
+): string {
   const base = `${ctx.publicOrigin}/${shop.domain}`;
   const out: string[] = [];
   out.push(
@@ -298,11 +367,7 @@ export function renderHome(shop: Storefront, categories: CategoryRef[], ctx: Ren
   out.push(`- Listings paginate with \`?page=N\`.\n`);
 
   if (categories.length) {
-    out.push(`## Categories\n`);
-    for (const c of categories.slice(0, MAX_CATEGORIES)) {
-      out.push(`- [${c.name}](${base}${c.path})${c.count ? ` (${c.count})` : ""}`);
-    }
-    out.push("");
+    out.push(...renderCategories(categories, total, base));
   }
 
   out.push(`## How to transact\n`);
@@ -315,7 +380,12 @@ export function renderHome(shop: Storefront, categories: CategoryRef[], ctx: Ren
   return out.join("\n");
 }
 
-export function renderLlmsTxt(shop: Storefront, categories: CategoryRef[], ctx: RenderCtx): string {
+export function renderLlmsTxt(
+  shop: Storefront,
+  categories: CategoryRef[],
+  ctx: RenderCtx,
+  total?: number,
+): string {
   const base = `${ctx.publicOrigin}/${shop.domain}`;
   const out = [`# ${shop.name ?? shop.domain}`, ""];
   out.push(
@@ -343,10 +413,8 @@ export function renderLlmsTxt(shop: Storefront, categories: CategoryRef[], ctx: 
     `- Any storefront URL works: replace \`https://${shop.domain}\` with \`${base}\``,
   );
   out.push(`- Append \`.json\` to any of these for structured JSON`);
-  out.push("", `## Categories`, "");
-  for (const c of categories.slice(0, MAX_CATEGORIES)) {
-    out.push(`- [${c.name}](${base}${c.path})`);
-  }
+  out.push("");
+  out.push(...renderCategories(categories, total, base));
   out.push("", `## Notes`, "");
   out.push(`- Prices and availability are observed, not guaranteed. Verify before promising.`);
   out.push(`- The merchant's own site is canonical: https://${shop.domain}`);

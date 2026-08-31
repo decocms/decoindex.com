@@ -75,6 +75,10 @@ export interface CategoryRef {
   path: string;
   name: string;
   count?: number;
+  /** 0 = top level. Lets the renderer show every root before any child. */
+  depth: number;
+  /** Name of the root this sits under, for grouping. */
+  parent?: string;
 }
 
 /** What a resolver returns for one URL. */
@@ -88,7 +92,7 @@ export type Doc =
       page: number;
       products: Product[];
     }
-  | { kind: "home"; categories: CategoryRef[] }
+  | { kind: "home"; categories: CategoryRef[]; totalCategories?: number }
   | { kind: "notfound" }
   /**
    * The merchant's API did not answer. Distinct from notfound on purpose: an

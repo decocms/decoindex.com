@@ -48,12 +48,14 @@ async function home(shop: Storefront): Promise<Doc> {
   if (res.failed) return { kind: "upstream_error" };
   const list = res.body?.collections ?? [];
   if (!list.length) return { kind: "notfound" };
+  // Shopify collections are flat — there is no hierarchy to preserve.
   const categories: CategoryRef[] = list.map((c) => ({
     path: `/collections/${c.handle}`,
     name: c.title ?? c.handle,
     count: c.products_count,
+    depth: 0,
   }));
-  return { kind: "home", categories };
+  return { kind: "home", categories, totalCategories: categories.length };
 }
 
 async function collection(

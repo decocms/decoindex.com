@@ -63,14 +63,23 @@ async function home(shop: Storefront): Promise<Doc> {
   );
   if (tree.failed) return { kind: "upstream_error" };
   if (!tree.body?.length) return { kind: "notfound" };
+  // Flat, but tagged with depth so the renderer can show every root before it
+  // spends budget on children. americanas has 46 roots and 736 subcategories;
+  // emitting them depth-first meant the first two roots consumed the whole list
+  // and a general retailer looked like it only sold farm equipment and crafts.
   const categories: CategoryRef[] = [];
   for (const root of tree.body) {
-    categories.push({ path: pathOf(root.url), name: root.name });
+    categories.push({ path: pathOf(root.url), name: root.name, depth: 0 });
     for (const child of root.children ?? []) {
-      categories.push({ path: pathOf(child.url), name: `${root.name} > ${child.name}` });
+      categories.push({
+        path: pathOf(child.url),
+        name: child.name,
+        depth: 1,
+        parent: root.name,
+      });
     }
   }
-  return { kind: "home", categories };
+  return { kind: "home", categories, totalCategories: categories.length };
 }
 
 async function listing(shop: Storefront, path: string, query: URLSearchParams): Promise<Doc> {
