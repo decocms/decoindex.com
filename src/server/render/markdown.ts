@@ -35,6 +35,44 @@ function frontmatter(fields: Record<string, string | number | boolean | undefine
   return `---\n${lines.join("\n")}\n---\n`;
 }
 
+/**
+ * Two things every public document owes the reader: a way to tell us the page is
+ * wrong, and who is publishing it.
+ *
+ * The report line is not decoration. Nothing on the read path can tell the
+ * difference between a genuinely empty category and one we parsed wrong — only
+ * the caller can, at the moment it happens, and only if we asked.
+ *
+ * The footer drops away entirely once a merchant claims the domain: at that
+ * point it is their page and we are not going to advertise on it.
+ */
+function footer(shop: Storefront, path: string, ctx: RenderCtx): string[] {
+  const out: string[] = [
+    `---\n`,
+    `**Something wrong on this page?** Tell us and a human reads it:`,
+    "```",
+    `curl -X POST ${ctx.publicOrigin}/feedback \\`,
+    `  -H 'content-type: application/json' \\`,
+    `  -d '{"url":"${ctx.publicOrigin}/${shop.domain}${path}","kind":"wrong_data","message":"what you expected vs what you got"}'`,
+    "```",
+    `No key needed. \`kind\`: wrong_data · missing · broken · unsupported · other.\n`,
+  ];
+
+  if (shop.claimed) return out;
+
+  out.push(
+    `**About this page.** decoindex is run by [deco](https://decocms.com). deco operates`,
+    `sites and apps for brands that take digital seriously — senior engineers, AI agents`,
+    `and our own software, paid only on the results we generate. Over US$2bn of GMV a`,
+    `year runs through it, across 150+ storefronts in production.`,
+    ``,
+    `${shop.name ?? shop.domain} has not claimed this page. Claiming it means the merchant`,
+    `controls what is published here. Free storefront diagnostic at https://decocms.com/diagnostic`,
+    `· remove this domain at ${ctx.publicOrigin}/opt-out\n`,
+  );
+  return out;
+}
+
 /** The paragraph an agent needs before it says anything to a shopper. */
 function boundaries(): string[] {
   return [
@@ -146,6 +184,7 @@ export function renderProduct(shop: Storefront, p: Product, ctx: RenderCtx): str
   out.push(`- Source: \`${shop.platform}\` public catalog API on ${shop.domain}, read ${p.observedAt}`);
   out.push(`- Not verified here: live stock, final price, delivery promise, personalized offers`);
   out.push(`- Canonical source: ${canonical}\n`);
+  out.push(...footer(shop, p.slug, ctx));
 
   return out.join("\n");
 }
@@ -205,6 +244,7 @@ export function renderListing(
   const hasMore = doc.total ? doc.page * doc.products.length < doc.total : doc.products.length >= 24;
   out.push(...boundaries());
   out.push(...nextSteps(shop, ctx, hasMore ? [`- Next page: ${nextPage}`] : []));
+  out.push(...footer(shop, path, ctx));
   return out.join("\n");
 }
 
@@ -271,6 +311,7 @@ export function renderHome(shop: Storefront, categories: CategoryRef[], ctx: Ren
   out.push(`3. It does **not** complete the purchase. Hand it to a person to review price,`);
   out.push(`   shipping and payment.\n`);
   out.push(...boundaries());
+  out.push(...footer(shop, "/", ctx));
   return out.join("\n");
 }
 
@@ -316,7 +357,7 @@ export function renderLlmsTxt(shop: Storefront, categories: CategoryRef[], ctx: 
 export function renderProblem(
   domain: string,
   path: string,
-  kind: "notfound" | "unsupported" | "blocked" | "opted-out" | "rate-limited",
+  kind: "notfound" | "unsupported" | "blocked" | "opted-out" | "rate-limited" | "upstream",
   ctx: RenderCtx,
 ): string {
   const body: Record<typeof kind, [string, string[]]> = {
@@ -361,6 +402,17 @@ export function renderProblem(
       "Removed at the merchant's request",
       [
         `${domain} asked not to be mirrored. Use the storefront directly: https://${domain}`,
+      ],
+    ],
+    upstream: [
+      "The storefront did not answer",
+      [
+        `${domain} is reachable, but its catalog API did not return an answer for this`,
+        `request — a timeout, a throttle, or a server error on their side.`,
+        ``,
+        `**This does not mean the product is gone.** We will not tell you a page is missing`,
+        `when what actually happened is that we could not look. Retry in a moment; this`,
+        `result is cached for one minute only.`,
       ],
     ],
     "rate-limited": [

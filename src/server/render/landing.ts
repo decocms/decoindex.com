@@ -61,6 +61,12 @@ const TEMPLATE = /* html */ `<!doctype html>
 <meta name="description" content="Swap the origin of any VTEX or Shopify storefront URL for clean Markdown: title, variants, the price we saw, and a cart link for every item in stock.">
 <meta name="theme-color" content="#07401A">
 <link rel="canonical" href="{{origin}}/">
+<!-- Agents that land on the HTML should find the machine-readable spec without
+     reading the page. rel=llms-txt is the emerging convention; the alternate
+     link is what a client honouring content negotiation looks for. -->
+<link rel="llms-txt" type="text/markdown" href="{{origin}}/llms.txt">
+<link rel="alternate" type="text/markdown" href="{{origin}}/llms.txt" title="decoindex for agents">
+<meta name="llms-txt" content="{{origin}}/llms.txt">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="decoindex">
 <meta property="og:url" content="{{origin}}/">

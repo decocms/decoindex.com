@@ -184,5 +184,70 @@ await check("second read is served from cache, not the merchant", async () => {
   assert.ok(ms < 150, `cached read took ${ms}ms — it is still hitting the origin`);
 });
 
+await check("every page tells the reader how to report it", async () => {
+  const { body } = await get(VTEX_PDP);
+  assert.match(body, /Something wrong on this page/, "no feedback prompt");
+  assert.match(body, new RegExp(`${BASE.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}/feedback`));
+});
+
+await check("unclaimed storefronts carry the decocms note", async () => {
+  const { body } = await get(VTEX_PDP);
+  assert.match(body, /About this page/);
+  assert.match(body, /decocms\.com/);
+});
+
+await check("feedback accepts a report and rejects an empty one", async () => {
+  const res = await fetch(BASE + "/feedback", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      url: BASE + VTEX_PDP,
+      kind: "other",
+      message: "smoke test — ignore. Filed by scripts/smoke.mjs.",
+    }),
+  });
+  assert.equal(res.status, 201);
+  const { id } = await res.json();
+  assert.ok(id, "no id returned");
+
+  const bad = await fetch(BASE + "/feedback", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ kind: "broken" }),
+  });
+  assert.equal(bad.status, 400, "a report with no message should be rejected");
+});
+
+await check("the MCP control plane refuses anonymous callers", async () => {
+  for (const init of [{}, { headers: { authorization: "Bearer wrong-token" } }]) {
+    const res = await fetch(BASE + "/mcp", init);
+    assert.ok([401, 503].includes(res.status), `expected 401/503, got ${res.status}`);
+  }
+});
+
+await check("html points agents at llms.txt", async () => {
+  const { body } = await get("/");
+  assert.match(body, /rel="llms-txt"/, "no llms-txt link in <head>");
+  const res = await fetch(BASE + VTEX_PDP);
+  assert.match(res.headers.get("link") ?? "", /rel="llms-txt"/, "no llms-txt Link header");
+});
+
+/**
+ * Reading the overview triggers brand extraction, which does a partial write to
+ * the registry. A partial write used to reset `platform` to 'unknown', after
+ * which every product on that domain answered 404. Order matters here: overview
+ * first, product second.
+ */
+await check("a brand write does not break the domain it describes", async () => {
+  const overview = await get("/farmrio.com.br/");
+  assert.equal(overview.res.status, 200, "overview failed");
+  assert.match(overview.body, /^platform: vtex$/m, "platform lost on the overview");
+
+  const listing = await get("/farmrio.com.br/moda-feminina/acessorios");
+  assert.equal(listing.res.status, 200, "listing 404'd after the overview was read");
+  assert.match(listing.body, /^platform: vtex$/m, "platform reset by the brand write");
+  assert.match(listing.body, /^total_results: \d+$/m);
+});
+
 console.log(failures ? `\n${failures} check(s) failed` : "\nall checks passed");
 process.exit(failures ? 1 : 0);

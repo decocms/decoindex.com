@@ -1,11 +1,14 @@
 import { Hono } from "hono";
 import type { Env } from "./env";
 import type { Doc, Storefront } from "./lib/types";
-import { cacheKey, canonicalUrl, normalizedQuery, parsePath, type Ext } from "./lib/url";
+import { RENDER_VERSION, cacheKey, canonicalUrl, normalizedQuery, parsePath, type Ext } from "./lib/url";
 import { getDomain, track, upsertDomain } from "./lib/registry";
 import { docKey, isStale, readDoc, writeDoc, type StoredDoc } from "./lib/store";
 import { detectPlatform, resolve } from "./platform";
 import { fetchBrand } from "./platform/brand";
+import { vtexApiOrigin } from "./platform/vtex";
+import { BadReport, submitFeedback } from "./lib/feedback";
+import { handleMcp } from "./mcp/server";
 import {
   renderHome,
   renderListing,
@@ -127,6 +130,17 @@ app.get("/llms.txt", (c) =>
       "- Not published: live stock, final price after promotions, delivery dates,",
       "  personalized offers. Verify these with the merchant before promising anything.",
       "",
+      "## Telling us something is wrong",
+      "",
+      "If a document is wrong, missing or malformed, say so — it is the only way we find out:",
+      "",
+      "```",
+      `curl -X POST ${c.env.PUBLIC_ORIGIN}/feedback -H 'content-type: application/json' \\`,
+      `  -d '{"url":"<the decoindex URL>","kind":"wrong_data","message":"what you expected"}'`,
+      "```",
+      "",
+      "No authentication. `kind`: wrong_data, missing, broken, unsupported, other.",
+      "",
       "## Notes",
       "",
       "- Supported platforms: VTEX, Shopify.",
@@ -162,15 +176,72 @@ app.get("/about", (c) =>
 app.get("/opt-out", (c) =>
   c.text(
     [
-      "To remove a domain from decoindex, email opt-out@decoindex.com from an address on",
-      "that domain. Removal is honoured within 24h and the domain is never re-mirrored",
-      "without an explicit request from the merchant.",
+      "To remove a domain from decoindex, email builders+indexoptout@decocms.com from an",
+      "address on that domain. Removal is honoured within 24h and the domain is never",
+      "re-mirrored without an explicit request from the merchant.",
       "",
       "You can also block us at the edge: we identify ourselves as `decoindex` in the",
       "User-Agent of every request and we do not work around blocks.",
     ].join("\n"),
   ),
 );
+
+/**
+ * Agent feedback. Public and unauthenticated on purpose: an agent that just hit
+ * a wrong document will not stop to go get a key, and a report we never receive
+ * is a bug we never learn about. Rate limited per IP instead.
+ */
+app.get("/feedback", (c) =>
+  c.json({
+    how: "POST JSON here. No authentication.",
+    fields: {
+      url: "The decoindex URL that was wrong (or pass domain + path separately).",
+      kind: "wrong_data | missing | broken | unsupported | other",
+      message: "Required. What went wrong, in your own words.",
+      expected: "Optional. What you expected instead.",
+    },
+    example: {
+      url: `${c.env.PUBLIC_ORIGIN}/farmrio.com.br/some-product/p`,
+      kind: "wrong_data",
+      message: "Variants table was empty but the storefront shows four sizes.",
+    },
+  }),
+);
+
+app.post("/feedback", async (c) => {
+  if (c.env.FEEDBACK_LIMIT) {
+    const ip = c.req.header("cf-connecting-ip") ?? "local";
+    const { success } = await c.env.FEEDBACK_LIMIT.limit({ key: ip });
+    if (!success) {
+      return c.json({ error: "Too many reports from this address. Try again shortly." }, 429);
+    }
+  }
+  const body = await c.req.json<Record<string, unknown>>().catch(() => null);
+  if (!body) return c.json({ error: "Body must be JSON. GET this URL for the shape." }, 400);
+
+  try {
+    const result = await submitFeedback(c.env, body, {
+      ua: c.req.header("user-agent"),
+      country: (c.req.raw.cf?.country as string) ?? undefined,
+    });
+    track(c.env, c.executionCtx, {
+      name: "feedback",
+      domain: typeof body.domain === "string" ? body.domain : undefined,
+      surface: "feedback",
+      ua: c.req.header("user-agent"),
+      country: (c.req.raw.cf?.country as string) ?? undefined,
+      meta: { kind: body.kind, id: result.id },
+    });
+    return c.json(result, 201);
+  } catch (err) {
+    if (err instanceof BadReport) return c.json({ error: err.message }, 400);
+    throw err;
+  }
+});
+
+/** Private control plane. Fails closed when MCP_AUTH_TOKEN is unset. */
+app.all("/mcp", (c) => handleMcp(c.req.raw, c.env));
+app.all("/mcp/*", (c) => handleMcp(c.req.raw, c.env));
 
 /** Client-side beacon for the landing page. Cookieless. */
 app.post("/e", async (c) => {
@@ -224,7 +295,7 @@ app.get("*", async (c) => {
           .catch(() => {}),
       );
     }
-    const res = toResponse(stored, surface);
+    const res = toResponse(stored, surface, c.env.PUBLIC_ORIGIN);
     if (stored.status === 200) c.executionCtx.waitUntil(cache.put(cacheReq, res.clone()));
     logRead(c.env, c.executionCtx, c.req.raw, { domain, surface, started, cache: "kv", ext, status: stored.status });
     return res;
@@ -232,7 +303,7 @@ app.get("*", async (c) => {
 
   // Layer 3: resolve it live, once.
   const fresh = await build(c.env, domain, path, ext, url.searchParams, rctx);
-  const res = toResponse(fresh, surface);
+  const res = toResponse(fresh, surface, c.env.PUBLIC_ORIGIN);
   c.executionCtx.waitUntil(writeDoc(c.env, kvKey, fresh));
   if (fresh.status === 200) c.executionCtx.waitUntil(cache.put(cacheReq, res.clone()));
   logRead(c.env, c.executionCtx, c.req.raw, { domain, surface, started, cache: "miss", ext, status: fresh.status });
@@ -258,6 +329,7 @@ async function build(
     contentType: "text/markdown; charset=utf-8",
     canonical: `https://${domain}${path}`,
     renderedAt: new Date().toISOString(),
+    renderVersion: RENDER_VERSION,
   });
 
   let row = await getDomain(env, domain);
@@ -312,6 +384,10 @@ async function build(
     locale: row.locale ?? undefined,
     claimed: Boolean(row.claimed_at),
   };
+  // VTEX answers on a canonical host that a custom storefront cannot intercept.
+  if (shop.platform === "vtex") {
+    shop.apiOrigin = vtexApiOrigin(row.account ?? undefined, shop.origin);
+  }
 
   // A catalog with no brand is a spreadsheet. The overview and the machine index
   // are the two surfaces where "who is this merchant" is the actual question, so
@@ -339,6 +415,7 @@ async function build(
   // The per-storefront machine index is the home doc in a different dress.
   if (path === "/llms.txt") {
     const doc = await resolve(shop, "/", query);
+    if (doc.kind === "upstream_error") return problem("upstream", 502);
     if (doc.kind !== "home") return problem("notfound", 404);
     return {
       body: renderLlmsTxt(shop, doc.categories, rctx),
@@ -346,10 +423,12 @@ async function build(
       contentType: "text/plain; charset=utf-8",
       canonical: `https://${domain}/`,
       renderedAt: new Date().toISOString(),
+      renderVersion: RENDER_VERSION,
     };
   }
 
   const doc = await resolve(shop, path, query);
+  if (doc.kind === "upstream_error") return problem("upstream", 502);
   if (doc.kind === "notfound") return problem("notfound", 404);
 
   return {
@@ -362,6 +441,7 @@ async function build(
         ? canonicalUrl(domain, doc.product.slug, rctx.attribution)
         : canonicalUrl(domain, path, rctx.attribution),
     renderedAt: new Date().toISOString(),
+    renderVersion: RENDER_VERSION,
   };
 }
 
@@ -373,6 +453,8 @@ function renderMarkdown(shop: Storefront, doc: Doc, path: string, rctx: RenderCt
       return renderListing(shop, doc, path, rctx);
     case "home":
       return renderHome(shop, doc.categories, rctx);
+    case "upstream_error":
+      return renderProblem(shop.domain, path, "upstream", rctx);
     default:
       return renderProblem(shop.domain, path, "notfound", rctx);
   }
@@ -380,7 +462,7 @@ function renderMarkdown(shop: Storefront, doc: Doc, path: string, rctx: RenderCt
 
 // ------------------------------------------------------------------ responses
 
-function toResponse(doc: StoredDoc, surface: string): Response {
+function toResponse(doc: StoredDoc, surface: string, origin: string): Response {
   const ttl = doc.status === 200 ? (TTL[surface as keyof typeof TTL] ?? TTL.product) : TTL.problem;
   return new Response(doc.body, {
     status: doc.status,
@@ -390,7 +472,10 @@ function toResponse(doc: StoredDoc, surface: string): Response {
       // Invariant 3: a mirror, not a competitor for the merchant's SEO.
       "x-robots-tag": "noindex, nofollow",
       "access-control-allow-origin": "*",
-      link: `<${doc.canonical}>; rel="canonical"`,
+      link: [
+        `<${doc.canonical}>; rel="canonical"`,
+        `<${origin}/llms.txt>; rel="llms-txt"; type="text/plain"`,
+      ].join(", "),
       "x-decoindex-rendered-at": doc.renderedAt,
     },
   });
