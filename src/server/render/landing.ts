@@ -11,8 +11,8 @@ export const LANDING_HTML = /* html */ `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>decoindex — agent-readable ecommerce storefronts</title>
-<meta name="description" content="Swap the origin of any VTEX or Shopify storefront URL and get clean Markdown instead of client-rendered HTML. Resolved on demand, no crawl, works on the first request.">
+<title>decoindex — storefronts your agent can actually read</title>
+<meta name="description" content="Swap the origin of any VTEX or Shopify storefront URL for clean Markdown: title, variants, the price we saw, and a cart link for every item in stock.">
 <meta name="theme-color" content="#07401A">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='16' fill='%23D0EC1A'/%3E%3C/svg%3E">
 <link rel="preload" href="https://www.decocms.com/fonts/switzer/Switzer-Variable.woff2" as="font" type="font/woff2" crossorigin="anonymous">
@@ -168,12 +168,11 @@ footer{border-top:1px solid var(--hairline);padding:36px 0;font-size:13px;color:
 
 <section class="hero">
   <div class="wrap">
-    <p class="eyebrow enter">For developers building agents</p>
-    <h1 class="enter" style="--d:60ms">Storefronts your agent<br>can actually read.<br><span class="dim">One URL swap.</span></h1>
-    <p class="lede enter" style="--d:140ms">
-      Point at any VTEX or Shopify product, category or homepage and get clean Markdown
-      instead of a megabyte of client-rendered HTML — resolved on demand from the
-      merchant's own public API. No crawl, no signup, no waiting for an index to build.
+    <h1 class="enter">Storefronts your agent<br>can actually read.<br><span class="dim">One URL swap.</span></h1>
+    <p class="lede enter" style="--d:120ms">
+      Ask most storefronts for a product page and the price isn't in the HTML. It arrives
+      later, from JavaScript you'd have to run yourself. Point the same URL here and you
+      get the title, the variants, the price, and a link that drops the item into a cart.
     </p>
 
     <div class="demo enter" style="--d:220ms">
@@ -199,14 +198,13 @@ footer{border-top:1px solid var(--hairline);padding:36px 0;font-size:13px;color:
       <a class="btn btn-lime" href="#try">See a real response ↓</a>
       <a class="btn btn-ghost" href="/llms.txt">Read the spec</a>
     </div>
-    <p class="fine enter" style="--d:340ms">No key. No rate card. Public catalog data only.</p>
+    <p class="fine enter" style="--d:340ms">Open it in a browser, curl it, or hand it straight to a model. Public catalog data only.</p>
   </div>
 </section>
 
 <section id="try">
   <div class="wrap">
-    <p class="eyebrow">The same product page, twice</p>
-    <h2>~900 KB of HTML, <span class="dim">or 2 KB an agent can use.</span></h2>
+    <h2>The same product page, twice.<br><span class="dim">~900 KB of HTML, or 2 KB you can use.</span></h2>
     <div class="split" style="margin-top:36px">
       <div class="pane bad">
         <header><span>GET www.farmrio.com.br/…/p</span><span>text/html</span></header>
@@ -252,32 +250,32 @@ live_commercial_data: false
   <div class="wrap">
     <div class="rows">
       <div class="row">
-        <h3>Any URL, first request</h3>
-        <p>We map the path onto the platform's own public catalog API — <code>/{slug}/p</code> on VTEX,
-           <code>/products/{handle}</code> on Shopify. Nothing is crawled ahead of time, so there is no
-           cold start and no "not indexed yet".</p>
+        <h3>Every page, not just products</h3>
+        <p>Product pages, category listings and the storefront's own front page all answer the
+           same way. Take a URL you already have and put <code>decoindex.com</code> in front of
+           the domain — there's nothing else to learn.</p>
       </div>
       <div class="row">
-        <h3>Cached the moment it's asked for</h3>
-        <p>The first read renders and stores the document permanently. Every read after that is
-           served from the edge and touches the merchant zero times.</p>
+        <h3>Quick the second time you look</h3>
+        <p>The first request goes and fetches the page. Every one after that comes back from the
+           edge in a few milliseconds, and the merchant's servers don't hear from us again.</p>
       </div>
       <div class="row">
-        <h3>A cart link, not just a description</h3>
-        <p>Every in-stock variant carries a deep link that builds a cart on the merchant's own
-           checkout, tagged <code>ref=decoindex</code>. It does not complete a purchase — a person
-           still reviews price, shipping and payment.</p>
+        <h3>It ends in a cart, not a dead end</h3>
+        <p>Every variant that's in stock comes with a link that builds a cart on the merchant's
+           own checkout. Your agent hands that to a person, who reviews the price and shipping
+           and pays. You never touch anyone's card.</p>
       </div>
       <div class="row">
-        <h3>JSON if you'd rather</h3>
-        <p>Append <code>.json</code> to any path for the same document, structured. Listings
-           paginate with <code>?page=N</code>.</p>
+        <h3>Markdown, or JSON if you'd rather</h3>
+        <p>Add <code>.json</code> to any URL for the same document, structured. Long listings
+           continue with <code>?page=2</code>.</p>
       </div>
       <div class="row">
-        <h3>Kind to the merchant</h3>
-        <p>Bounded reads, an honest User-Agent, images never rehosted, <code>noindex</code> and
-           <code>rel=canonical</code> pointing home on every page. We are a channel, not a
-           competitor for their search traffic.</p>
+        <h3>The merchant stays the destination</h3>
+        <p>We keep these pages out of search results, point every one back at the merchant's own,
+           never rehost their images, and tag outbound links so they can see the visit came
+           through an agent. If you're building for a brand, you can tell them that.</p>
       </div>
     </div>
   </div>
@@ -285,31 +283,33 @@ live_commercial_data: false
 
 <section class="band">
   <div class="wrap">
-    <p class="eyebrow">The part most scrapers get wrong</p>
-    <h2>An agent that promises what a merchant<br class="hide-sm"> <span class="dim">can't honour costs everyone.</span></h2>
+    <h2>Some questions we can answer.<br><span class="dim">Some only the merchant can.</span></h2>
+    <p class="lede" style="margin-top:20px">Sooner or later a shopper asks your agent “is it still there in
+       my size, and when does it arrive?” Two of those words — <em>still</em> and <em>when</em> — are
+       things we genuinely don't know. Here's the line, so you can draw it too.</p>
     <div class="cards">
       <div class="card yes">
-        <h3>Published, timestamped</h3>
+        <h3>Safe to repeat</h3>
         <ul>
-          <li>Title, brand, description, attributes</li>
-          <li>Variants and their SKUs</li>
-          <li>Category breadcrumb</li>
-          <li>Observed price and availability</li>
-          <li>Cart link on the merchant's checkout</li>
+          <li>Title, brand and description</li>
+          <li>Every variant and its SKU</li>
+          <li>Where it sits in the catalogue</li>
+          <li>The price and stock we saw, with a timestamp</li>
+          <li>A cart link on the merchant's checkout</li>
         </ul>
       </div>
       <div class="card">
-        <h3>Never published — ask the merchant</h3>
+        <h3>Send them to the merchant</h3>
         <ul>
-          <li>Live stock for a chosen variant</li>
-          <li>Final price after cart promotions and coupons</li>
-          <li>Delivery date for a buyer's address</li>
-          <li>Personalized or segmented offers</li>
+          <li>Whether that size is still there right now</li>
+          <li>The final price once discounts and coupons land</li>
+          <li>When it arrives at a particular address</li>
+          <li>Anything priced for one specific shopper</li>
         </ul>
       </div>
     </div>
-    <p class="fine" style="max-width:640px">Every response repeats this boundary in its own body, so an
-       agent reading one page in isolation still knows what it may and may not claim.</p>
+    <p class="fine" style="max-width:640px">Every response repeats this in its own body, so an agent that
+       reads a single page in isolation still knows what it can and can't promise.</p>
   </div>
 </section>
 
@@ -318,8 +318,9 @@ live_commercial_data: false
     <div class="forest">
       <p class="eyebrow" style="color:var(--green-2)">For merchants</p>
       <h2>Agents are already shopping.<br>Be legible to them.</h2>
-      <p>Reads of your catalog are free and always will be. Search, proactive indexing and
-         a live feed of what agents ask for are the paid tier. Or tell us to stop, and we will.</p>
+      <p>Reading your catalogue is free and stays free. If you want search across it, or a feed
+         of what agents keep asking for, come talk to us. And if you'd rather we weren't here at
+         all, say so — we'll stop within a day.</p>
       <div class="cta-row">
         <a class="btn btn-lime" href="mailto:hi@deco.cx?subject=decoindex%20%E2%80%94%20claim%20my%20store&body=Store%20domain%3A%20%0APlatform%3A%20%0AName%3A%20">Claim your store</a>
         <a class="btn" style="background:rgba(255,255,255,.14);color:#fff" href="/opt-out">Opt out</a>
