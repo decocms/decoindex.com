@@ -38,6 +38,7 @@ export function landingHtml(origin: string, sampleMd: string | null): string {
   const md = sampleMd ?? "Fetching this document for the first time — reload in a moment.";
   return TEMPLATE.replace(/\{\{(\w+)\}\}/g, (_, k) => {
     switch (k) {
+      case "origin": return origin;
       case "sampleUrl": return sampleUrl;
       case "merchantUrl": return merchantUrl;
       case "sampleUrlShort": return `${origin.replace(/^https?:\/\//, "")}/${SAMPLE.domain}/…/p`;
@@ -59,6 +60,20 @@ const TEMPLATE = /* html */ `<!doctype html>
 <title>decoindex — storefronts your agent can actually read</title>
 <meta name="description" content="Swap the origin of any VTEX or Shopify storefront URL for clean Markdown: title, variants, the price we saw, and a cart link for every item in stock.">
 <meta name="theme-color" content="#07401A">
+<link rel="canonical" href="{{origin}}/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="decoindex">
+<meta property="og:url" content="{{origin}}/">
+<meta property="og:title" content="decoindex — storefronts your agent can actually read">
+<meta property="og:description" content="Swap the origin of any VTEX or Shopify storefront URL for clean Markdown. Same product page: 1.3 MB of HTML, or 4 KB you can use.">
+<meta property="og:image" content="{{origin}}/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A bar chart comparing one product page as .html and as .md: 1.3 MB against 4 KB, 99.7% fewer tokens.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="decoindex — storefronts your agent can actually read">
+<meta name="twitter:description" content="Swap the origin of any VTEX or Shopify storefront URL for clean Markdown. Same product page: 1.3 MB of HTML, or 4 KB you can use.">
+<meta name="twitter:image" content="{{origin}}/og.png">
 <!-- Everything that navigates away opens in a new tab, including the link the demo
      widget builds. Same-page anchors opt back out with target="_self". -->
 <base target="_blank">

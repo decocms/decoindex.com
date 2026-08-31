@@ -14,6 +14,8 @@ import {
   type RenderCtx,
 } from "./render/markdown";
 import { SAMPLE, landingHtml } from "./render/landing";
+// Imported as bytes via the "Data" rule in wrangler.jsonc.
+import ogImage from "../../assets/og.png";
 
 type Ctx = { Bindings: Env };
 const app = new Hono<Ctx>();
@@ -56,17 +58,34 @@ app.get("/", async (c) => {
   return c.html(body);
 });
 
+/** Social preview. Immutable: regenerating it is a deploy, so cache it hard. */
+app.get("/og.png", () =>
+  new Response(ogImage, {
+    headers: {
+      "content-type": "image/png",
+      "cache-control": "public, max-age=3600, s-maxage=604800, immutable",
+    },
+  }),
+);
+
 app.get("/robots.txt", (c) =>
   c.text(
     [
-      // Invariant 3: we are a channel, not a competitor. Search engines must not
-      // index the mirror — the day a decoindex page outranks a merchant's own
-      // PDP is the day the commercial conversation ends. AI agents are the point.
+      // Invariant 3: we are a channel, not a competitor. Search engines get our
+      // own pages and nothing else — the day a decoindex mirror outranks a
+      // merchant's own PDP is the day the commercial conversation ends.
+      // Everything under /{domain}/ is a mirror; the handful of paths above it
+      // are ours to be found by. AI agents are unrestricted; they are the point.
       "User-agent: Googlebot",
       "User-agent: bingbot",
       "User-agent: DuckDuckBot",
       "User-agent: Yandex",
       "User-agent: Baiduspider",
+      "Allow: /$",
+      "Allow: /about",
+      "Allow: /opt-out",
+      "Allow: /llms.txt",
+      "Allow: /og.png",
       "Disallow: /",
       "",
       "User-agent: *",

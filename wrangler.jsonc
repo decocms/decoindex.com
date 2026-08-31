@@ -30,6 +30,10 @@
     }
   ],
 
+  // The social preview image is static; import it as bytes instead of adding an
+  // assets binding and a build step for one file.
+  "rules": [{ "type": "Data", "globs": ["**/*.png"], "fallthrough": true }],
+
   "vars": {
     // Pinned, not derived from the request: rendered documents embed this in
     // their own links and are cached, so it must not vary by hostname.
