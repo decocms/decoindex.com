@@ -26,11 +26,12 @@ export async function resolveShopify(
 
   const productHandle = path.match(/\/products\/([^/?]+)\/?$/)?.[1];
   if (productHandle) {
-    const body = await getJson<{ product?: ShopifyProduct }>(
+    const res = await getJson<{ product?: ShopifyProduct }>(
       `${shop.origin}/products/${encodeURIComponent(productHandle)}.json`,
     );
-    return body?.product
-      ? { kind: "product", product: toProduct(body.product, shop) }
+    if (res.failed) return { kind: "upstream_error" };
+    return res.body?.product
+      ? { kind: "product", product: toProduct(res.body.product, shop) }
       : { kind: "notfound" };
   }
 
@@ -41,10 +42,11 @@ export async function resolveShopify(
 }
 
 async function home(shop: Storefront): Promise<Doc> {
-  const body = await getJson<{ collections?: ShopifyCollection[] }>(
+  const res = await getJson<{ collections?: ShopifyCollection[] }>(
     `${shop.origin}/collections.json?limit=50`,
   );
-  const list = body?.collections ?? [];
+  if (res.failed) return { kind: "upstream_error" };
+  const list = res.body?.collections ?? [];
   if (!list.length) return { kind: "notfound" };
   const categories: CategoryRef[] = list.map((c) => ({
     path: `/collections/${c.handle}`,
@@ -71,15 +73,17 @@ async function collection(
     ),
   ]);
 
-  const list = products?.products ?? [];
+  if (products.failed) return { kind: "upstream_error" };
+  const list = products.body?.products ?? [];
   if (!list.length) return { kind: "notfound" };
+  const collectionMeta = meta.body?.collection;
   return {
     kind: "listing",
-    title: meta?.collection?.title ?? handle.replace(/-/g, " "),
-    description: meta?.collection?.description
-      ? summarize(meta.collection.description, 400)
+    title: collectionMeta?.title ?? handle.replace(/-/g, " "),
+    description: collectionMeta?.description
+      ? summarize(collectionMeta.description, 400)
       : undefined,
-    total: meta?.collection?.products_count,
+    total: collectionMeta?.products_count,
     page,
     products: list.map((p) => toProduct(p, shop)),
   };
@@ -195,17 +199,31 @@ function slugify(s: string): string {
     .replace(/^_|_$/g, "");
 }
 
-async function getJson<T>(url: string): Promise<T | null> {
+/**
+ * `failed` separates "the collection is empty" from "we never got an answer".
+ * A throttled storefront must not render as a 404 — that tells an agent the
+ * product does not exist, which is worse than admitting we could not look.
+ */
+interface Fetched<T> {
+  body: T | null;
+  failed: boolean;
+}
+
+async function getJson<T>(url: string): Promise<Fetched<T>> {
   try {
     const res = await fetch(url, {
       headers: { "user-agent": UA, accept: "application/json" },
       signal: AbortSignal.timeout(TIMEOUT),
     });
-    if (!res.ok) return null;
-    if (!(res.headers.get("content-type") ?? "").includes("json")) return null;
-    return (await res.json()) as T;
+    // A missing product genuinely 404s here, unlike the collection endpoints.
+    if (res.status === 404) return { body: null, failed: false };
+    if (!res.ok) return { body: null, failed: true };
+    if (!(res.headers.get("content-type") ?? "").includes("json")) {
+      return { body: null, failed: true };
+    }
+    return { body: (await res.json()) as T, failed: false };
   } catch {
-    return null;
+    return { body: null, failed: true };
   }
 }
 

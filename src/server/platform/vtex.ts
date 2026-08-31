@@ -15,6 +15,26 @@ import { UA } from "./detect";
 const PER_PAGE = 24;
 const TIMEOUT = 6_000;
 
+/**
+ * Where to call the catalog API.
+ *
+ * A merchant's own domain is not always safe to call: farmrio's frontend answers
+ * `/api/catalog_system/pub/products/search/{category}?_from=..` with 2.7 MB of
+ * storefront HTML, because unknown paths fall through to their SPA. That parsed
+ * as "no products" and rendered a category with 135 items as Not Found.
+ *
+ * Every VTEX account also answers on `{account}.vtexcommercestable.com.br`,
+ * which sits behind any custom frontend and cannot be intercepted. Use it when
+ * we know the account; fall back to the merchant domain when we do not.
+ */
+function api(shop: Storefront): string {
+  return shop.apiOrigin ?? shop.origin;
+}
+
+export function vtexApiOrigin(account: string | undefined, origin: string): string {
+  return account ? `https://${account}.vtexcommercestable.com.br` : origin;
+}
+
 export async function resolveVtex(
   shop: Storefront,
   path: string,
@@ -26,9 +46,12 @@ export async function resolveVtex(
     const slug = path.replace(/\/p\/?$/, "").split("/").filter(Boolean).pop();
     if (!slug) return { kind: "notfound" };
     const raw = await getJson<VtexProduct[]>(
-      `${shop.origin}/api/catalog_system/pub/products/search/${encodeURIComponent(slug)}/p`,
+      `${api(shop)}/api/catalog_system/pub/products/search/${encodeURIComponent(slug)}/p`,
     );
-    return raw?.[0] ? { kind: "product", product: toProduct(raw[0], shop) } : { kind: "notfound" };
+    if (raw.failed) return { kind: "upstream_error" };
+    return raw.body?.[0]
+      ? { kind: "product", product: toProduct(raw.body[0], shop) }
+      : { kind: "notfound" };
   }
 
   return listing(shop, path, query);
@@ -36,11 +59,12 @@ export async function resolveVtex(
 
 async function home(shop: Storefront): Promise<Doc> {
   const tree = await getJson<VtexCategory[]>(
-    `${shop.origin}/api/catalog_system/pub/category/tree/2`,
+    `${api(shop)}/api/catalog_system/pub/category/tree/2`,
   );
-  if (!tree?.length) return { kind: "notfound" };
+  if (tree.failed) return { kind: "upstream_error" };
+  if (!tree.body?.length) return { kind: "notfound" };
   const categories: CategoryRef[] = [];
-  for (const root of tree) {
+  for (const root of tree.body) {
     categories.push({ path: pathOf(root.url), name: root.name });
     for (const child of root.children ?? []) {
       categories.push({ path: pathOf(child.url), name: `${root.name} > ${child.name}` });
@@ -55,7 +79,7 @@ async function listing(shop: Storefront, path: string, query: URLSearchParams): 
   const segments = path.split("/").filter(Boolean).map(encodeURIComponent).join("/");
 
   let res = await getWithHeaders<VtexProduct[]>(
-    `${shop.origin}/api/catalog_system/pub/products/search/${segments}?_from=${from}&_to=${from + PER_PAGE - 1}`,
+    `${api(shop)}/api/catalog_system/pub/products/search/${segments}?_from=${from}&_to=${from + PER_PAGE - 1}`,
   );
 
   // Not a real category. VTEX collections and CMS pages resolve through cluster
@@ -65,11 +89,12 @@ async function listing(shop: Storefront, path: string, query: URLSearchParams): 
     const term = path.split("/").filter(Boolean).join(" ").replace(/-/g, " ").trim();
     if (term) {
       res = await getWithHeaders<VtexProduct[]>(
-        `${shop.origin}/api/catalog_system/pub/products/search?ft=${encodeURIComponent(term)}&_from=0&_to=${PER_PAGE - 1}`,
+        `${api(shop)}/api/catalog_system/pub/products/search?ft=${encodeURIComponent(term)}&_from=0&_to=${PER_PAGE - 1}`,
       );
     }
   }
 
+  if (res.failed) return { kind: "upstream_error" };
   if (!res.body?.length) return { kind: "notfound" };
   return {
     kind: "listing",
@@ -206,23 +231,35 @@ export function summarize(html: string, maxChars = 1200): string {
 
 // --- fetch helpers ----------------------------------------------------------
 
-async function getJson<T>(url: string): Promise<T | null> {
-  return (await getWithHeaders<T>(url)).body;
+async function getJson<T>(url: string): Promise<Fetched<T>> {
+  return getWithHeaders<T>(url);
 }
 
-async function getWithHeaders<T>(url: string): Promise<{ body: T | null; resources: string | null }> {
+/**
+ * `failed` is the difference between "the catalog has nothing here" and "we
+ * never got an answer". Collapsing the two renders a throttled storefront as a
+ * 404, which tells an agent the product does not exist — the exact class of
+ * confident-and-wrong this service is supposed to avoid.
+ */
+interface Fetched<T> {
+  body: T | null;
+  resources: string | null;
+  failed: boolean;
+}
+
+async function getWithHeaders<T>(url: string): Promise<Fetched<T>> {
   try {
     const res = await fetch(url, {
       headers: { "user-agent": UA, accept: "application/json" },
       signal: AbortSignal.timeout(TIMEOUT),
     });
-    if (!res.ok && res.status !== 206) return { body: null, resources: null };
+    if (!res.ok && res.status !== 206) return { body: null, resources: null, failed: true };
     if (!(res.headers.get("content-type") ?? "").includes("json")) {
-      return { body: null, resources: null };
+      return { body: null, resources: null, failed: true };
     }
-    return { body: (await res.json()) as T, resources: res.headers.get("resources") };
+    return { body: (await res.json()) as T, resources: res.headers.get("resources"), failed: false };
   } catch {
-    return { body: null, resources: null };
+    return { body: null, resources: null, failed: true };
   }
 }
 

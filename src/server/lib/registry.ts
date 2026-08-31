@@ -31,10 +31,19 @@ export async function getDomain(env: Env, domain: string): Promise<RegistryRow |
 }
 
 /**
- * Partial upsert. Every optional column binds a real NULL so the COALESCE in the
- * conflict branch actually preserves the existing value — the previous version
- * defaulted `status` to a non-null string, which silently clobbered it on every
- * write, and bound NULL into NOT NULL columns, which threw on the first insert.
+ * Partial upsert: an omitted field keeps whatever is already stored.
+ *
+ * The conflict branch reads the numbered *parameters* (`?2`, `?3`, …) rather
+ * than `excluded.*`, and that distinction is the whole point. `excluded` holds
+ * the row the INSERT would have written — already defaulted — so with
+ * `VALUES (…, COALESCE(?3,'unknown'), …)` the value `excluded.platform` is never
+ * NULL, and `COALESCE(excluded.platform, domains.platform)` silently overwrites
+ * a known platform with 'unknown' on every partial write. That shipped: writing
+ * a merchant's brand description reset their platform, and the read path then
+ * answered 404 for a storefront it had resolved correctly minutes earlier.
+ *
+ * Referencing `?3` directly gives the UPDATE branch the caller's real NULL,
+ * while the VALUES clause still applies the default on first insert.
  */
 export async function upsertDomain(
   env: Env,
@@ -44,22 +53,23 @@ export async function upsertDomain(
   await env.DB.prepare(
     `INSERT INTO domains (domain, status, platform, origin, account, merchant_name, currency, country,
                           detected_at, last_error, description, logo_url, theme_color, locale, brand_checked_at)
-     VALUES (?, COALESCE(?, 'active'), COALESCE(?, 'unknown'), ?, ?, ?, COALESCE(?, 'BRL'), ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES (?1, COALESCE(?2, 'active'), COALESCE(?3, 'unknown'), ?4, ?5, ?6, COALESCE(?7, 'BRL'),
+             ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
      ON CONFLICT(domain) DO UPDATE SET
-       status        = COALESCE(excluded.status, domains.status),
-       platform      = COALESCE(excluded.platform, domains.platform),
-       origin        = COALESCE(excluded.origin, domains.origin),
-       account       = COALESCE(excluded.account, domains.account),
-       merchant_name = COALESCE(excluded.merchant_name, domains.merchant_name),
-       currency      = COALESCE(excluded.currency, domains.currency),
-       country       = COALESCE(excluded.country, domains.country),
-       detected_at   = COALESCE(excluded.detected_at, domains.detected_at),
-       description   = COALESCE(excluded.description, domains.description),
-       logo_url      = COALESCE(excluded.logo_url, domains.logo_url),
-       theme_color   = COALESCE(excluded.theme_color, domains.theme_color),
-       locale        = COALESCE(excluded.locale, domains.locale),
-       brand_checked_at = COALESCE(excluded.brand_checked_at, domains.brand_checked_at),
-       last_error    = excluded.last_error`,
+       status           = COALESCE(?2,  domains.status),
+       platform         = COALESCE(?3,  domains.platform),
+       origin           = COALESCE(?4,  domains.origin),
+       account          = COALESCE(?5,  domains.account),
+       merchant_name    = COALESCE(?6,  domains.merchant_name),
+       currency         = COALESCE(?7,  domains.currency),
+       country          = COALESCE(?8,  domains.country),
+       detected_at      = COALESCE(?9,  domains.detected_at),
+       last_error       = ?10,
+       description      = COALESCE(?11, domains.description),
+       logo_url         = COALESCE(?12, domains.logo_url),
+       theme_color      = COALESCE(?13, domains.theme_color),
+       locale           = COALESCE(?14, domains.locale),
+       brand_checked_at = COALESCE(?15, domains.brand_checked_at)`,
   )
     .bind(
       domain,

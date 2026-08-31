@@ -48,7 +48,15 @@ export interface Product {
 export interface Storefront {
   domain: string;
   platform: Platform;
+  /** The merchant's own site. Canonical links and cart URLs point here. */
   origin: string;
+  /**
+   * Where we actually call the catalog API. Often the same as `origin`, but a
+   * merchant running a custom frontend may intercept the platform's API paths
+   * and answer with their storefront HTML — VTEX exposes a canonical host that
+   * doesn't. Fetch from here, link to `origin`.
+   */
+  apiOrigin?: string;
   name?: string;
   account?: string;
   currency: string;
@@ -81,4 +89,10 @@ export type Doc =
       products: Product[];
     }
   | { kind: "home"; categories: CategoryRef[] }
-  | { kind: "notfound" };
+  | { kind: "notfound" }
+  /**
+   * The merchant's API did not answer. Distinct from notfound on purpose: an
+   * agent told "this product does not exist" acts on it, and a storefront
+   * throttling us is not the same fact as a discontinued SKU.
+   */
+  | { kind: "upstream_error" };

@@ -1,4 +1,5 @@
 import type { Env } from "../env";
+import { RENDER_VERSION } from "./url";
 
 /**
  * The lazy index. A rendered document is written to KV *without* an expiry, so a
@@ -17,6 +18,8 @@ export interface StoredDoc {
   contentType: string;
   canonical: string;
   renderedAt: string;
+  /** Which renderer produced this. Absent on documents written before v3. */
+  renderVersion?: string;
 }
 
 /** How old an entry may get before we refresh it behind the reader's back. */
@@ -27,8 +30,14 @@ const MAX_AGE_SECONDS: Record<string, number> = {
   llms: 86_400,
 };
 
-/** Negative answers expire, so the merchant can fix a 404 by publishing. */
+/** A genuine miss: expires so a merchant can fix it by publishing the product. */
 const NEGATIVE_TTL = 600;
+/**
+ * An upstream failure or a throttle is transient and not the merchant's answer,
+ * so it is held only long enough to stop a retry storm — never long enough to
+ * keep telling callers a live product is missing.
+ */
+const TRANSIENT_TTL = 60;
 
 export function docKey(domain: string, path: string, query: string): string {
   return `md:${domain}${path}${query ? `?${query}` : ""}`;
@@ -42,11 +51,19 @@ export async function readDoc(env: Env, key: string): Promise<StoredDoc | null> 
 export async function writeDoc(env: Env, key: string, doc: StoredDoc): Promise<void> {
   // A 200 is an index entry and never expires. Anything else is a negative
   // result: keep it just long enough to absorb a scan, not long enough to lie.
-  const options = doc.status === 200 ? {} : { expirationTtl: NEGATIVE_TTL };
+  const options =
+    doc.status === 200
+      ? {}
+      : { expirationTtl: doc.status >= 500 || doc.status === 429 ? TRANSIENT_TTL : NEGATIVE_TTL };
   await env.CACHE.put(key, JSON.stringify(doc), options);
 }
 
 export function isStale(doc: StoredDoc, surface: string): boolean {
+  // A document written by an older renderer is stale no matter how fresh it is.
+  // Versioning the KV *key* instead would strand every old entry forever, since
+  // index documents are deliberately written without a TTL; this way the reader
+  // gets the old body once and the next reader gets the new one.
+  if (doc.renderVersion !== RENDER_VERSION) return true;
   const maxAge = MAX_AGE_SECONDS[surface] ?? 86_400;
   const age = (Date.now() - Date.parse(doc.renderedAt)) / 1000;
   return !Number.isFinite(age) || age > maxAge;
