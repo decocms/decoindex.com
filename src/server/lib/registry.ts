@@ -17,6 +17,13 @@ export interface RegistryRow {
   country: string | null;
   detected_at: string | null;
   last_error: string | null;
+  description: string | null;
+  logo_url: string | null;
+  theme_color: string | null;
+  locale: string | null;
+  brand_checked_at: string | null;
+  claimed_at: string | null;
+  claimed_by: string | null;
 }
 
 export async function getDomain(env: Env, domain: string): Promise<RegistryRow | null> {
@@ -35,8 +42,9 @@ export async function upsertDomain(
   patch: Partial<Omit<RegistryRow, "domain">> = {},
 ): Promise<void> {
   await env.DB.prepare(
-    `INSERT INTO domains (domain, status, platform, origin, account, merchant_name, currency, country, detected_at, last_error)
-     VALUES (?, COALESCE(?, 'active'), COALESCE(?, 'unknown'), ?, ?, ?, COALESCE(?, 'BRL'), ?, ?, ?)
+    `INSERT INTO domains (domain, status, platform, origin, account, merchant_name, currency, country,
+                          detected_at, last_error, description, logo_url, theme_color, locale, brand_checked_at)
+     VALUES (?, COALESCE(?, 'active'), COALESCE(?, 'unknown'), ?, ?, ?, COALESCE(?, 'BRL'), ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(domain) DO UPDATE SET
        status        = COALESCE(excluded.status, domains.status),
        platform      = COALESCE(excluded.platform, domains.platform),
@@ -46,6 +54,11 @@ export async function upsertDomain(
        currency      = COALESCE(excluded.currency, domains.currency),
        country       = COALESCE(excluded.country, domains.country),
        detected_at   = COALESCE(excluded.detected_at, domains.detected_at),
+       description   = COALESCE(excluded.description, domains.description),
+       logo_url      = COALESCE(excluded.logo_url, domains.logo_url),
+       theme_color   = COALESCE(excluded.theme_color, domains.theme_color),
+       locale        = COALESCE(excluded.locale, domains.locale),
+       brand_checked_at = COALESCE(excluded.brand_checked_at, domains.brand_checked_at),
        last_error    = excluded.last_error`,
   )
     .bind(
@@ -59,6 +72,11 @@ export async function upsertDomain(
       patch.country ?? null,
       patch.detected_at ?? null,
       patch.last_error ?? null,
+      patch.description ?? null,
+      patch.logo_url ?? null,
+      patch.theme_color ?? null,
+      patch.locale ?? null,
+      patch.brand_checked_at ?? null,
     )
     .run();
 }

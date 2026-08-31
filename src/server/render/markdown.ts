@@ -222,15 +222,31 @@ export function renderHome(shop: Storefront, categories: CategoryRef[], ctx: Ren
       account: shop.account,
       currency: shop.currency,
       country: shop.country,
+      locale: shop.locale,
+      theme_color: shop.themeColor,
       live_commercial_data: false,
     }),
   );
-  out.push(`# ${shop.name ?? shop.domain} — agent interface\n`);
-  out.push(
-    `> Catalog of this \`${shop.platform}\` storefront as Markdown. Every page is resolved`,
-    `> on demand from the merchant's own public API and cached, so any storefront URL works`,
-    `> immediately — there is no crawl and no waiting.\n`,
-  );
+  out.push(`# ${shop.name ?? shop.domain}\n`);
+
+  // The merchant's own words first. An agent choosing between four storefronts
+  // needs to know which one this is before it needs to know how to query it.
+  if (shop.description) {
+    out.push(`> ${shop.description}\n`);
+    out.push(`_Above: how ${shop.domain} describes itself, from its own site metadata._\n`);
+  }
+
+  const facts: string[] = [];
+  if (shop.name && shop.name !== shop.domain) facts.push(`**Merchant:** ${shop.name}`);
+  facts.push(`**Site:** https://${shop.domain}`);
+  facts.push(`**Platform:** ${shop.platform}${shop.account ? ` (account \`${shop.account}\`)` : ""}`);
+  facts.push(`**Currency:** ${shop.currency}`);
+  if (shop.country) facts.push(`**Country:** ${shop.country}`);
+  if (shop.locale) facts.push(`**Locale:** ${shop.locale}`);
+  if (shop.themeColor) facts.push(`**Brand colour:** \`${shop.themeColor}\``);
+  if (shop.logoUrl) facts.push(`**Brand image:** ${shop.logoUrl}`);
+  for (const f of facts) out.push(`- ${f}`);
+  out.push("");
 
   out.push(`## How to address any page\n`);
   out.push(`Take a URL on \`${shop.domain}\` and swap the origin for \`${ctx.publicOrigin}/${shop.domain}\`:\n`);
@@ -262,9 +278,21 @@ export function renderLlmsTxt(shop: Storefront, categories: CategoryRef[], ctx: 
   const base = `${ctx.publicOrigin}/${shop.domain}`;
   const out = [`# ${shop.name ?? shop.domain}`, ""];
   out.push(
-    `> Agent-readable mirror of the ${shop.domain} storefront, served as Markdown from the`,
-    `> merchant's own public ${shop.platform} API. Catalog facts only — live stock, final`,
-    `> price and delivery are not published here.`,
+    shop.description
+      ? `> ${shop.description}`
+      : `> Agent-readable mirror of the ${shop.domain} storefront.`,
+    "",
+  );
+  out.push(`## Facts`, "");
+  if (shop.name && shop.name !== shop.domain) out.push(`- **Merchant:** ${shop.name}`);
+  out.push(`- **Site:** https://${shop.domain}`);
+  out.push(`- **Platform:** ${shop.platform}`);
+  out.push(`- **Currency:** ${shop.currency}`);
+  if (shop.country) out.push(`- **Country:** ${shop.country}`);
+  if (shop.locale) out.push(`- **Locale:** ${shop.locale}`);
+  if (shop.themeColor) out.push(`- **Brand colour:** ${shop.themeColor}`);
+  out.push(
+    `- **Published here:** catalog facts only — live stock, final price and delivery are not.`,
     "",
   );
   // Most actionable thing in the file, so it goes first: agents truncate.

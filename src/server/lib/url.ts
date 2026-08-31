@@ -118,6 +118,14 @@ export function normalizedQuery(query?: URLSearchParams): string {
   return out.toString();
 }
 
+/**
+ * Bump when a renderer changes shape. The edge cache has no purge from inside a
+ * Worker and a document TTL is a day, so without this a template fix is
+ * invisible until it expires. It only ever appears in the synthetic cache key,
+ * never in a URL we serve or publish.
+ */
+export const RENDER_VERSION = "2";
+
 /** Cache key: stable, ext-aware, query-normalized. */
 export function cacheKey(
   origin: string,
@@ -127,5 +135,6 @@ export function cacheKey(
   query?: URLSearchParams,
 ): string {
   const q = normalizedQuery(query);
-  return `${origin}/${domain}${path}${ext === "md" ? "" : `.${ext}`}${q ? `?${q}` : ""}`;
+  const suffix = `${q ? `?${q}&` : "?"}v=${RENDER_VERSION}`;
+  return `${origin}/${domain}${path}${ext === "md" ? "" : `.${ext}`}${suffix}`;
 }

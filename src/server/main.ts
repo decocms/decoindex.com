@@ -5,6 +5,7 @@ import { cacheKey, canonicalUrl, normalizedQuery, parsePath, type Ext } from "./
 import { getDomain, track, upsertDomain } from "./lib/registry";
 import { docKey, isStale, readDoc, writeDoc, type StoredDoc } from "./lib/store";
 import { detectPlatform, resolve } from "./platform";
+import { fetchBrand } from "./platform/brand";
 import {
   renderHome,
   renderListing,
@@ -305,7 +306,35 @@ async function build(
     account: row.account ?? undefined,
     currency: row.currency,
     country: row.country ?? undefined,
+    description: row.description ?? undefined,
+    logoUrl: row.logo_url ?? undefined,
+    themeColor: row.theme_color ?? undefined,
+    locale: row.locale ?? undefined,
+    claimed: Boolean(row.claimed_at),
   };
+
+  // A catalog with no brand is a spreadsheet. The overview and the machine index
+  // are the two surfaces where "who is this merchant" is the actual question, so
+  // they pay for one homepage read — once per domain, then it lives in D1 and
+  // every other surface gets the name for free.
+  if ((path === "/" || path === "/llms.txt") && !row.brand_checked_at) {
+    const brand = await fetchBrand(shop.origin);
+    if (brand) {
+      shop.name ??= brand.name;
+      shop.description = brand.description;
+      shop.logoUrl = brand.image;
+      shop.themeColor = brand.themeColor;
+      shop.locale = brand.locale;
+    }
+    await upsertDomain(env, domain, {
+      merchant_name: brand?.name ?? null,
+      description: brand?.description ?? null,
+      logo_url: brand?.image ?? null,
+      theme_color: brand?.themeColor ?? null,
+      locale: brand?.locale ?? null,
+      brand_checked_at: new Date().toISOString(),
+    });
+  }
 
   // The per-storefront machine index is the home doc in a different dress.
   if (path === "/llms.txt") {

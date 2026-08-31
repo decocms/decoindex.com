@@ -53,6 +53,13 @@ export interface Storefront {
   account?: string;
   currency: string;
   country?: string;
+  /** The merchant's own words about themselves. Attributed, never rewritten. */
+  description?: string;
+  logoUrl?: string;
+  themeColor?: string;
+  locale?: string;
+  /** Merchant has signed up: their data, their page, no promo footer. */
+  claimed?: boolean;
 }
 
 export interface CategoryRef {
