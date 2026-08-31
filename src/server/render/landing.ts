@@ -5,8 +5,53 @@
  * Design system is deco's: Switzer at weight 400, lime #D0EC1A on forest #07401A,
  * pill controls, hairline borders, no shadows on flat content. Hand-written CSS —
  * there is no build step in a Worker and this page does not need one.
+ *
+ * The side-by-side comparison shows the *real* current document, read from our
+ * own KV. A page that argues for honest data has no business illustrating itself
+ * with a mockup, and a hand-written sample rots the moment the format changes.
  */
-export const LANDING_HTML = /* html */ `<!doctype html>
+
+/** The product the comparison is built from. Real, in stock, cheap to re-check. */
+export const SAMPLE = {
+  domain: "farmrio.com.br",
+  path: "/copo-quencher-stanley-destiny-x-farm-rio-887ml-multicolorido-374774-2276/p",
+  /** Measured 2026-08-31; refreshed by hand when the sample changes. */
+  htmlBytes: 1_398_266,
+  /** Verbatim from the top of that response, not a reconstruction. */
+  htmlHead:
+    '<!DOCTYPE html><html lang="pt-BR"><head><title>Copo Quencher Stanley Destiny x Farm Rio 887ml</title>' +
+    '<link rel="modulepreload" href="/_frsh/js/d75752cc540895ef5acbd1048e35423152553736/main.js"/>' +
+    '<link rel="modulepreload" href="/_frsh/js/d75752cc5408.../chunk-BEGOSeOy.js"/>' +
+    '<link rel="modulepreload" href="/_frsh/js/d75752cc5408.../island-tryonmodal.js"/>…',
+} as const;
+
+const esc = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+const kb = (bytes: number) =>
+  bytes >= 1_048_576 ? `${(bytes / 1_048_576).toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
+
+export function landingHtml(origin: string, sampleMd: string | null): string {
+  const sampleUrl = `${origin}/${SAMPLE.domain}${SAMPLE.path}`;
+  const merchantUrl = `https://www.${SAMPLE.domain}${SAMPLE.path}`;
+  // If the sample is not in cache yet, say so rather than showing a stand-in.
+  const md = sampleMd ?? "Fetching this document for the first time — reload in a moment.";
+  return TEMPLATE.replace(/\{\{(\w+)\}\}/g, (_, k) => {
+    switch (k) {
+      case "sampleUrl": return sampleUrl;
+      case "merchantUrl": return merchantUrl;
+      case "sampleUrlShort": return `${origin.replace(/^https?:\/\//, "")}/${SAMPLE.domain}/…/p`;
+      case "merchantUrlShort": return `www.${SAMPLE.domain}/…/p`;
+      case "htmlSize": return kb(SAMPLE.htmlBytes);
+      case "mdSize": return sampleMd ? kb(new TextEncoder().encode(sampleMd).length) : "—";
+      case "htmlHead": return esc(SAMPLE.htmlHead);
+      case "sampleMd": return esc(md);
+      default: return "";
+    }
+  });
+}
+
+const TEMPLATE = /* html */ `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -14,6 +59,9 @@ export const LANDING_HTML = /* html */ `<!doctype html>
 <title>decoindex — storefronts your agent can actually read</title>
 <meta name="description" content="Swap the origin of any VTEX or Shopify storefront URL for clean Markdown: title, variants, the price we saw, and a cart link for every item in stock.">
 <meta name="theme-color" content="#07401A">
+<!-- Everything that navigates away opens in a new tab, including the link the demo
+     widget builds. Same-page anchors opt back out with target="_self". -->
+<base target="_blank">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='16' fill='%23D0EC1A'/%3E%3C/svg%3E">
 <link rel="preload" href="https://www.decocms.com/fonts/switzer/Switzer-Variable.woff2" as="font" type="font/woff2" crossorigin="anonymous">
 <style>
@@ -104,7 +152,9 @@ header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.86);backdro
 .chip:hover{background:var(--paper-3)}
 
 /* ---- before / after ---- */
-.split{display:grid;gap:16px;grid-template-columns:1fr}
+/* align-items:start so each pane is its own height — the excerpt is short and
+   the full document is long, and stretching the short one leaves dead space. */
+.split{display:grid;gap:16px;grid-template-columns:1fr;align-items:start}
 @media(min-width:900px){.split{grid-template-columns:1fr 1fr;gap:24px}}
 .pane{border:1px solid var(--hairline);border-radius:16px;overflow:hidden;background:#fff}
 /* Wraps rather than pushing the content-type label off a narrow screen — the
@@ -112,9 +162,15 @@ header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.86);backdro
 .pane header{position:static;background:var(--paper-3);border:0;border-bottom:1px solid var(--hairline);
   padding:12px 18px;font-size:13px;color:var(--muted);
   display:flex;justify-content:space-between;gap:4px 12px;flex-wrap:wrap}
-.pane pre{margin:0;padding:18px;overflow:auto;max-height:340px;
-  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.65;color:#3f3a37}
-.pane.bad pre{color:var(--faint)}
+.pane header a{color:var(--soft);text-decoration:none;border-bottom:1px solid rgba(94,117,0,.28)}
+.pane header a:hover{border-bottom-color:var(--soft)}
+/* Tall enough to read, scrollable for the rest: this is the whole document. */
+.pane pre{margin:0;padding:18px;overflow:auto;max-height:min(60vh,520px);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.65;color:#3f3a37;
+  white-space:pre;tab-size:2}
+.pane.bad pre{color:var(--faint);white-space:pre-wrap;word-break:break-all;max-height:200px}
+.pane-note{margin:0;padding:12px 18px;border-top:1px solid var(--hairline);
+  font-size:12.5px;line-height:1.5;color:var(--muted);background:var(--paper-2)}
 
 /* ---- feature rows ---- */
 .rows{border-top:1px solid var(--hairline)}
@@ -157,11 +213,11 @@ footer{border-top:1px solid var(--hairline);padding:36px 0;font-size:13px;color:
 
 <header>
   <div class="wrap hd">
-    <a class="brand" href="/"><b>decoindex</b><span>commerce index by decocms.com</span></a>
+    <a class="brand" href="/" target="_self"><b>decoindex</b><span>commerce index by decocms.com</span></a>
     <nav>
       <a class="hide-sm" href="/llms.txt">llms.txt</a>
       <a class="hide-sm" href="/about">About</a>
-      <a href="#claim" class="btn btn-ink" style="padding:8px 18px;font-size:14px">Claim your store</a>
+      <a href="#claim" target="_self" class="btn btn-ink" style="padding:8px 18px;font-size:14px">Claim your store</a>
     </nav>
   </div>
 </header>
@@ -170,9 +226,9 @@ footer{border-top:1px solid var(--hairline);padding:36px 0;font-size:13px;color:
   <div class="wrap">
     <h1 class="enter">Storefronts your agent<br>can actually read.<br><span class="dim">One URL swap.</span></h1>
     <p class="lede enter" style="--d:120ms">
-      Ask most storefronts for a product page and the price isn't in the HTML. It arrives
-      later, from JavaScript you'd have to run yourself. Point the same URL here and you
-      get the title, the variants, the price, and a link that drops the item into a cart.
+      Ask a storefront for a product page and you get a megabyte of markup with the details
+      scattered through script tags. Point the same URL here and you get the title, every
+      variant with its own price and stock, and a link that drops the item into a cart.
     </p>
 
     <div class="demo enter" style="--d:220ms">
@@ -195,7 +251,7 @@ footer{border-top:1px solid var(--hairline);padding:36px 0;font-size:13px;color:
     </div>
 
     <div class="cta-row enter" style="--d:300ms">
-      <a class="btn btn-lime" href="#try">See a real response ↓</a>
+      <a class="btn btn-lime" href="#try" target="_self">See a real response ↓</a>
       <a class="btn btn-ghost" href="/llms.txt">Read the spec</a>
     </div>
     <p class="fine enter" style="--d:340ms">Open it in a browser, curl it, or hand it straight to a model. Public catalog data only.</p>
@@ -204,43 +260,25 @@ footer{border-top:1px solid var(--hairline);padding:36px 0;font-size:13px;color:
 
 <section id="try">
   <div class="wrap">
-    <h2>The same product page, twice.<br><span class="dim">~900 KB of HTML, or 2 KB you can use.</span></h2>
-    <div class="split" style="margin-top:36px">
+    <h2>The same product page, twice.<br><span class="dim">{{htmlSize}} of HTML, or {{mdSize}} you can use.</span></h2>
+    <p class="fine">Both panes are live. Open either one and check.</p>
+    <div class="split" style="margin-top:28px">
       <div class="pane bad">
-        <header><span>GET www.farmrio.com.br/…/p</span><span>text/html</span></header>
-<pre>&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;script&gt;
-window.__RUNTIME__={"account":"lojafarm",…
-&lt;/script&gt;&lt;link rel=preload as=script …
-&lt;div id="__next"&gt;&lt;div class="vtex-flex-
-layout-0-x-flexRow"&gt;&lt;div class="vtex-
-store-components-3-x-container"&gt;…
-
-&lt;!-- price is rendered client-side --&gt;
-&lt;!-- variants come from a second XHR --&gt;
-&lt;!-- 41 more script tags --&gt;</pre>
+        <header>
+          <a href="{{merchantUrl}}" target="_blank" rel="noopener">GET {{merchantUrlShort}} ↗</a>
+          <span>text/html · {{htmlSize}}</span>
+        </header>
+<pre>{{htmlHead}}</pre>
+        <p class="pane-note">Excerpt. The formatted price a shopper sees never appears in this
+           document — only a bare <code>419</code>, inside a JSON-LD script tag, 70 scripts deep.</p>
       </div>
       <div class="pane">
-        <header><span>GET decoindex.com/farmrio.com.br/…/p</span><span>text/markdown</span></header>
-<pre>---
-type: product
-canonical_url: https://www.farmrio.com.br/…
-platform: vtex
-currency: BRL
-price: 41900
-availability: InStock
-live_commercial_data: false
----
-
-# Copo Quencher Stanley Destiny x Farm Rio
-
-**Brand:** Farm
-**Category:** Moda Feminina > Acessórios
-**Price observed:** R$ 419,00 · in stock
-
-## Variants
-| SKU    | tamanho | Price     | Stock    | Add to cart |
-|--------|---------|----------:|----------|-------------|
-| 374774 | U       | R$ 419,00 | in stock | …/checkout/cart/add?sku=… |</pre>
+        <header>
+          <a href="{{sampleUrl}}" target="_blank" rel="noopener">GET {{sampleUrlShort}} ↗</a>
+          <span>text/markdown · {{mdSize}}</span>
+        </header>
+<pre>{{sampleMd}}</pre>
+        <p class="pane-note">The whole document, exactly as served right now.</p>
       </div>
     </div>
   </div>

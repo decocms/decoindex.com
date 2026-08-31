@@ -13,7 +13,7 @@ import {
   renderProduct,
   type RenderCtx,
 } from "./render/markdown";
-import { LANDING_HTML } from "./render/landing";
+import { SAMPLE, landingHtml } from "./render/landing";
 
 type Ctx = { Bindings: Env };
 const app = new Hono<Ctx>();
@@ -39,7 +39,22 @@ const TTL = {
 
 app.get("/healthz", (c) => c.text("ok"));
 
-app.get("/", (c) => c.html(LANDING_HTML));
+/**
+ * The comparison on the landing page shows the real current document, read out
+ * of our own KV — never fetched from the merchant, so the landing page stays
+ * within invariant 1 and costs one KV read.
+ */
+app.get("/", async (c) => {
+  const stored = await readDoc(c.env, docKey(SAMPLE.domain, SAMPLE.path, "")).catch(() => null);
+  const body = landingHtml(c.env.PUBLIC_ORIGIN, stored?.status === 200 ? stored.body : null);
+  // Warm the sample on the first ever request so the next visitor sees it.
+  if (!stored) {
+    c.executionCtx.waitUntil(
+      fetch(`${new URL(c.req.url).origin}/${SAMPLE.domain}${SAMPLE.path}`).then(() => {}, () => {}),
+    );
+  }
+  return c.html(body);
+});
 
 app.get("/robots.txt", (c) =>
   c.text(
