@@ -1,0 +1,100 @@
+{
+  "runAt": "2026-08-31T23:10:05.707Z",
+  "base": "http://127.0.0.1:8799",
+  "model": "claude-sonnet-5",
+  "reps": 1,
+  "tokensExact": false,
+  "git": null,
+  "stale": [],
+  "layer1": [
+    {
+      "brand": "Farm Rio",
+      "domain": "farmrio.com.br",
+      "platform": "vtex",
+      "groundTruth": {
+        "path": "/copo-quencher-stanley-woods-x-farm-rio-887ml-multicolorido-374773-2276/p",
+        "title": "Copo Quencher Stanley Woods x Farm Rio 887ml",
+        "priceMinor": 41900,
+        "currency": "BRL",
+        "variants": [
+          "U"
+        ],
+        "totalInListing": 24
+      },
+      "site": {
+        "url": "https://www.farmrio.com.br/copo-quencher-stanley-woods-x-farm-rio-887ml-multicolorido-374773-2276/p",
+        "status": 200,
+        "contentType": "text/html",
+        "bytes": 1316680,
+        "tokens": 329170,
+        "tokensEstimated": true,
+        "msFirst": 36,
+        "msWarm": 30,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      },
+      "decoindex": {
+        "url": "http://127.0.0.1:8799/farmrio.com.br/copo-quencher-stanley-woods-x-farm-rio-887ml-multicolorido-374773-2276/p",
+        "status": 200,
+        "contentType": "text/markdown",
+        "bytes": 5113,
+        "tokens": 1278,
+        "tokensEstimated": true,
+        "msFirst": 18,
+        "msWarm": 3,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      }
+    }
+  ],
+  "layer2": [
+    {
+      "brand": "Farm Rio",
+      "domain": "farmrio.com.br",
+      "arm": "site",
+      "rep": 1,
+      "ok": true,
+      "wallMs": 17576,
+      "durationMs": null,
+      "costUsd": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "numTurns": null,
+      "answer": null,
+      "error": null,
+      "grade": {
+        "parsed": false,
+        "priceOk": false,
+        "variantF1": 0
+      }
+    },
+    {
+      "brand": "Farm Rio",
+      "domain": "farmrio.com.br",
+      "arm": "decoindex",
+      "rep": 1,
+      "ok": true,
+      "wallMs": 31609,
+      "durationMs": null,
+      "costUsd": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "numTurns": null,
+      "answer": null,
+      "error": null,
+      "grade": {
+        "parsed": false,
+        "priceOk": false,
+        "variantF1": 0
+      }
+    }
+  ]
+}

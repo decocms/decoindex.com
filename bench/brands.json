@@ -1,0 +1,73 @@
+[
+  {
+    "brand": "Farm Rio",
+    "domain": "farmrio.com.br",
+    "origin": "https://www.farmrio.com.br",
+    "platform": "vtex",
+    "account": "lojafarm",
+    "listing": "/moda-feminina/acessorios"
+  },
+  {
+    "brand": "Fila",
+    "domain": "fila.com.br",
+    "origin": "https://www.fila.com.br",
+    "platform": "vtex",
+    "account": "fila",
+    "listing": "/calcado/tenis"
+  },
+  {
+    "brand": "Osklen",
+    "domain": "osklen.com.br",
+    "origin": "https://www.osklen.com.br",
+    "platform": "vtex",
+    "account": "osklenbr",
+    "listing": "/masculino/vestuario"
+  },
+  {
+    "brand": "Monte Carlo",
+    "domain": "montecarlo.com.br",
+    "origin": "https://www.montecarlo.com.br",
+    "platform": "vtex",
+    "account": "montecarlo",
+    "listing": "/joias"
+  },
+  {
+    "brand": "Lojas Torra",
+    "domain": "lojastorra.com.br",
+    "origin": "https://www.lojastorra.com.br",
+    "platform": "vtex",
+    "account": "torratorra",
+    "listing": "/feminino/vestidos-e-macacoes"
+  },
+  {
+    "brand": "Bagaggio",
+    "domain": "bagaggio.com.br",
+    "origin": "https://www.bagaggio.com.br",
+    "platform": "vtex",
+    "account": "lojabagaggio",
+    "listing": "/malas/mala-media"
+  },
+  {
+    "brand": "Technos",
+    "domain": "technos.com.br",
+    "origin": "https://www.technos.com.br",
+    "platform": "vtex",
+    "account": "timecenter",
+    "listing": "/relogio/fossil"
+  },
+  {
+    "brand": "Le Biscuit",
+    "domain": "lebiscuit.com.br",
+    "origin": "https://www.lebiscuit.com.br",
+    "platform": "vtex",
+    "account": "lebiscuit",
+    "listing": "/bebe/hora-de-comer"
+  },
+  {
+    "brand": "Allbirds",
+    "domain": "allbirds.com",
+    "origin": "https://www.allbirds.com",
+    "platform": "shopify",
+    "listing": "/collections/mens"
+  }
+]

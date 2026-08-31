@@ -249,5 +249,35 @@ await check("a brand write does not break the domain it describes", async () => 
   assert.match(listing.body, /^total_results: \d+$/m);
 });
 
+/**
+ * ChatGPT's browser refuses text/markdown outright and reports the site as
+ * broken. Anything that does not ask for markdown by name must get text/plain,
+ * on a cold read and on a cached one.
+ */
+await check("clients that can't read markdown get text/plain", async () => {
+  const accepts = [
+    undefined,
+    "*/*",
+    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  ];
+  for (const accept of accepts) {
+    // Twice: the second is an edge-cache hit, which must relabel too.
+    for (const pass of ["cold", "cached"]) {
+      const res = await fetch(BASE + VTEX_PDP, { headers: accept ? { accept } : {} });
+      const ct = res.headers.get("content-type") ?? "";
+      assert.match(ct, /^text\/plain/, `${pass} accept=${accept ?? "(none)"} got ${ct}`);
+    }
+  }
+});
+
+await check("clients that ask for markdown still get it", async () => {
+  for (const accept of ["text/markdown", "text/markdown, text/plain;q=0.9"]) {
+    const res = await fetch(BASE + VTEX_PDP, { headers: { accept } });
+    assert.match(res.headers.get("content-type") ?? "", /^text\/markdown/, `accept=${accept}`);
+  }
+  const json = await fetch(BASE + VTEX_PDP + ".json");
+  assert.match(json.headers.get("content-type") ?? "", /^application\/json/);
+});
+
 console.log(failures ? `\n${failures} check(s) failed` : "\nall checks passed");
 process.exit(failures ? 1 : 0);

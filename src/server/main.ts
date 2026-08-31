@@ -92,6 +92,18 @@ app.get("/robots.txt", (c) =>
       "Allow: /og.png",
       "Disallow: /",
       "",
+      // Named explicitly so there is no ambiguity for the clients that matter.
+      "User-agent: GPTBot",
+      "User-agent: ChatGPT-User",
+      "User-agent: OAI-SearchBot",
+      "User-agent: ClaudeBot",
+      "User-agent: Claude-User",
+      "User-agent: Claude-SearchBot",
+      "User-agent: PerplexityBot",
+      "User-agent: Perplexity-User",
+      "User-agent: Google-Extended",
+      "Allow: /",
+      "",
       "User-agent: *",
       "Allow: /",
       "",
@@ -281,7 +293,7 @@ app.get("*", async (c) => {
   const hit = await cache.match(cacheReq);
   if (hit) {
     logRead(c.env, c.executionCtx, c.req.raw, { domain, surface, started, cache: "edge", ext, status: hit.status });
-    return hit;
+    return forClient(hit, c.req.header("accept") ?? null);
   }
 
   // Layer 2: KV — the persistent index. Serve stale, refresh behind the reader.
@@ -298,7 +310,7 @@ app.get("*", async (c) => {
     const res = toResponse(stored, surface, c.env.PUBLIC_ORIGIN);
     if (stored.status === 200) c.executionCtx.waitUntil(cache.put(cacheReq, res.clone()));
     logRead(c.env, c.executionCtx, c.req.raw, { domain, surface, started, cache: "kv", ext, status: stored.status });
-    return res;
+    return forClient(res, c.req.header("accept") ?? null);
   }
 
   // Layer 3: resolve it live, once.
@@ -307,7 +319,7 @@ app.get("*", async (c) => {
   c.executionCtx.waitUntil(writeDoc(c.env, kvKey, fresh));
   if (fresh.status === 200) c.executionCtx.waitUntil(cache.put(cacheReq, res.clone()));
   logRead(c.env, c.executionCtx, c.req.raw, { domain, surface, started, cache: "miss", ext, status: fresh.status });
-  return res;
+  return forClient(res, c.req.header("accept") ?? null);
 });
 
 /**
@@ -462,6 +474,34 @@ function renderMarkdown(shop: Storefront, doc: Doc, path: string, rctx: RenderCt
 
 // ------------------------------------------------------------------ responses
 
+/**
+ * `text/markdown` is the honest label and it is also, in practice, unreadable.
+ *
+ * ChatGPT's browser refuses it outright — "unsupported content-type" — and then
+ * tells the user decoindex is broken. Other fetchers download it instead of
+ * showing it. A service whose whole point is being readable by agents cannot
+ * ship a MIME type the largest agent rejects, however correct that type is.
+ *
+ * So: markdown only for clients that ask for it by name; `text/plain` for
+ * everyone else. The bytes are identical either way — this changes the envelope,
+ * not the document.
+ */
+function negotiate(stored: string, accept: string | null): string {
+  if (!stored.startsWith("text/markdown")) return stored;
+  return /text\/(x-)?markdown/i.test(accept ?? "") ? stored : "text/plain; charset=utf-8";
+}
+
+/**
+ * The cache always holds the canonical `text/markdown` document; this relabels
+ * it for the caller on the way out. Storing one entry per Accept would multiply
+ * the index for zero difference in bytes.
+ */
+function forClient(res: Response, accept: string | null): Response {
+  const out = new Response(res.body, res);
+  out.headers.set("content-type", negotiate(res.headers.get("content-type") ?? "", accept));
+  return out;
+}
+
 function toResponse(doc: StoredDoc, surface: string, origin: string): Response {
   const ttl = doc.status === 200 ? (TTL[surface as keyof typeof TTL] ?? TTL.product) : TTL.problem;
   return new Response(doc.body, {
@@ -469,9 +509,15 @@ function toResponse(doc: StoredDoc, surface: string, origin: string): Response {
     headers: {
       "content-type": doc.contentType,
       "cache-control": `public, max-age=${ttl.browser}, s-maxage=${ttl.edge}`,
-      // Invariant 3: a mirror, not a competitor for the merchant's SEO.
-      "x-robots-tag": "noindex, nofollow",
+      // Invariant 3: a mirror, not a competitor for the merchant's SEO — but
+      // only `noindex`. `nofollow` was also telling every crawler not to follow
+      // the links on the page, and every link here points at the merchant. It
+      // suppressed exactly the traffic this service exists to send them.
+      "x-robots-tag": "noindex",
       "access-control-allow-origin": "*",
+      // The body is identical but the content-type is negotiated, so a shared
+      // cache must not hand a markdown-typed response to a client that cannot read it.
+      vary: "Accept",
       link: [
         `<${doc.canonical}>; rel="canonical"`,
         `<${origin}/llms.txt>; rel="llms-txt"; type="text/plain"`,
