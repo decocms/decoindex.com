@@ -72,7 +72,9 @@ header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.86);backdro
 .hd nav{margin-left:auto;display:flex;align-items:center;gap:8px}
 .hd nav a{font-size:14px;color:var(--muted);text-decoration:none;padding:8px 10px;transition:color .3s}
 .hd nav a:hover{color:var(--ink)}
-@media(max-width:640px){.hd nav a.hide-sm{display:none}}
+/* The wordmark keeps its own line at every width; the tagline is the first
+   thing to go, along with the secondary nav. */
+@media(max-width:640px){.hd nav a.hide-sm,.hd .brand span{display:none}}
 
 /* ---- hero ---- */
 .hero{padding-top:64px;padding-bottom:24px}
@@ -105,8 +107,11 @@ header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.86);backdro
 .split{display:grid;gap:16px;grid-template-columns:1fr}
 @media(min-width:900px){.split{grid-template-columns:1fr 1fr;gap:24px}}
 .pane{border:1px solid var(--hairline);border-radius:16px;overflow:hidden;background:#fff}
+/* Wraps rather than pushing the content-type label off a narrow screen — the
+   two labels are the whole point of the before/after comparison. */
 .pane header{position:static;background:var(--paper-3);border:0;border-bottom:1px solid var(--hairline);
-  padding:12px 18px;font-size:13px;color:var(--muted);display:flex;justify-content:space-between;gap:12px}
+  padding:12px 18px;font-size:13px;color:var(--muted);
+  display:flex;justify-content:space-between;gap:4px 12px;flex-wrap:wrap}
 .pane pre{margin:0;padding:18px;overflow:auto;max-height:340px;
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.65;color:#3f3a37}
 .pane.bad pre{color:var(--faint)}
@@ -152,7 +157,7 @@ footer{border-top:1px solid var(--hairline);padding:36px 0;font-size:13px;color:
 
 <header>
   <div class="wrap hd">
-    <a class="brand" href="/"><b>decoindex</b><span>by deco</span></a>
+    <a class="brand" href="/"><b>decoindex</b><span>commerce index by decocms.com</span></a>
     <nav>
       <a class="hide-sm" href="/llms.txt">llms.txt</a>
       <a class="hide-sm" href="/about">About</a>
@@ -325,7 +330,7 @@ live_commercial_data: false
 
 <footer>
   <div class="wrap foot">
-    <span>decoindex — built by <a href="https://decocms.com">deco</a></span>
+    <span>decoindex — commerce index by <a href="https://decocms.com">decocms.com</a></span>
     <span class="sp"></span>
     <a href="/about">About</a>
     <a href="/llms.txt">llms.txt</a>
