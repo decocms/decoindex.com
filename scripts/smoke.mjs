@@ -130,6 +130,17 @@ await check("Shopify product: currency detected from meta.json", async () => {
   assert.match(body, /^type: product$/m);
 });
 
+await check("Shopify tags are words, not characters", async () => {
+  const { body } = await get(SHOPIFY_PDP);
+  const tags = [...body.matchAll(/^- \*\*tag:\*\* (.*)$/gm)].map((m) => m[1]);
+  // tags is a comma-separated string on this endpoint; iterating it yields one
+  // claim per letter. A single-character tag is the signature of that bug.
+  const singles = tags.filter((t) => t.length <= 1);
+  assert.equal(singles.length, 0, `tags split into characters: ${tags.slice(0, 8).join("|")}`);
+  // Internal metafield tags are noise an agent can't use.
+  assert.ok(!tags.some((t) => t.includes("::") || t.includes("=>")), "internal tags leaked");
+});
+
 await check("Shopify collection resolves", async () => {
   const { res, body } = await get("/allbirds.com/collections/mens");
   assert.equal(res.status, 200);

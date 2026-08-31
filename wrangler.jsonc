@@ -32,9 +32,8 @@
 
   "vars": {
     // Pinned, not derived from the request: rendered documents embed this in
-    // their own links and are cached, so it must not vary by hostname. Switch to
-    // https://decoindex.com once the zone is on Cloudflare, then flush KV.
-    "PUBLIC_ORIGIN": "https://decoindex.deco-ceo.workers.dev",
+    // their own links and are cached, so it must not vary by hostname.
+    "PUBLIC_ORIGIN": "https://decoindex.com",
     "ATTRIBUTION_PARAM": "ref",
     "ATTRIBUTION_VALUE": "decoindex"
   }

@@ -121,7 +121,7 @@ function toProduct(p: ShopifyProduct, shop: Storefront): Product {
       confidence: "asserted",
     });
   }
-  for (const tag of (p.tags ?? []).slice(0, 20)) {
+  for (const tag of publishableTags(p.tags)) {
     claims.push({
       predicate: "tag",
       value: tag,
@@ -143,6 +143,26 @@ function toProduct(p: ShopifyProduct, shop: Storefront): Product {
     claims,
     observedAt,
   };
+}
+
+/**
+ * `tags` is an array on the collection endpoints and a comma-separated *string*
+ * on /products/{handle}.json. Iterating the string yields one claim per
+ * character, which shipped once: a product page listing `tag: a`, `tag: l`,
+ * `tag: l`, `tag: b`... spelling out the merchant's first tag one letter at a
+ * time. Normalize the type before anything else touches it.
+ *
+ * Then drop the internal ones. Themes and apps stash machine state in tags
+ * (`allbirds::cfId => color-187a11c8`, `carbon-score => undefined`), and a
+ * namespace separator or a fat arrow is the reliable tell. An agent learns
+ * nothing from those, and they crowd out the tags a shopper would recognise.
+ */
+function publishableTags(raw: string | string[] | undefined): string[] {
+  const all = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(",") : [];
+  return all
+    .map((t) => t.trim())
+    .filter((t) => t && !t.includes("::") && !t.includes("=>"))
+    .slice(0, 20);
 }
 
 /**
@@ -203,7 +223,8 @@ interface ShopifyProduct {
   vendor?: string;
   body_html?: string;
   product_type?: string;
-  tags?: string[];
+  /** Array on collection endpoints, comma-separated string by handle. */
+  tags?: string[] | string;
   options?: { name: string }[];
   images?: { src: string }[];
   variants?: ShopifyVariant[];
