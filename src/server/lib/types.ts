@@ -1,9 +1,9 @@
-export type Platform = "vtex" | "shopify" | "nuvemshop" | "tray" | "unknown";
+export type Platform = "vtex" | "shopify" | "unknown";
 
-export type IndexStatus =
-  | "queued" // known domain, nothing ingested yet
-  | "discovered" // built from public sources only
-  | "merchant-verified" // merchant claimed the domain and connected a source
+export type DomainStatus =
+  | "active" // supported platform, serving
+  | "unsupported" // reachable, but not a platform we can read
+  | "blocked" // the origin refuses us (403 / WAF)
   | "opted-out"; // merchant asked us to stop
 
 export type Confidence = "asserted" | "verified" | "inferred";
@@ -27,6 +27,8 @@ export interface Variant {
   /** Public availability signal only. Never a delivery promise. */
   available?: boolean;
   attributes: Record<string, string>; // size, color, ...
+  /** Deep link that creates a cart on the merchant's own checkout. */
+  cartUrl?: string;
 }
 
 export interface Product {
@@ -42,20 +44,34 @@ export interface Product {
   observedAt: string;
 }
 
-export interface StorefrontMeta {
+/** What we know about a storefront. Comes straight from the registry row. */
+export interface Storefront {
   domain: string;
   platform: Platform;
-  status: IndexStatus;
+  origin: string;
   name?: string;
-  locale: string;
+  account?: string;
   currency: string;
-  productCount: number;
-  catalogFreshness?: string; // ISO
-  lastError?: string;
+  country?: string;
 }
 
-export interface SearchHit {
-  product: Product;
-  score: number;
-  why: string[]; // human/agent-readable reasons the hit matched
+export interface CategoryRef {
+  /** Path on the merchant's own site, so `{origin}/{domain}{path}` just works. */
+  path: string;
+  name: string;
+  count?: number;
 }
+
+/** What a resolver returns for one URL. */
+export type Doc =
+  | { kind: "product"; product: Product }
+  | {
+      kind: "listing";
+      title: string;
+      description?: string;
+      total?: number;
+      page: number;
+      products: Product[];
+    }
+  | { kind: "home"; categories: CategoryRef[] }
+  | { kind: "notfound" };

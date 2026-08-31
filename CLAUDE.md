@@ -16,11 +16,16 @@ reach for us instead of scraping?
 
 Break these and the service stops being viable. They are not preferences.
 
-**1. Reads never crawl.** A request is served from the edge cache, from the
-Durable Object, or as a `queued` stub. Fetching a merchant page inside a
-request handler is forbidden — it would let anyone knock us over, and it puts
-our latency at the mercy of someone else's storefront. All fetching happens on
-the queue, driven by cron or by a job a read enqueued.
+**1. Reads are bounded, and never crawl.** A request is served from the edge
+cache, from KV, or by resolving *that one URL* against the merchant's public
+platform API — at most two upstream calls, a 5s timeout each, rate-limited per
+domain, and negative-cached. A read never enumerates a catalog and never renders
+HTML. A cold domain additionally pays one detection handshake, once, ever.
+
+This is what makes "swap the origin and it just works" true, and the bound is
+what stops anyone using us as an amplifier against a storefront. Bulk indexing
+and search are the paid tier and run off the request path. If you find yourself
+adding a third upstream call to a read, you are building the wrong thing.
 
 **2. Catalog facts and commercial facts are never mixed.** Title, attributes,
 variants, categories, observed base price: indexable, cacheable, ours to
@@ -39,47 +44,67 @@ outranks a merchant's own PDP is the day the commercial conversation ends.
 
 ```
 Worker (Hono)  src/server/main.ts
-  GET *  -> parsePath -> Cache API -> StorefrontDO -> Markdown/JSON
-  queue()     -> ingest pipeline
-  scheduled() -> refresh the 20 stalest storefronts, hourly
+  GET /{domain}/{...path}
+    1. Cache API          hit -> return
+    2. KV  md:{domain}{path}   hit -> return (+ refresh in waitUntil if stale)
+    3. miss:
+         D1 registry -> platform, or detectPlatform() once
+         platform/resolve() -> Doc      <= 2 upstream calls, 5s each
+         render/markdown.ts -> Markdown or JSON
+         waitUntil: KV put (no TTL), D1 event
 
-StorefrontDO   one per domain, idFromName(domain)
-  SQLite: products, variants, terms (inverted index), vectors (int8)
-  hybrid search: BM25 + cosine, fused with RRF
+src/server/platform/   detect.ts + vtex.ts + shopify.ts, one resolve() each
+src/server/render/     markdown.ts (documents) + landing.ts (the / page)
 
-D1   the registry (which domains exist) + first-party events
-R2   raw source snapshots (reprocess without re-crawling)
-KV   per-domain ingest locks
+D1   registry: which domains exist, platform, origin, account, currency
+     + the append-only events table
+KV   rendered documents. Written WITHOUT a TTL — this is the index, not a cache
 ```
 
-Ingestion never renders pages when it can avoid it. Platform detection decides
-everything: VTEX and Shopify hand over the whole catalog as JSON. That is why
-`src/server/ingest/detect.ts` matters more than it looks.
+Platform detection decides everything: VTEX and Shopify address their catalog
+JSON with the same paths their storefront uses, which is the entire reason a URL
+swap can work without a crawl. That is why `src/server/platform/detect.ts`
+matters more than it looks.
+
+Supported: VTEX, Shopify. Wake needs a per-merchant `TCS-Access-Token`, so it
+cannot be zero-config — it belongs to the paid tier, not here.
 
 ## Conventions
 
 - `src/server/env.ts` mirrors `wrangler.jsonc` by hand. Secrets are optional so
   unconfigured features degrade instead of crashing.
 - `npm run check` (`tsc --noEmit`) stays green. Always.
-- Business logic is plain functions taking `env`. Routes, queue consumers and
-  scripts all call the same functions; nothing is coupled to a transport.
-- Tokenization lives in one module (`lib/text.ts`) because index time and query
-  time must agree exactly. Never inline a second tokenizer.
-- Prices are integers in centavos. No floats anywhere near money.
+- Business logic is plain functions taking `env`. Nothing is coupled to a transport.
+- A resolver returns a `Doc` (`lib/types.ts`); only `render/` knows about Markdown.
+  Adding a platform means one file and one `case` in `platform/index.ts`.
+- Prices are integers in minor units. No floats anywhere near money.
+- `npm run smoke` runs the real end-to-end journey against live storefronts. It
+  discovers an in-stock product rather than hardcoding one, because a hardcoded
+  SKU passes until it sells out and then reports a bug that isn't there.
 
 ## Gotchas already paid for
 
-1. DO SQLite row types need `extends Record<string, SqlStorageValue>` or `exec<T>`
-   refuses them.
-2. Vectors are cached in DO memory (`vecCache`) and invalidated on write. Reading
-   10MB of blobs per query from SQLite is the difference between 5ms and 500ms.
-3. VTEX refuses `_to` beyond 2500. Past that, paginate by category, not offset.
-4. Shopify `/products.json` pages are 1-indexed; VTEX cursors are 0-indexed
-   offsets. `pipeline.ts` tracks both in the same `cursor` field — read it.
-5. Queue retries only on total failure. Upserts are idempotent, so a half-applied
-   catalog page is fine; the next cron pass finishes it.
-6. Embeddings must be multilingual (`bge-m3`). An English-only model ranks a
-   pt-BR catalog as noise, silently.
+1. **A miss is `200 []`, not 404.** VTEX and Shopify both answer a bad slug with
+   an empty body and a success status. Empty *is* the not-found signal; check the
+   payload, never the status.
+2. **Detection must check `content-type`.** A VTEX store answers `/products.json`
+   with `200 text/html` (its own 404 page). Status alone classifies half of
+   Brazilian ecommerce as Shopify.
+3. **VTEX `items[].variations` is an array of property *names*,** not a map. The
+   values live as top-level keys on the item: `variations: ["Tamanho"]` and
+   `item["Tamanho"]: ["U"]`. Reading it as a map silently yields an empty
+   variants table on every product — which shipped once already.
+4. **Shopify's two product endpoints disagree about stock.**
+   `/collections/{h}/products.json` returns `available` and no inventory numbers;
+   `/products/{handle}.json` returns inventory numbers and no `available`.
+   Reading only `available` marks every product fetched by handle as sold out.
+   See `availability()` in `platform/shopify.ts`.
+5. **`workerd`'s fetch is not your laptop's fetch.** A WAF that returns 403 to
+   curl can return 404 or 500 to the Worker. Treat 5xx on a public catalog
+   endpoint as a block, not as "unsupported platform".
+6. **Only `active` domains get a registry row.** A failed detection is remembered
+   by the expiring negative KV entry instead, so a merchant who lifts a block or
+   migrates platforms starts working on its own rather than being wrong forever.
 
 ## The improvement loop
 

@@ -1,19 +1,21 @@
 import type { Env } from "../env";
-import type { IndexStatus, Platform } from "./types";
+import type { DomainStatus, Platform } from "./types";
 
 /**
- * The registry is the global view: which domains we know, how they were
- * discovered, when they were last refreshed. The DO owns one storefront's
- * data; D1 owns the list of storefronts and everything cross-cutting.
+ * The registry answers one question on the read path: for this domain, which
+ * platform API do I call and at which origin? Everything else here is bookkeeping.
  */
 
 export interface RegistryRow {
   domain: string;
-  status: IndexStatus;
+  status: DomainStatus;
   platform: Platform;
-  priority: number; // 100 = seeded from Vitrine, 10 = discovered from traffic
-  product_count: number;
-  last_refresh: string | null;
+  origin: string | null;
+  account: string | null;
+  merchant_name: string | null;
+  currency: string;
+  country: string | null;
+  detected_at: string | null;
   last_error: string | null;
 }
 
@@ -21,52 +23,51 @@ export async function getDomain(env: Env, domain: string): Promise<RegistryRow |
   return env.DB.prepare("SELECT * FROM domains WHERE domain = ?").bind(domain).first<RegistryRow>();
 }
 
+/**
+ * Partial upsert. Every optional column binds a real NULL so the COALESCE in the
+ * conflict branch actually preserves the existing value — the previous version
+ * defaulted `status` to a non-null string, which silently clobbered it on every
+ * write, and bound NULL into NOT NULL columns, which threw on the first insert.
+ */
 export async function upsertDomain(
   env: Env,
   domain: string,
   patch: Partial<Omit<RegistryRow, "domain">> = {},
 ): Promise<void> {
   await env.DB.prepare(
-    `INSERT INTO domains (domain, status, platform, priority, product_count, last_refresh, last_error)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO domains (domain, status, platform, origin, account, merchant_name, currency, country, detected_at, last_error)
+     VALUES (?, COALESCE(?, 'active'), COALESCE(?, 'unknown'), ?, ?, ?, COALESCE(?, 'BRL'), ?, ?, ?)
      ON CONFLICT(domain) DO UPDATE SET
        status        = COALESCE(excluded.status, domains.status),
        platform      = COALESCE(excluded.platform, domains.platform),
-       priority      = COALESCE(excluded.priority, domains.priority),
-       product_count = COALESCE(excluded.product_count, domains.product_count),
-       last_refresh  = COALESCE(excluded.last_refresh, domains.last_refresh),
+       origin        = COALESCE(excluded.origin, domains.origin),
+       account       = COALESCE(excluded.account, domains.account),
+       merchant_name = COALESCE(excluded.merchant_name, domains.merchant_name),
+       currency      = COALESCE(excluded.currency, domains.currency),
+       country       = COALESCE(excluded.country, domains.country),
+       detected_at   = COALESCE(excluded.detected_at, domains.detected_at),
        last_error    = excluded.last_error`,
   )
     .bind(
       domain,
-      patch.status ?? "queued",
+      patch.status ?? null,
       patch.platform ?? null,
-      patch.priority ?? null,
-      patch.product_count ?? null,
-      patch.last_refresh ?? null,
+      patch.origin ?? null,
+      patch.account ?? null,
+      patch.merchant_name ?? null,
+      patch.currency ?? null,
+      patch.country ?? null,
+      patch.detected_at ?? null,
       patch.last_error ?? null,
     )
     .run();
 }
 
-/** Stalest first, highest priority first — what the hourly cron refreshes. */
-export async function stalest(env: Env, limit: number): Promise<RegistryRow[]> {
-  const res = await env.DB.prepare(
-    `SELECT * FROM domains
-      WHERE status IN ('discovered','merchant-verified')
-      ORDER BY priority DESC, COALESCE(last_refresh, '1970') ASC
-      LIMIT ?`,
-  )
-    .bind(limit)
-    .all<RegistryRow>();
-  return res.results ?? [];
-}
-
 /**
  * First-party analytics. The Worker is the collector — no GA, no PostHog.
- * `surface` is what we actually care about: which representation agents pull.
+ * `ua_class` is the metric that decides whether this business exists.
  */
-export async function track(
+export function track(
   env: Env,
   ctx: { waitUntil(p: Promise<unknown>): void },
   event: {
@@ -78,7 +79,7 @@ export async function track(
     ms?: number;
     meta?: Record<string, unknown>;
   },
-): Promise<void> {
+): void {
   const stmt = env.DB.prepare(
     `INSERT INTO events (ts, name, domain, surface, ua_class, country, ms, meta)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -96,18 +97,20 @@ export async function track(
 }
 
 /**
- * The metric that decides whether this business exists: how much of our
- * traffic is agents, and which ones. Bucket rather than store raw UA.
+ * Bucket rather than store the raw UA. Order matters: `Claude-User` must be
+ * tested before the broader `claude` alternatives, and bare `Applebot` (which
+ * powers Siri web results) is a crawler, not an agent.
  */
 export function classifyClient(ua?: string): string {
   if (!ua) return "unknown";
   const u = ua.toLowerCase();
-  if (/gptbot|oai-searchbot|chatgpt/.test(u)) return "openai";
-  if (/claudebot|claude-web|anthropic/.test(u)) return "anthropic";
+  if (/gptbot|oai-searchbot|chatgpt-user|chatgpt/.test(u)) return "openai";
+  if (/claude-user|claudebot|claude-searchbot|claude-web|anthropic/.test(u)) return "anthropic";
   if (/perplexity/.test(u)) return "perplexity";
-  if (/google-extended|googleother/.test(u)) return "google-ai";
-  if (/bytespider|amazonbot|ccbot|applebot/.test(u)) return "other-crawler";
-  if (/curl|wget|python|node-fetch|axios|go-http/.test(u)) return "script";
+  if (/google-extended|googleother|gemini/.test(u)) return "google-ai";
+  if (/bytespider|amazonbot|ccbot|applebot|meta-externalagent/.test(u)) return "other-crawler";
+  if (/googlebot|bingbot|duckduckbot|yandex|baiduspider/.test(u)) return "search-engine";
+  if (/curl|wget|python|node-fetch|axios|go-http|undici|okhttp/.test(u)) return "script";
   if (/mozilla|chrome|safari|firefox/.test(u)) return "browser";
   return "unknown";
 }

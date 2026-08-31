@@ -1,32 +1,18 @@
-import type { StorefrontDO } from "./do/storefront";
-
 export interface Env {
-  // Durable Objects
-  STOREFRONT: DurableObjectNamespace<StorefrontDO>;
-
-  // Storage
+  /** Registry (which domains exist, which platform) + first-party events. */
   DB: D1Database;
-  LOCKS: KVNamespace;
-  SNAPSHOTS: R2Bucket;
-
-  // Async
-  INGEST: Queue<IngestJob>;
-
-  // Inference
-  AI: Ai;
+  /** Rendered markdown, stored without a TTL. This *is* the lazy index. */
+  CACHE: KVNamespace;
 
   // Vars
   PUBLIC_ORIGIN: string;
   ATTRIBUTION_PARAM: string;
   ATTRIBUTION_VALUE: string;
-  EMBEDDING_MODEL: string;
 
-  // Secrets (optional -> features degrade instead of crashing)
-  ADMIN_TOKEN?: string;
+  /**
+   * Native rate limiter, keyed on merchant domain. Guards invariant 1: nobody
+   * gets to use us as an amplifier against a storefront. Optional so local dev
+   * and unconfigured deploys degrade instead of crashing.
+   */
+  READ_THROUGH?: { limit(o: { key: string }): Promise<{ success: boolean }> };
 }
-
-export type IngestJob =
-  | { kind: "discover"; domain: string; priority?: "high" | "low" }
-  | { kind: "catalog"; domain: string; cursor?: number }
-  | { kind: "embed"; domain: string; skuIds: string[] }
-  | { kind: "page"; domain: string; path: string };

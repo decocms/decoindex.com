@@ -1,4 +1,4 @@
-import type { Product, SearchHit, StorefrontMeta } from "../lib/types";
+import type { CategoryRef, Product, Storefront } from "../lib/types";
 import { canonicalUrl } from "../lib/url";
 
 /**
@@ -6,33 +6,70 @@ import { canonicalUrl } from "../lib/url";
  * this service could do is let an agent promise something the merchant cannot
  * honour, so durable catalog facts and volatile commercial facts are labelled
  * differently, always, in every surface.
+ *
+ * Size is a feature: an agent that has to fetch twice has been failed once. The
+ * caps below hold a product page to a couple of KB against ~1MB of HTML.
  */
+
+const MAX_VARIANTS = 40;
+const MAX_CLAIMS = 30;
+const MAX_CATEGORIES = 60;
 
 export interface RenderCtx {
   publicOrigin: string;
   attribution: { param: string; value: string };
 }
 
-const money = (minor?: number, currency = "BRL") =>
+const money = (minor: number | undefined, currency: string, locale = "pt-BR") =>
   minor === undefined
     ? "—"
-    : new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(minor / 100);
+    : new Intl.NumberFormat(currency === "BRL" ? locale : "en-US", {
+        style: "currency",
+        currency,
+      }).format(minor / 100);
 
-function frontmatter(fields: Record<string, string | number | undefined>): string {
+function frontmatter(fields: Record<string, string | number | boolean | undefined>): string {
   const lines = Object.entries(fields)
     .filter(([, v]) => v !== undefined && v !== "")
     .map(([k, v]) => `${k}: ${typeof v === "string" && /[:#]/.test(v) ? JSON.stringify(v) : v}`);
   return `---\n${lines.join("\n")}\n---\n`;
 }
 
-export function renderProduct(meta: StorefrontMeta, p: Product, ctx: RenderCtx): string {
-  const canonical = canonicalUrl(meta.domain, p.slug, ctx.attribution);
+/** The paragraph an agent needs before it says anything to a shopper. */
+function boundaries(): string[] {
+  return [
+    `## Before recommending or transacting\n`,
+    "Catalog facts above are observed and timestamped. These are **not** verified here",
+    "and must be confirmed with the merchant before any promise to a shopper:",
+    "live stock for the chosen variant, final price after cart-level promotions and",
+    "coupons, delivery date for the buyer's address, and return conditions.\n",
+  ];
+}
+
+function nextSteps(shop: Storefront, ctx: RenderCtx, extra: string[] = []): string[] {
+  const base = `${ctx.publicOrigin}/${shop.domain}`;
+  return [
+    `## Next steps\n`,
+    ...extra,
+    `- Any page of this storefront in Markdown: take its URL and swap the origin for \`${base}\``,
+    `- Storefront overview: ${base}/`,
+    `- Machine index: ${base}/llms.txt`,
+    `- Same document as JSON: append \`.json\` to this URL\n`,
+  ];
+}
+
+export function renderProduct(shop: Storefront, p: Product, ctx: RenderCtx): string {
+  const canonical = canonicalUrl(shop.domain, p.slug, ctx.attribution);
   const prices = p.variants.map((v) => v.priceMinor).filter((n): n is number => n !== undefined);
-  const priceLine = prices.length
-    ? prices.length > 1 && Math.min(...prices) !== Math.max(...prices)
-      ? `${money(Math.min(...prices))}–${money(Math.max(...prices))}`
-      : money(prices[0])
-    : "not published";
+  const min = prices.length ? Math.min(...prices) : undefined;
+  const max = prices.length ? Math.max(...prices) : undefined;
+  const priceLine =
+    min === undefined
+      ? "not published"
+      : min === max
+        ? money(min, shop.currency)
+        : `${money(min, shop.currency)}–${money(max, shop.currency)}`;
+  const inStock = p.variants.filter((v) => v.available);
 
   const out: string[] = [];
   out.push(
@@ -40,40 +77,51 @@ export function renderProduct(meta: StorefrontMeta, p: Product, ctx: RenderCtx):
       decoindex: "1.0",
       type: "product",
       canonical_url: canonical,
-      merchant: meta.name ?? meta.domain,
-      domain: meta.domain,
-      platform: meta.platform,
-      index_status: meta.status,
-      locale: meta.locale,
-      currency: meta.currency,
-      indexed_at: p.observedAt,
-      live_commercial_data: "false",
+      merchant: shop.name ?? shop.domain,
+      domain: shop.domain,
+      platform: shop.platform,
+      currency: shop.currency,
+      price: min,
+      availability: inStock.length ? "InStock" : "OutOfStock",
+      observed_at: p.observedAt,
+      live_commercial_data: false,
     }),
   );
 
   out.push(`# ${p.title}\n`);
   if (p.brand) out.push(`**Brand:** ${p.brand}  `);
   if (p.categories.length) out.push(`**Category:** ${p.categories.join(" > ")}  `);
-  out.push(`**Price observed:** ${priceLine}\n`);
+  out.push(`**Price observed:** ${priceLine} · ${inStock.length ? "in stock" : "sold out"}\n`);
   if (p.description) out.push(`${p.description}\n`);
 
   if (p.variants.length) {
-    const attrKeys = [...new Set(p.variants.flatMap((v) => Object.keys(v.attributes)))].slice(0, 4);
+    const attrKeys = [...new Set(p.variants.flatMap((v) => Object.keys(v.attributes)))].slice(0, 3);
     out.push(`## Variants\n`);
-    out.push(`| SKU | ${attrKeys.join(" | ")}${attrKeys.length ? " | " : ""}Price | Availability |`);
-    out.push(`|---|${attrKeys.map(() => "---|").join("")}---:|---|`);
-    for (const v of p.variants.slice(0, 60)) {
+    out.push(`| SKU | ${attrKeys.join(" | ")}${attrKeys.length ? " | " : ""}Price | Stock | Add to cart |`);
+    out.push(`|---|${attrKeys.map(() => "---|").join("")}---:|---|---|`);
+    for (const v of p.variants.slice(0, MAX_VARIANTS)) {
       const cells = attrKeys.map((k) => v.attributes[k] ?? "—");
       const avail =
-        v.available === undefined ? "verify live" : v.available ? "in stock (as indexed)" : "sold out (as indexed)";
-      out.push(`| ${v.skuId} | ${cells.length ? cells.join(" | ") + " | " : ""}${money(v.priceMinor, v.currency)} | ${avail} |`);
+        v.available === undefined ? "verify live" : v.available ? "in stock" : "sold out";
+      out.push(
+        `| ${v.skuId} | ${cells.length ? cells.join(" | ") + " | " : ""}${money(v.priceMinor, v.currency)} | ${avail} | ${v.cartUrl ?? "—"} |`,
+      );
+    }
+    if (p.variants.length > MAX_VARIANTS) {
+      out.push(`\n_${p.variants.length - MAX_VARIANTS} more variants not shown._`);
     }
     out.push("");
+    if (inStock.length) {
+      out.push(
+        `The cart link builds a cart on the merchant's own checkout and does **not** complete a purchase.`,
+        `Hand it to a person to review price, shipping and payment.\n`,
+      );
+    }
   }
 
   if (p.claims.length) {
     out.push(`## Product facts\n`);
-    for (const c of p.claims.slice(0, 40)) {
+    for (const c of p.claims.slice(0, MAX_CLAIMS)) {
       out.push(`- **${c.predicate.replace(/_/g, " ")}:** ${c.value}`);
     }
     out.push("");
@@ -85,173 +133,227 @@ export function renderProduct(meta: StorefrontMeta, p: Product, ctx: RenderCtx):
     out.push("");
   }
 
-  out.push(`## Before recommending or transacting\n`);
+  out.push(...boundaries());
   out.push(
-    [
-      "Verify against the merchant before making any promise to a shopper:",
-      "selected-size availability, final price after promotions, delivery date",
-      "for the buyer's address, and return conditions for this specific item.",
-    ].join(" ") + "\n",
+    ...nextSteps(shop, ctx, [
+      `- This product on the merchant's site: ${canonical}`,
+      ...(p.categories.length
+        ? [`- Browse the category: ${ctx.publicOrigin}/${shop.domain}/ (see the category list)`]
+        : []),
+    ]),
   );
-
   out.push(`## Evidence\n`);
-  out.push(`- Catalog facts: \`${sourceSummary(p)}\`, observed ${p.observedAt}`);
-  out.push(`- Index status: \`${meta.status}\`${meta.status === "discovered" ? " (public sources only, not merchant-confirmed)" : ""}`);
+  out.push(`- Source: \`${shop.platform}\` public catalog API on ${shop.domain}, read ${p.observedAt}`);
   out.push(`- Not verified here: live stock, final price, delivery promise, personalized offers`);
   out.push(`- Canonical source: ${canonical}\n`);
 
   return out.join("\n");
 }
 
-function sourceSummary(p: Product): string {
-  const sources = [...new Set(p.claims.map((c) => c.source))];
-  return sources.length ? sources.join(", ") : p.id.split(":")[0]!;
-}
-
-export function renderBrand(
-  meta: StorefrontMeta,
-  categories: { path: string; count: number }[],
-  sample: Product[],
+export function renderListing(
+  shop: Storefront,
+  doc: { title: string; description?: string; total?: number; page: number; products: Product[] },
+  path: string,
   ctx: RenderCtx,
 ): string {
-  const base = `${ctx.publicOrigin}/${meta.domain}`;
+  const base = `${ctx.publicOrigin}/${shop.domain}`;
+  const canonical = canonicalUrl(shop.domain, path, ctx.attribution);
+  const out: string[] = [];
+  out.push(
+    frontmatter({
+      decoindex: "1.0",
+      type: "product_list",
+      canonical_url: canonical,
+      merchant: shop.name ?? shop.domain,
+      domain: shop.domain,
+      platform: shop.platform,
+      title: doc.title,
+      total_results: doc.total,
+      page: doc.page,
+      shown: doc.products.length,
+      currency: shop.currency,
+      observed_at: new Date().toISOString(),
+      live_commercial_data: false,
+    }),
+  );
+  out.push(`# ${doc.title}\n`);
+  if (doc.description) out.push(`${doc.description}\n`);
+  out.push(
+    doc.total
+      ? `${doc.total} products. Showing ${doc.products.length} (page ${doc.page}).\n`
+      : `Showing ${doc.products.length} products (page ${doc.page}).\n`,
+  );
+
+  out.push(`| Product | Price | Was | Stock | Details |`);
+  out.push(`|---|---:|---:|---|---|`);
+  for (const p of doc.products) {
+    const prices = p.variants.map((v) => v.priceMinor).filter((n): n is number => n !== undefined);
+    const list = p.variants
+      .map((v) => v.listPriceMinor)
+      .filter((n): n is number => n !== undefined);
+    const price = prices.length ? Math.min(...prices) : undefined;
+    const was = list.length ? Math.max(...list) : undefined;
+    out.push(
+      `| ${p.title.replace(/\|/g, "/")} | ${money(price, shop.currency)} | ${
+        was && price && was > price ? money(was, shop.currency) : "—"
+      } | ${p.variants.some((v) => v.available) ? "yes" : "no"} | ${base}${p.slug} |`,
+    );
+  }
+  out.push("");
+
+  const nextPage = `${base}${path}?page=${doc.page + 1}`;
+  const hasMore = doc.total ? doc.page * doc.products.length < doc.total : doc.products.length >= 24;
+  out.push(...boundaries());
+  out.push(...nextSteps(shop, ctx, hasMore ? [`- Next page: ${nextPage}`] : []));
+  return out.join("\n");
+}
+
+export function renderHome(shop: Storefront, categories: CategoryRef[], ctx: RenderCtx): string {
+  const base = `${ctx.publicOrigin}/${shop.domain}`;
   const out: string[] = [];
   out.push(
     frontmatter({
       decoindex: "1.0",
       type: "storefront",
-      domain: meta.domain,
-      merchant: meta.name ?? meta.domain,
-      platform: meta.platform,
-      index_status: meta.status,
-      products_indexed: meta.productCount,
-      catalog_freshness: meta.catalogFreshness,
-      locale: meta.locale,
-      currency: meta.currency,
+      canonical_url: `https://${shop.origin.replace(/^https?:\/\//, "")}/`,
+      merchant: shop.name ?? shop.domain,
+      domain: shop.domain,
+      platform: shop.platform,
+      account: shop.account,
+      currency: shop.currency,
+      country: shop.country,
+      live_commercial_data: false,
     }),
   );
-  out.push(`# ${meta.name ?? meta.domain}\n`);
+  out.push(`# ${shop.name ?? shop.domain} — agent interface\n`);
   out.push(
-    meta.status === "queued"
-      ? `This storefront is known but not yet indexed. A catalog ingest has been queued; retry shortly.\n`
-      : `${meta.productCount} products indexed from \`${meta.platform}\`, last refreshed ${meta.catalogFreshness ?? "unknown"}.\n`,
+    `> Catalog of this \`${shop.platform}\` storefront as Markdown. Every page is resolved`,
+    `> on demand from the merchant's own public API and cached, so any storefront URL works`,
+    `> immediately — there is no crawl and no waiting.\n`,
   );
 
-  out.push(`## How to query this storefront\n`);
-  out.push(`- Search: \`${base}/search?q=<query>\` — hybrid lexical + semantic over the full catalog`);
-  out.push(`- Category listing: \`${base}/c/<category>\``);
-  out.push(`- Any product page: \`${base}<merchant path>.md\``);
-  out.push(`- Full catalog: \`${base}/products.json\``);
-  out.push(`- Index of everything: \`${base}/llms.txt\`\n`);
+  out.push(`## How to address any page\n`);
+  out.push(`Take a URL on \`${shop.domain}\` and swap the origin for \`${ctx.publicOrigin}/${shop.domain}\`:\n`);
+  out.push("```");
+  out.push(`https://${shop.domain}/some/product/path`);
+  out.push(`${base}/some/product/path`);
+  out.push("```\n");
+  out.push(`- Append \`.json\` for the same document as structured JSON.`);
+  out.push(`- Listings paginate with \`?page=N\`.\n`);
 
   if (categories.length) {
     out.push(`## Categories\n`);
-    for (const c of categories.slice(0, 40)) {
-      out.push(`- ${c.path} (${c.count})`);
+    for (const c of categories.slice(0, MAX_CATEGORIES)) {
+      out.push(`- [${c.name}](${base}${c.path})${c.count ? ` (${c.count})` : ""}`);
     }
     out.push("");
   }
 
-  if (sample.length) {
-    out.push(`## Sample products\n`);
-    for (const p of sample.slice(0, 10)) {
-      out.push(`- [${p.title}](${base}${p.slug}.md)`);
-    }
-    out.push("");
-  }
-
-  out.push(`## Boundaries\n`);
-  out.push(`- Catalog facts come from public merchant sources and are timestamped.`);
-  out.push(`- Stock, final price, delivery and returns must be verified with the merchant.`);
-  out.push(`- Merchants can claim this domain or opt out: ${ctx.publicOrigin}/opt-out\n`);
+  out.push(`## How to transact\n`);
+  out.push(`1. Open a product page here and read the \`Add to cart\` column for the chosen variant.`);
+  out.push(`2. That URL creates a cart on ${shop.domain}'s own checkout, with \`ref=decoindex\`.`);
+  out.push(`3. It does **not** complete the purchase. Hand it to a person to review price,`);
+  out.push(`   shipping and payment.\n`);
+  out.push(...boundaries());
   return out.join("\n");
 }
 
-export function renderLlmsTxt(meta: StorefrontMeta, products: Product[], ctx: RenderCtx): string {
-  const base = `${ctx.publicOrigin}/${meta.domain}`;
-  const out = [`# ${meta.name ?? meta.domain}`, ""];
+export function renderLlmsTxt(shop: Storefront, categories: CategoryRef[], ctx: RenderCtx): string {
+  const base = `${ctx.publicOrigin}/${shop.domain}`;
+  const out = [`# ${shop.name ?? shop.domain}`, ""];
   out.push(
-    `> Agent-readable index of ${meta.productCount} products. Catalog facts as of ${meta.catalogFreshness ?? "unknown"}. Live commercial data is not included.`,
+    `> Agent-readable mirror of the ${shop.domain} storefront, served as Markdown from the`,
+    `> merchant's own public ${shop.platform} API. Catalog facts only — live stock, final`,
+    `> price and delivery are not published here.`,
     "",
   );
-  out.push(`## Query interfaces`, "");
-  out.push(`- [Search](${base}/search?q=): hybrid search over the catalog`);
-  out.push(`- [Catalog JSON](${base}/products.json): full normalized catalog`);
-  out.push("", `## Products`, "");
-  for (const p of products) {
-    out.push(`- [${p.title}](${base}${p.slug}.md)`);
+  // Most actionable thing in the file, so it goes first: agents truncate.
+  out.push(`## Format for agents`, "");
+  out.push(`- [Storefront overview](${base}/): categories and URL conventions`);
+  out.push(
+    `- Any storefront URL works: replace \`https://${shop.domain}\` with \`${base}\``,
+  );
+  out.push(`- Append \`.json\` to any of these for structured JSON`);
+  out.push("", `## Categories`, "");
+  for (const c of categories.slice(0, MAX_CATEGORIES)) {
+    out.push(`- [${c.name}](${base}${c.path})`);
   }
+  out.push("", `## Notes`, "");
+  out.push(`- Prices and availability are observed, not guaranteed. Verify before promising.`);
+  out.push(`- The merchant's own site is canonical: https://${shop.domain}`);
   return out.join("\n");
 }
 
-export function renderSearch(
-  meta: StorefrontMeta,
-  query: string,
-  hits: SearchHit[],
+/** An honest failure beats a plausible one. Every non-200 says why, and what to do. */
+export function renderProblem(
+  domain: string,
+  path: string,
+  kind: "notfound" | "unsupported" | "blocked" | "opted-out" | "rate-limited",
   ctx: RenderCtx,
 ): string {
-  const base = `${ctx.publicOrigin}/${meta.domain}`;
-  const out: string[] = [];
-  out.push(
+  const body: Record<typeof kind, [string, string[]]> = {
+    notfound: [
+      "Not found",
+      [
+        `\`${path}\` did not resolve to a product or listing on ${domain}.`,
+        ``,
+        `The URL shape is fine — this path just has no catalog data behind it. Storefront`,
+        `pages built from CMS collections rather than real categories resolve through ids`,
+        `we cannot see, and we do not guess: for a commerce agent, wrong is worse than absent.`,
+        ``,
+        `Try the overview: ${ctx.publicOrigin}/${domain}/`,
+      ],
+    ],
+    unsupported: [
+      "Could not read this storefront",
+      [
+        `${domain} answered, but not with a catalog we can read.`,
+        ``,
+        `Either it is not running a platform we support — VTEX and Shopify, via their`,
+        `public catalog APIs — or its edge is refusing us without saying so. We do not`,
+        `scrape HTML, so the answer is nothing rather than a bad guess.`,
+        ``,
+        `This verdict is not permanent: we retry from scratch on a later request.`,
+        `Merchant on another platform, or want to allow us? ${ctx.publicOrigin}/#claim`,
+      ],
+    ],
+    blocked: [
+      "Origin refused us",
+      [
+        `${domain} is reachable but its edge rejected our request (bot protection or WAF).`,
+        ``,
+        `We identify ourselves honestly as \`decoindex\` and do not work around blocks. If`,
+        `you are the merchant and want this to work, allow that user-agent.`,
+        ``,
+        `This verdict is not permanent: we retry from scratch on a later request.`,
+        `${ctx.publicOrigin}/about`,
+      ],
+    ],
+    "opted-out": [
+      "Removed at the merchant's request",
+      [
+        `${domain} asked not to be mirrored. Use the storefront directly: https://${domain}`,
+      ],
+    ],
+    "rate-limited": [
+      "Slow down",
+      [
+        `Too many first-time reads for ${domain} at once. Cached pages are always served`,
+        `immediately; this limit only applies to URLs we have never seen. Retry shortly.`,
+      ],
+    ],
+  };
+  const [title, lines] = body[kind];
+  return [
     frontmatter({
       decoindex: "1.0",
-      type: "search_results",
-      domain: meta.domain,
-      query,
-      results: hits.length,
-      catalog_freshness: meta.catalogFreshness,
-      live_commercial_data: "false",
+      type: "problem",
+      problem: kind,
+      domain,
+      path,
     }),
-  );
-  out.push(`# Search: ${query}\n`);
-  if (!hits.length) {
-    out.push(`No products matched in the indexed catalog of ${meta.domain}.\n`);
-    out.push(`The catalog holds ${meta.productCount} products; try broader terms or browse \`${base}\`.\n`);
-    return out.join("\n");
-  }
-  hits.forEach((hit, i) => {
-    const p = hit.product;
-    const prices = p.variants.map((v) => v.priceMinor).filter((n): n is number => n !== undefined);
-    out.push(`## ${i + 1}. ${p.title}\n`);
-    out.push(`- Price observed: ${prices.length ? money(Math.min(...prices)) : "not published"}`);
-    if (p.categories.length) out.push(`- Category: ${p.categories.join(" > ")}`);
-    const sizes = [...new Set(p.variants.map((v) => v.attributes.tamanho ?? v.attributes.size).filter(Boolean))];
-    if (sizes.length) out.push(`- Variants indexed: ${sizes.join(", ")}`);
-    out.push(`- Why this matched: ${hit.why.join("; ")}`);
-    out.push(`- Details: ${base}${p.slug}.md`);
-    out.push(`- Buy: ${canonicalUrl(meta.domain, p.slug, ctx.attribution)}\n`);
-  });
-  out.push(`---\nStock, final price and delivery are not verified here. Confirm on the merchant page before promising anything to a shopper.\n`);
-  return out.join("\n");
-}
-
-export function renderPlp(
-  meta: StorefrontMeta,
-  category: string,
-  products: Product[],
-  ctx: RenderCtx,
-): string {
-  const base = `${ctx.publicOrigin}/${meta.domain}`;
-  const out: string[] = [];
-  out.push(
-    frontmatter({
-      decoindex: "1.0",
-      type: "category",
-      domain: meta.domain,
-      category,
-      products: products.length,
-      catalog_freshness: meta.catalogFreshness,
-    }),
-  );
-  out.push(`# ${category} — ${meta.name ?? meta.domain}\n`);
-  out.push(`| Product | Price observed | Variants | Details |`);
-  out.push(`|---|---:|---|---|`);
-  for (const p of products) {
-    const prices = p.variants.map((v) => v.priceMinor).filter((n): n is number => n !== undefined);
-    out.push(
-      `| ${p.title} | ${prices.length ? money(Math.min(...prices)) : "—"} | ${p.variants.length} | ${base}${p.slug}.md |`,
-    );
-  }
-  out.push("");
-  return out.join("\n");
+    `# ${title}\n`,
+    ...lines,
+    "",
+  ].join("\n");
 }

@@ -6,7 +6,23 @@
  * so normalize once, here, and never again.
  */
 
-export type Ext = "md" | "json" | "html";
+export type Ext = "md" | "json";
+
+/**
+ * Things a browser asks for at the root that look like a domain to the regex
+ * below (`favicon.ico` matches `name.tld`). Without this guard they fall through
+ * to the catch-all and we go fetch `https://www.favicon.ico`.
+ */
+const NOT_A_DOMAIN = new Set([
+  "favicon.ico",
+  "robots.txt",
+  "sitemap.xml",
+  "llms.txt",
+  "apple-touch-icon.png",
+  "site.webmanifest",
+  "ads.txt",
+  "security.txt",
+]);
 
 export interface ParsedRequest {
   domain: string; // normalized: lowercase, no scheme, no leading www, no port
@@ -18,7 +34,7 @@ const EXT_RE = /\.(md|json)$/i;
 
 export function normalizeDomain(raw: string): string | null {
   let d = raw.trim().toLowerCase();
-  if (!d) return null;
+  if (!d || NOT_A_DOMAIN.has(d)) return null;
   d = d.replace(/^https?:\/\//, "");
   d = d.split("/")[0]!;
   d = d.split("@").pop()!; // strip any userinfo
@@ -69,19 +85,32 @@ export function canonicalUrl(
   return u.toString();
 }
 
-/** Cache key: stable, ext-aware, query-normalized (sorted, whitelisted). */
+/**
+ * Only these params change the answer. Everything else (utm_*, gclid, VTEX's own
+ * tracking) is dropped, so a hundred decorated variants of one URL share a single
+ * index entry instead of a hundred.
+ */
+const SIGNIFICANT = ["page"];
+
+/** Canonical, sorted query string. Shared by the edge cache key and the KV key. */
+export function normalizedQuery(query?: URLSearchParams): string {
+  if (!query) return "";
+  const out = new URLSearchParams();
+  for (const k of SIGNIFICANT) {
+    const v = query.get(k)?.trim().toLowerCase();
+    if (v) out.set(k, v);
+  }
+  return out.toString();
+}
+
+/** Cache key: stable, ext-aware, query-normalized. */
 export function cacheKey(
   origin: string,
   domain: string,
   path: string,
   ext: Ext,
   query?: URLSearchParams,
-  allow: string[] = ["q", "page", "limit"],
 ): string {
-  const u = new URL(`${origin}/${domain}${path}`);
-  if (query) {
-    const keys = allow.filter((k) => query.get(k)).sort();
-    for (const k of keys) u.searchParams.set(k, query.get(k)!.trim().toLowerCase());
-  }
-  return u.toString() + (ext === "md" ? "" : `.${ext}`);
+  const q = normalizedQuery(query);
+  return `${origin}/${domain}${path}${ext === "md" ? "" : `.${ext}`}${q ? `?${q}` : ""}`;
 }

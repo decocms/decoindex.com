@@ -2,60 +2,40 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "decoindex",
   "main": "src/server/main.ts",
+  "account_id": "55dd6d847f366735ef6e0f860c7bdc51",
   "compatibility_date": "2026-08-01",
-  "compatibility_flags": ["nodejs_compat"],
 
   "observability": { "enabled": true },
 
-  "routes": [{ "pattern": "decoindex.com/*", "zone_name": "decoindex.com" }],
+  // decoindex.com is not on this Cloudflare account yet (Namecheap nameservers),
+  // so we ship on workers.dev. Add the zone, then uncomment.
+  // "routes": [{ "pattern": "decoindex.com/*", "zone_name": "decoindex.com" }],
+  "workers_dev": true,
 
-  "durable_objects": {
-    "bindings": [{ "name": "STOREFRONT", "class_name": "StorefrontDO" }]
-  },
-  "migrations": [
-    { "tag": "v1", "new_sqlite_classes": ["StorefrontDO"] }
-  ],
-
+  // The registry (which domains exist, which platform) + first-party events.
   "d1_databases": [
-    { "binding": "DB", "database_name": "decoindex", "database_id": "REPLACE_ME" }
+    { "binding": "DB", "database_name": "decoindex", "database_id": "82dbbe9a-f533-44ca-bd4f-03d2c6a6ee0c" }
   ],
 
-  "kv_namespaces": [
-    { "binding": "LOCKS", "id": "REPLACE_ME" }
+  // Rendered documents, written without a TTL. This is the lazy index.
+  "kv_namespaces": [{ "binding": "CACHE", "id": "8e36e22837104aae8369560db0c5451c" }],
+
+  // Guards invariant 1: bounds first-time reads per merchant domain. Cached
+  // reads never reach this.
+  "ratelimits": [
+    {
+      "name": "READ_THROUGH",
+      "namespace_id": "1001",
+      "simple": { "limit": 60, "period": 60 }
+    }
   ],
-
-  "r2_buckets": [
-    { "binding": "SNAPSHOTS", "bucket_name": "decoindex-snapshots" }
-  ],
-
-  "queues": {
-    "producers": [{ "binding": "INGEST", "queue": "decoindex-ingest" }],
-    "consumers": [
-      {
-        "queue": "decoindex-ingest",
-        "max_batch_size": 10,
-        "max_batch_timeout": 5,
-        "max_retries": 2,
-        "dead_letter_queue": "decoindex-ingest-dlq"
-      }
-    ]
-  },
-
-  "ai": { "binding": "AI" },
-
-  "triggers": {
-    // hourly: refresh the stalest storefronts
-    "crons": ["17 * * * *"]
-  },
 
   "vars": {
-    "PUBLIC_ORIGIN": "https://decoindex.com",
+    // Pinned, not derived from the request: rendered documents embed this in
+    // their own links and are cached, so it must not vary by hostname. Switch to
+    // https://decoindex.com once the zone is on Cloudflare, then flush KV.
+    "PUBLIC_ORIGIN": "https://decoindex.deco-ceo.workers.dev",
     "ATTRIBUTION_PARAM": "ref",
-    "ATTRIBUTION_VALUE": "decoindex",
-    "EMBEDDING_MODEL": "@cf/baai/bge-m3"
-  },
-
-  "rules": [
-    { "type": "Text", "globs": ["**/*.md", "**/*.html"], "fallthrough": true }
-  ]
+    "ATTRIBUTION_VALUE": "decoindex"
+  }
 }
