@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "decoindex",
-    "description": "Agent-readable mirror of brand storefronts. Search a merchant's indexed catalog and get normalized product facts — price, variants, composition, availability as last observed. Never live stock, never the final price after promotions, never delivery dates: always tell the user to confirm those with the merchant before they commit to a purchase.",
+    "description": "Agent-readable mirror of brand storefronts. Resolves a merchant's own catalog on demand and returns normalized product facts — price, variants, composition, availability, as last observed.",
     "version": "1.0.0"
   },
   "servers": [{ "url": "https://decoindex.com" }],
@@ -11,7 +11,7 @@
       "get": {
         "operationId": "searchStorefront",
         "summary": "Search one merchant's catalog",
-        "description": "Search a single merchant's catalog, resolved on demand against the store's own search endpoint. Each result already includes full product detail (variants, prices, availability, claims), so no separate product-lookup call is needed. Reads are synchronous — there is no indexing queue and no 'retry in a minute' state; a non-200 means the reason is in the body. Use sort=price_asc for anything about the cheapest option: it orders the whole result set server-side, and results are not price-ordered otherwise.",
+        "description": "Search a merchant's catalog live against its own search endpoint — synchronous, no queue. Each hit has full product detail (variants, price, availability, claims). sort=price_asc orders the whole result, not just the page — use it for cheapest-first. Non-200: reason is in the body.",
         "parameters": [
           {
             "name": "domain",

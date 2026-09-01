@@ -13,7 +13,7 @@
       "author": { "name": "deco CMS", "email": "hi@deco.cx" },
       "homepage": "https://github.com/decocms/decoindex.com",
       "repository": "https://github.com/decocms/decoindex.com",
-      "license": "MIT",
+      "license": "AGPL-3.0-only",
       "keywords": ["ecommerce", "storefront", "mcp", "search", "vtex", "shopify", "agent-readable"],
       "category": "commerce"
     }

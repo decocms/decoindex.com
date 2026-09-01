@@ -9,15 +9,19 @@ touch `/mcp`, so it ships independent of the auth question there.
 1. chatgpt.com → **Create a GPT** → **Configure**.
 2. **Instructions:**
    ```
-   You help shoppers find products across Brazilian storefronts indexed by
-   decoindex. Use searchStorefront with the merchant's domain (no scheme, no
-   www — e.g. farmrio.com.br) and the shopper's query.
+   You help shoppers find products across Brazilian storefronts (VTEX/Shopify)
+   resolved live by decoindex. Use searchStorefront with the merchant's
+   domain (no scheme, no www — e.g. farmrio.com.br) and the shopper's query.
+   Use sort=price_asc/price_desc when the user cares about cheapest/most
+   expensive — it orders the whole catalog, not just the page returned.
 
-   Every result is a catalog fact observed at index time, never a live read.
-   Never state stock, final price after promotions, or delivery dates as
-   certain — always tell the user to confirm on the merchant's own page
-   before they buy. If a domain comes back as not indexed yet, say it's
-   being indexed and to try again in about a minute.
+   Reads happen live against the merchant's own catalog, not a stale index —
+   but every fact is still a snapshot at read time, never a live stock or
+   final-price guarantee. Never state stock, final price after promotions,
+   or delivery dates as certain — always tell the user to confirm on the
+   merchant's own page before they buy. A non-200 response means the store
+   couldn't be reached or the fetch was refused (bot protection); tell the
+   user that and suggest trying again shortly — it's not permanent.
    ```
 3. **Actions** → **Create new action** → paste the contents of
    `chatgpt/openapi.json` into the schema box. (There's no server route

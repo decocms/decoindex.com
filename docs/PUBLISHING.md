@@ -34,14 +34,6 @@ being production. Wiring Workers Builds to `main` is the durable fix.
 **Before running `npm run deploy`:** confirm `git log` matches what is live
 (`npx wrangler deployments list`), and deploy from `main`, not from a workspace
 branch.
-3. **The auth decision matters for this PR specifically:** `src/server/mcp.ts`
-   in this PR is deliberately public/no-auth (matches the original written
-   invariants: read-only, public data, no login). If production's existing
-   `/mcp` auth is staying, `mcp.ts` needs a `MCP_AUTH_TOKEN` secret check
-   added before merge-forward, and the ChatGPT/Claude install instructions in
-   the README need a token step. If the auth was a one-off experiment,
-   dropping it and shipping this PR's public version is the simpler and
-   already-tested path — pick one, don't ship half of each.
 
 ## 1. Deploy (once reconciled)
 
@@ -123,6 +115,6 @@ repo (`decocms/decoindex.com`, already has `.claude-plugin/plugin.json` +
 security scan + manual review before it's synced into the community catalog.
 
 No extra code work needed on our side for this one — the repo already has
-everything the submission form asks for (`plugin.json` metadata, MIT
-license, a working `.mcp.json`, a skill). This can be submitted independently
-of the ChatGPT directory decision above.
+everything the submission form asks for (`plugin.json` metadata, an
+AGPL-3.0-only license, a working `.mcp.json`, a skill). This can be
+submitted independently of the ChatGPT directory decision above.
