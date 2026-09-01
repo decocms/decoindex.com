@@ -9,8 +9,10 @@ https://www.farmrio.com.br/vestido-longo-alca-estampado/p
 https://decoindex.com/farmrio.com.br/vestido-longo-alca-estampado/p.md
 ```
 
-One Cloudflare Worker. No MCP server, no login, no SDK — the URL is the API,
-because the agents we want are already holding a URL and have nothing installed.
+One Cloudflare Worker, no login, no build step — the URL is the API, because
+the agents we want are already holding a URL and have nothing installed. An
+MCP server (`/mcp`) sits on top of the same data for hosts that want tools and
+inline UI instead of a bare fetch — see [Install](#install).
 
 ## Surfaces
 
@@ -23,6 +25,7 @@ because the agents we want are already holding a URL and have nothing installed.
 | `/{domain}/c/{category}` | Category listing |
 | `/{domain}/llms.txt` | Index of everything, in the format agents look for |
 | `/{domain}/products.json` | Full normalized catalog |
+| `/mcp` | JSON-RPC/MCP: `search_storefront`, `get_product`, `list_storefronts`, with inline widget UI |
 
 Search is the point. Mirroring a PDP is a commodity; brand site search is
 uniformly bad, and it is exactly where an agent gives up.
@@ -81,6 +84,62 @@ curl 'http://localhost:8787/farmrio.com.br/search?q=vestido+longo'
 Deploy once by hand (`npm run deploy`), then connect the repo to Workers Builds
 so every push to `main` ships and every PR gets a preview URL.
 
+## Install
+
+`/mcp` is the same StorefrontDO, cache and invariants as the routes above,
+reached over JSON-RPC. Connect it, or use the URL trick straight from a skill
+— no server required for that half.
+
+### Claude Code (skill + plugin)
+
+```
+/plugin marketplace add decocms/decoindex.com
+/plugin install decoindex@decoindex
+```
+
+Installs `skills/decoindex/SKILL.md` (the URL-swap trick, no tool required)
+and connects `.mcp.json` → `https://decoindex.com/mcp` for `search_storefront`,
+`get_product`, and `list_storefronts`.
+
+### ChatGPT (plugin / Apps SDK)
+
+1. ChatGPT → **Settings → Apps & Connectors → Advanced → Developer mode** →
+   enable it (developer mode is per-account, one-time).
+2. **Create app** → paste `https://decoindex.com/mcp` as the MCP server URL →
+   **Create**.
+3. Start a chat with the connector enabled and ask e.g. *"search farmrio.com.br
+   for vestido longo"* — the model calls `search_storefront` and the product
+   grid renders inline.
+
+No auth prompt: the server is public and read-only by design (see
+[Security](#security-and-rate-limiting) below). Submitting to the public
+Plugin directory is a separate review step — see `/privacy` and the "Not
+built yet" list; developer mode does not require it.
+
+### Any other MCP client
+
+```json
+{ "mcpServers": { "decoindex": { "url": "https://decoindex.com/mcp" } } }
+```
+
+## Security and rate limiting
+
+`/mcp` is public and unauthenticated on purpose — it's read-only and the data
+is already public on the merchant's own site. Two things stand in for auth:
+
+- **Cache sharing.** Every tool call is keyed through the same `cacheKey()`
+  the GET routes use, so a repeated query is a cache hit regardless of which
+  surface asked first — a POST endpoint would otherwise bypass the Cache API
+  entirely (the Cache API never caches POST) and re-run the embedding model
+  on every call.
+- **Rate limit.** A Workers [Rate Limiting](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/)
+  binding caps `/mcp` at 60 requests/min per IP (`wrangler.jsonc` →
+  `MCP_RATE_LIMITER`). Over the cap, calls get a JSON-RPC `-32000` error
+  instead of a 500 or an open-ended AI bill.
+
+If a legitimate integration needs a higher ceiling, raise the `simple.limit`
+value in `wrangler.jsonc` rather than removing the binding.
+
 ## Seeding
 
 The registry starts from the brands already tracked in Vitrine — platform known,
@@ -99,6 +158,9 @@ Built and typechecking:
 - VTEX + Shopify + JSON-LD ingestors, platform detection, robots.txt for HTML fetches
 - queue pipeline (discover → catalog → embed), hourly cron refresh
 - all Markdown/JSON renderers, landing page, first-party analytics
+- `/mcp` (JSON-RPC/MCP over Streamable HTTP): 3 tools, one widget resource,
+  cache-shared with the GET routes, rate-limited; Claude skill + plugin at
+  `skills/decoindex` and `.claude-plugin/`
 
 Not built yet:
 

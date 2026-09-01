@@ -40,6 +40,7 @@ outranks a merchant's own PDP is the day the commercial conversation ends.
 ```
 Worker (Hono)  src/server/main.ts
   GET *  -> parsePath -> Cache API -> StorefrontDO -> Markdown/JSON
+  POST /mcp   -> src/server/mcp.ts -> same DO, same cache, JSON-RPC in/out
   queue()     -> ingest pipeline
   scheduled() -> refresh the 20 stalest storefronts, hourly
 
@@ -67,6 +68,25 @@ everything: VTEX and Shopify hand over the whole catalog as JSON. That is why
   time must agree exactly. Never inline a second tokenizer.
 - Prices are integers in centavos. No floats anywhere near money.
 
+## The MCP surface (`/mcp`)
+
+A tool call is a read, full stop — it obeys the three invariants above like
+any GET route, and reuses their code rather than reimplementing it:
+`getDomain`/`upsertDomain` for the queued-stub path, `render/markdown.ts` for
+the text a model reads, `lib/url.ts#cacheKey` for cache identity. The one
+thing POST changes: the Cache API never caches POST, so `mcp.ts` builds the
+same cache key by hand and checks `caches.default` itself before touching the
+DO — a tool call and its REST equivalent (e.g. `search_storefront` and
+`/{domain}/search?q=`) land in the **same cache entry**. Skipping that check
+before adding a new tool reopens the AI-cost hole a rate limit alone doesn't
+close (`embedOne()` still runs once per miss).
+
+The widget (`render/widget.ts`) renders a third-party merchant's own catalog
+data inside a sandboxed iframe on someone else's platform — treat every field
+in it as attacker-controlled. No `innerHTML` with catalog data, ever; DOM is
+built with `createElement`/`textContent`, and every `href`/`src` goes through
+`safeUrl()` (https-only, image hosts additionally allowlisted).
+
 ## Gotchas already paid for
 
 1. DO SQLite row types need `extends Record<string, SqlStorageValue>` or `exec<T>`
@@ -80,6 +100,10 @@ everything: VTEX and Shopify hand over the whole catalog as JSON. That is why
    catalog page is fine; the next cron pass finishes it.
 6. Embeddings must be multilingual (`bge-m3`). An English-only model ranks a
    pt-BR catalog as noise, silently.
+7. `upsertDomain()`'s bind list must match `domains`' `NOT NULL DEFAULT` columns
+   explicitly (`"unknown"`/`10`/`0`, not `null`) — an explicit bound `NULL` on
+   `INSERT` overrides a column default, which only fires for an *omitted*
+   column. Passing `null` there 500s on the very first read of any new domain.
 
 ## The improvement loop
 

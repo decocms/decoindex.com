@@ -8,7 +8,8 @@
     "deploy": "wrangler deploy",
     "db:local": "wrangler d1 migrations apply decoindex --local",
     "db:remote": "wrangler d1 migrations apply decoindex --remote",
-    "seed": "bun run scripts/seed-registry.ts"
+    "seed": "bun run scripts/seed-registry.ts",
+    "smoke": "bun run scripts/mcp-smoke.ts"
   },
   "dependencies": {
     "hono": "^4.6.14"
