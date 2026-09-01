@@ -119,12 +119,15 @@ export function normalizedQuery(query?: URLSearchParams): string {
 }
 
 /**
- * Bump when a renderer changes shape. The edge cache has no purge from inside a
+ * Bump when a renderer changes shape — or when the same shape would now be
+ * filled with different content. Reordering a listing is the second kind: the
+ * template is untouched, every cached document is still wrong, and the ordering
+ * fix looked deployed while the edge served yesterday's row order for a day. The edge cache has no purge from inside a
  * Worker and a document TTL is a day, so without this a template fix is
  * invisible until it expires. It only ever appears in the synthetic cache key,
  * never in a URL we serve or publish.
  */
-export const RENDER_VERSION = "15";
+export const RENDER_VERSION = "16";
 
 /** Cache key: stable, ext-aware, query-normalized. */
 export function cacheKey(

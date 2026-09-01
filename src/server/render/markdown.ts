@@ -1,5 +1,6 @@
 import type { CategoryRef, Product, Sort, Storefront } from "../lib/types";
 import { canonicalUrl } from "../lib/url";
+import { fromPrice } from "../platform/order";
 
 /**
  * Every response states its evidence boundary. The single most damaging thing
@@ -106,9 +107,13 @@ function productTable(products: Product[], shop: Storefront, base: string): stri
     `|---|---:|---:|---|---|`,
   ];
   for (const p of ordered) {
-    const prices = p.variants.map((v) => v.priceMinor).filter((n): n is number => n !== undefined);
     const list = p.variants.map((v) => v.listPriceMinor).filter((n): n is number => n !== undefined);
-    const price = prices.length ? Math.min(...prices) : undefined;
+    // Same definition the sorter uses, deliberately shared rather than repeated.
+    // These drifted apart once: the column showed the cheapest of *all* variants
+    // while price_asc ordered on the cheapest *buyable* one, so a sorted table
+    // printed 199,99 above 199,98 and contradicted its own heading. It also meant
+    // advertising a price whose only variant was sold out.
+    const price = fromPrice(p);
     const was = list.length ? Math.max(...list) : undefined;
     out.push(
       `| ${p.title.replace(/\|/g, "/")} | ${money(price, shop.currency)} | ${
