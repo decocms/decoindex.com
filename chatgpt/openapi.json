@@ -7,11 +7,11 @@
   },
   "servers": [{ "url": "https://decoindex.com" }],
   "paths": {
-    "/{domain}/search.json": {
+    "/{domain}/search": {
       "get": {
         "operationId": "searchStorefront",
         "summary": "Search one merchant's catalog",
-        "description": "Search a merchant's catalog live against its own search endpoint — synchronous, no queue. Each hit has full product detail (variants, price, availability, claims). sort=price_asc orders the whole result, not just the page — use it for cheapest-first. Non-200: reason is in the body.",
+        "description": "Search a merchant's catalog live, synchronous, no queue. Returns a compact Markdown table (title, price, stock, detail link per hit) — small on purpose, so call getProduct with a hit's path for full facts. sort=price_asc orders the whole result, not just the page.",
         "parameters": [
           {
             "name": "domain",
@@ -47,7 +47,36 @@
         ],
         "responses": {
           "200": {
-            "description": "Search results with full product detail.",
+            "description": "Markdown table of hits, one row per product, with a Details link per row (e.g. https://decoindex.com/{domain}{path}) — pass that link's path portion to getProduct for full detail.",
+            "content": { "text/plain": { "schema": { "type": "string" } } }
+          }
+        }
+      }
+    },
+    "/{domain}/{path}.json": {
+      "get": {
+        "operationId": "getProduct",
+        "summary": "Full detail for one product already found by search",
+        "description": "Fetch everything indexed about one product: variants, current price, availability, composition and other claims. Use the path from a searchStorefront hit's Details link, not a raw merchant URL.",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Registrable domain only — no scheme, no www, no path. Example: farmrio.com.br"
+          },
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Everything after the domain in a search hit's Details link, without the leading slash or trailing .json, e.g. vestido-longo-alca-estampado/p"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full product detail.",
             "content": {
               "application/json": {
                 "schema": {
@@ -61,39 +90,35 @@
                         "currency": { "type": "string" }
                       }
                     },
-                    "total": { "type": "integer" },
-                    "query": { "type": "string" },
-                    "products": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": { "type": "string" },
-                          "slug": { "type": "string" },
-                          "title": { "type": "string" },
-                          "brand": { "type": "string" },
-                          "description": { "type": "string" },
-                          "images": { "type": "array", "items": { "type": "string" } },
-                          "variants": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "priceMinor": { "type": "integer", "description": "Price in cents, as last observed." },
-                                "currency": { "type": "string" },
-                                "available": { "type": "boolean" },
-                                "attributes": { "type": "object" }
-                              }
+                    "product": {
+                      "type": "object",
+                      "properties": {
+                        "title": { "type": "string" },
+                        "brand": { "type": "string" },
+                        "description": { "type": "string" },
+                        "categories": { "type": "array", "items": { "type": "string" } },
+                        "images": { "type": "array", "items": { "type": "string" } },
+                        "variants": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "skuId": { "type": "string" },
+                              "priceMinor": { "type": "integer", "description": "Price in cents, as last observed." },
+                              "currency": { "type": "string" },
+                              "available": { "type": "boolean" },
+                              "attributes": { "type": "object" },
+                              "cartUrl": { "type": "string" }
                             }
-                          },
-                          "claims": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "predicate": { "type": "string" },
-                                "value": { "type": "string" }
-                              }
+                          }
+                        },
+                        "claims": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "predicate": { "type": "string" },
+                              "value": { "type": "string" }
                             }
                           }
                         }
