@@ -205,7 +205,6 @@ export function benchmarkHtml(
   errand: ModelResults | null = null,
 ): string {
   const served = r.layer1.filter((x) => x.site.outcome === "ok");
-  const shells = r.layer1.filter((x) => x.site.outcome === "js-shell");
   const blocked = r.layer1.filter((x) => x.site.outcome === "blocked");
   const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
@@ -262,7 +261,6 @@ export function benchmarkHtml(
       case "ratio": return String(ratio);
       case "served": return String(served.length);
       case "total": return String(r.layer1.length);
-      case "shells": return String(shells.length);
       case "blocked": return String(blocked.length);
       case "siteTok": return n(siteTok);
       case "idxTok": return n(idxTok);
@@ -313,14 +311,6 @@ export function benchmarkHtml(
         return estimated
           ? "Token counts are estimated at 4 bytes per token — set <code>ANTHROPIC_API_KEY</code> and they come from the count-tokens endpoint instead."
           : "Token counts come from Anthropic's count-tokens endpoint, not an estimate.";
-      case "shellNote": return shells.length
-        ? shells.map((x) => `<b>${esc(x.brand)}</b>`).join(", ") +
-          ` returned a real product URL with a matching canonical and <em>no product in the HTML</em> — no title, no price. An agent reading that page learns nothing at all.`
-        : "";
-      case "blockedNote": return blocked.length
-        ? blocked.map((x) => `<b>${esc(x.brand)}</b>`).join(", ") +
-          " answered a plain browser request with a bot challenge, so there is no payload to compare."
-        : "";
       default: return "";
     }
   });
@@ -680,24 +670,6 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
     {{tokenChart}}
     {{stale}}
     <p class="fine">{{tokenNote}}</p>
-  </div>
-</section>
-
-<section class="band">
-  <div class="wrap">
-    <h2>Two rows worth reading twice.</h2>
-    <div class="cards">
-      <div class="card">
-        <h3>A page can be 200 and still say nothing</h3>
-        <p class="fine" style="margin-top:0">{{shellNote}} We count that separately instead of folding
-           it into the token ratio, because a small useless page would flatter us for the wrong reason.</p>
-      </div>
-      <div class="card">
-        <h3>Some storefronts never answer at all</h3>
-        <p class="fine" style="margin-top:0">{{blockedNote}} An agent hitting that gets a challenge page,
-           not a catalog — which is the case for a channel the merchant actually opted into.</p>
-      </div>
-    </div>
   </div>
 </section>
 
