@@ -91,6 +91,13 @@ async function cached(
   params: URLSearchParams,
   ttlSeconds: number,
   compute: () => Promise<unknown>,
+  // main.ts's outer cache only ever stores a 200 (see `if (response.status
+  // === 200)` in app.get("*")) — a "not indexed yet" stub is never cached
+  // there, so a page that gets ingested a minute later is visible right
+  // away. Default true matches search, where "0 hits" is itself a fact worth
+  // caching; get_product overrides this so a still-queued product doesn't
+  // get stuck reporting "queued" for a full day after it's actually indexed.
+  shouldCache: (value: unknown) => boolean = () => true,
 ): Promise<unknown> {
   const key = cacheKey(env.PUBLIC_ORIGIN, domain, path, "json", params);
   const cache = caches.default;
@@ -99,6 +106,7 @@ async function cached(
   if (hit) return hit.json();
 
   const value = await compute();
+  if (!shouldCache(value)) return value;
   const res = new Response(JSON.stringify(value), {
     headers: { "content-type": "application/json", "cache-control": `s-maxage=${ttlSeconds}` },
   });
@@ -136,7 +144,12 @@ async function callSearchStorefront(env: Env, args: Record<string, unknown>) {
     return { meta: m, query, hits };
   })) as { meta: Parameters<typeof renderSearch>[0]; query: string; hits: Parameters<typeof renderSearch>[2] };
 
-  return { text: renderSearch(out.meta, out.query, out.hits, rctx), structured: out };
+  // The widget renders these hits directly (it can't call canonicalUrl()
+  // itself), so bake the attributed link in server-side rather than let the
+  // client reconstruct a bare merchant URL — invariant 3 applies to the
+  // clickable card the same as it does to the "Buy:" line in renderSearch.
+  const hitsWithUrl = out.hits.map((h) => ({ ...h, url: canonicalUrl(domain, h.product.slug, rctx.attribution) }));
+  return { text: renderSearch(out.meta, out.query, out.hits, rctx), structured: { ...out, hits: hitsWithUrl } };
 }
 
 async function callGetProduct(env: Env, args: Record<string, unknown>) {
@@ -153,16 +166,27 @@ async function callGetProduct(env: Env, args: Record<string, unknown>) {
     return { text: `# ${domain}\n\nNot indexed yet. Ingestion queued — retry in a minute.\n`, structured: { queued: true, domain } };
   }
 
-  const out = (await cached(env, domain, path, new URLSearchParams(), 86_400, async () => {
-    const stub = env.STOREFRONT.get(env.STOREFRONT.idFromName(domain));
-    const m = (await stub.getMeta()) ?? { domain, platform: row.platform, status: row.status, locale: "pt-BR", currency: "BRL", productCount: 0 };
-    const product = await stub.getProductBySlug(path.replace(/\/$/, ""));
-    if (!product) {
-      await env.INGEST.send({ kind: "page", domain, path });
-      return { meta: m, product: null };
-    }
-    return { meta: m, product };
-  })) as { meta: Parameters<typeof renderProduct>[0]; product: Parameters<typeof renderProduct>[1] | null };
+  const out = (await cached(
+    env,
+    domain,
+    path,
+    new URLSearchParams(),
+    86_400,
+    async () => {
+      const stub = env.STOREFRONT.get(env.STOREFRONT.idFromName(domain));
+      const m = (await stub.getMeta()) ?? { domain, platform: row.platform, status: row.status, locale: "pt-BR", currency: "BRL", productCount: 0 };
+      const product = await stub.getProductBySlug(path.replace(/\/$/, ""));
+      if (!product) {
+        await env.INGEST.send({ kind: "page", domain, path });
+        return { meta: m, product: null };
+      }
+      return { meta: m, product };
+    },
+    // Don't cache a miss: main.ts never caches its 202 stub either (only a
+    // 200 gets stored), so a page ingested a minute later shows up right
+    // away instead of reporting "queued" for a full day.
+    (v) => (v as { product: unknown }).product !== null,
+  )) as { meta: Parameters<typeof renderProduct>[0]; product: Parameters<typeof renderProduct>[1] | null };
 
   if (!out.product) {
     return { text: `# Not indexed yet\n\nA fetch for ${domain}${path} has been queued; retry in a minute.\n`, structured: { queued: true, domain, path } };

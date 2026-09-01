@@ -111,8 +111,10 @@ export const WIDGET_HTML = `<!doctype html>
     var grid = el("div", { class: "grid" });
     hits.forEach(function (hit) {
       var p = hit.product || hit;
+      // hit.url is baked in server-side (canonicalUrl() with attribution) —
+      // never reconstruct a merchant URL here, it would drop the ref param.
       grid.appendChild(productCard({
-        url: p.slug ? (data.meta && data.meta.domain ? "https://www." + data.meta.domain + p.slug : p.slug) : p.url,
+        url: hit.url,
         image: (p.images && p.images[0]) || p.image,
         title: p.title, brand: p.brand,
         priceCents: p.variants && p.variants[0] ? p.variants[0].priceMinor : p.priceCents,
