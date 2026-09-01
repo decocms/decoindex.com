@@ -46,6 +46,9 @@
   // Caps /mcp callers at 60 req/min per IP. Tool calls can miss the edge
   // cache and trigger AI.run() — this is the hard teeth backing the cache
   // sharing in src/server/mcp.ts, since the Cache API never caches POST.
+  // "unsafe.bindings" is the pre-4.36 way to declare this — the pinned
+  // wrangler here is ^3.99.0. Once bumped past 4.36, migrate to the
+  // top-level "ratelimits" field instead (same shape, no "unsafe" wrapper).
   "unsafe": {
     "bindings": [
       {
