@@ -833,7 +833,7 @@ node bench/run.mjs --agents --reps 3</pre>
          what an agent sees today — talk to us and we'll fix it. And if you'd rather we weren't here at
          all, say so, and we'll stop within a day.</p>
       <div class="cta-row">
-        <a class="btn btn-lime" href="mailto:hi@deco.cx?subject=decoindex%20benchmark">Talk to us</a>
+        <a class="btn btn-lime" href="mailto:builders+indexclaim@decocms.com?subject=decoindex%20benchmark">Talk to us</a>
         <a class="btn" style="background:rgba(255,255,255,.14);color:#fff" href="/opt-out">Opt out</a>
       </div>
     </div>

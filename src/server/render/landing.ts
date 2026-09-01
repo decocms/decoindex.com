@@ -262,7 +262,7 @@ const TEMPLATE = /* html */ `<!doctype html>
          of what agents keep asking for, come talk to us. And if you'd rather we weren't here at
          all, say so — we'll stop within a day.</p>
       <div class="cta-row">
-        <a class="btn btn-lime" href="mailto:hi@deco.cx?subject=decoindex%20%E2%80%94%20claim%20my%20store&body=Store%20domain%3A%20%0APlatform%3A%20%0AName%3A%20">Claim your store</a>
+        <a class="btn btn-lime" href="mailto:builders+indexclaim@decocms.com?subject=decoindex%20%E2%80%94%20claim%20my%20store&body=Store%20domain%3A%20%0APlatform%3A%20%0AName%3A%20">Claim your store</a>
         <a class="btn" style="background:rgba(255,255,255,.14);color:#fff" href="/opt-out">Opt out</a>
       </div>
     </div>
