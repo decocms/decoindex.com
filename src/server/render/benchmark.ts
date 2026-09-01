@@ -78,6 +78,8 @@ export interface ModelRun {
   truncated: boolean;
   /** The page was larger than this model's context window. A result, not a bug. */
   contextOverflow?: boolean;
+  /** Zero tokens, zero cost: the request never reached the model. Not a result. */
+  noRun?: boolean;
   grade: { parsed: boolean; priceOk: boolean };
 }
 
@@ -125,7 +127,7 @@ function modelSection(m: ModelResults | null): string {
   // first version of this called .find() and quietly showed one store's numbers
   // under a heading that said five.
   const rows = names.map((name) => {
-    const at = (arm: string) => m.rows.filter((y) => y.model === name && y.arm === arm);
+    const at = (arm: string) => m.rows.filter((y) => y.model === name && y.arm === arm && !y.noRun);
     const site = at("site");
     const idx = at("decoindex");
     const okOf = (xs: ModelRun[]) => xs.filter((x) => x.grade.priceOk);
@@ -149,16 +151,17 @@ function modelSection(m: ModelResults | null): string {
     return `<tr><td><b>${esc(name)}</b></td>${cell(site)}${cell(idx)}<td class="mid">${score}</td></tr>`;
   });
 
-  const okRows = (arm: string) => m.rows.filter((x) => x.arm === arm && x.grade.priceOk);
+  const live = m.rows.filter((x) => !x.noRun);
+  const okRows = (arm: string) => live.filter((x) => x.arm === arm && x.grade.priceOk);
   const tokRatio = Math.round(
     mean(okRows("site").map((x) => x.inTok))! / Math.max(1, mean(okRows("decoindex").map((x) => x.inTok))!),
   );
   const costRatio = Math.round(
     mean(okRows("site").map((x) => x.cost))! / Math.max(1e-9, mean(okRows("decoindex").map((x) => x.cost))!),
   );
-  const siteOk = m.rows.filter((x) => x.arm === "site" && x.grade.priceOk).length;
-  const idxOk = m.rows.filter((x) => x.arm === "decoindex" && x.grade.priceOk).length;
-  const total = m.rows.filter((x) => x.arm === "site").length;
+  const siteOk = okRows("site").length;
+  const idxOk = okRows("decoindex").length;
+  const total = live.filter((x) => x.arm === "site").length;
 
   return `<div style="overflow-x:auto"><table class="tbl m" style="margin-top:28px;min-width:0">
 <thead><tr>
@@ -199,6 +202,7 @@ export function benchmarkHtml(
   r: BenchResults,
   journeys: JourneyRun[] = [],
   models: ModelResults | null = null,
+  errand: ModelResults | null = null,
 ): string {
   const served = r.layer1.filter((x) => x.site.outcome === "ok");
   const shells = r.layer1.filter((x) => x.site.outcome === "js-shell");
@@ -293,10 +297,12 @@ export function benchmarkHtml(
       }
       case "journeys": return journeySection(journeys);
       case "models": return modelSection(models);
+      case "errand": return modelSection(errand);
       case "tokenChart": return tokenChart(r.layer1);
-      case "costChart": return costChart(models, journeys);
+      case "costChart": return costChart(models, errand, journeys);
       case "modelStores": return String(models?.stores?.length ?? 0);
       case "modelCount": return String(new Set(models?.rows?.map((x) => x.model) ?? []).size);
+      case "errandStores": return String(errand?.stores?.length ?? 0);
       case "modelNames": return models
         ? [...new Set(models.rows.map((x) => x.model))].map((x) => esc(x)).join(" and ")
         : "";
@@ -435,7 +441,7 @@ function tokenChart(rows: BenchRow[]): string {
  * while burying the one comparison that is — the pair within each row. One
  * chart, one scale, and the harness written on every row.
  */
-function costChart(m: ModelResults | null, journeys: JourneyRun[] = []): string {
+function costChart(m: ModelResults | null, e: ModelResults | null, journeys: JourneyRun[] = []): string {
   const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 
   const groups: { label: string; note: string; site: number; idx: number; siteNote: string }[] = [];
@@ -457,8 +463,10 @@ function costChart(m: ModelResults | null, journeys: JourneyRun[] = []): string 
     });
   }
 
-  for (const name of new Set(m?.rows?.map((x) => x.model) ?? [])) {
-    const at = (arm: string) => (m?.rows ?? []).filter((y) => y.model === name && y.arm === arm);
+  const fromModels = (src: ModelResults | null, note: string) => {
+  for (const name of new Set(src?.rows?.map((x) => x.model) ?? [])) {
+    const at = (arm: string) =>
+      (src?.rows ?? []).filter((y) => y.model === name && y.arm === arm && !y.noRun);
     const site = at("site");
     const idx = at("decoindex");
     const tooBig = site.filter((x) => x.contextOverflow).length;
@@ -468,7 +476,7 @@ function costChart(m: ModelResults | null, journeys: JourneyRun[] = []): string 
     if (wrong) parts.push(`${wrong} of ${site.length} answered wrong`);
     groups.push({
       label: name,
-      note: "Test 2 · raw fetch loop",
+      note,
       // Priced over the runs that produced an answer. A run whose page never fit
       // has no price to report, so it is counted beside the bar rather than
       // averaged in as a cheap success — which is what dragged DeepSeek to $0.
@@ -477,12 +485,15 @@ function costChart(m: ModelResults | null, journeys: JourneyRun[] = []): string 
       siteNote: parts.join(" · "),
     });
   }
+  };
+  fromModels(e, "Test 1 · errand");
+  fromModels(m, "Test 2 · product page");
   if (!groups.length) return "";
 
   const max = Math.max(...groups.map((g) => g.site)) || 1;
   // LABEL clears the longest model id plus its harness line; anything narrower
   // and the subtitle runs under the bars.
-  const ROW = 74, TOP = 32, LABEL = 320, RIGHT = 104, W = 1020;
+  const ROW = 62, TOP = 32, LABEL = 320, RIGHT = 104, W = 1020;
   const trackW = W - LABEL - RIGHT;
   const h = TOP + groups.length * ROW + 8;
 
@@ -515,9 +526,11 @@ function costChart(m: ModelResults | null, journeys: JourneyRun[] = []): string 
   <text x="${W}" y="12" text-anchor="end" fill="${BAR.dim}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">USD / ANSWER</text>
   ${bars.join("\n  ")}
 </svg>
-<figcaption>One shared scale, so the bars can be read against each other — but the two tests used different
-  harnesses and different questions, so the comparison that means something is the pair within each row.
-  Averaged over runs that produced an answer.</figcaption>
+<figcaption>Both tests run the same models through the same loop, so rows can be read against each other
+  within a test; across tests the question differs, so the honest comparison is still the pair inside each
+  row. The Claude Code row is a different harness again — its WebFetch summarizes server-side, so its
+  numbers are about whether the errand finished, not what reading cost. Averaged over runs that produced an
+  answer; runs where the request never reached the model are not counted.</figcaption>
 </figure>`;
 }
 
@@ -697,38 +710,52 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
 
     <div class="rows" style="margin-top:36px">
       <div class="row">
+        <h3>The harness, both tests</h3>
+        <p>A plain tool-calling loop against the OpenRouter API, written for this benchmark. One tool,
+           <code>fetch_url</code>, which returns the response body verbatim with nothing summarizing it on
+           the way. That is what a developer writing their own agent gets: the payload lands in the context
+           window and is paid for at list price.<br>
+           <b>Models:</b> the same {{modelCount}} in both tests — so the only thing that differs between
+           them is the question. An earlier version ran Test 1 under Claude Code and Test 2 under this loop,
+           which meant the two differed in harness as well as task and neither could be read against the
+           other.</p>
+      </div>
+      <div class="row">
         <h3>Test 1 — a whole errand</h3>
-        <p><b>Harness:</b> Claude Code headless, <code>claude -p</code>, its built-in WebFetch as the only
-           tool. WebFetch fetches server-side and summarizes before the model sees a byte, so the payload
-           difference is partly absorbed by Anthropic's infrastructure — this test is about whether the
-           errand completes at all, not about tokens.<br>
-           <b>Model:</b> claude-sonnet-5. <b>Store:</b> americanas.com. <b>Given:</b> the homepage, nothing
-           else. <b>Graded:</b> the product it names is looked up in the merchant's API and confirmed or
-           thrown out.</p>
+        <p>The agent gets the store's homepage and nothing else: no category, no search link, no hint that
+           the catalog can be ordered by price. It has to find its own way in.<br>
+           <b>Stores:</b> {{errandStores}}. <b>Graded:</b> whatever product it names is looked up in the
+           merchant's API and confirmed to exist, be in stock, and cost what was claimed. Up to 120 KB of
+           any one page enters the context, which is the same budget for both arms.</p>
       </div>
       <div class="row">
         <h3>Test 2 — one product page</h3>
-        <p><b>Harness:</b> a plain tool-calling loop against the OpenRouter API, written for this benchmark.
-           One tool, <code>fetch_url</code>, which returns the response body verbatim with nothing
-           summarizing it. This is what a developer writing their own agent gets, so the payload lands in
-           the context window and is paid for at list price.<br>
-           <b>Models:</b> {{modelCount}}. <b>Stores:</b> {{modelStores}}. <b>Given:</b> one product URL.
-           <b>Graded:</b> the price it reports must match the merchant's API to the cent.</p>
+        <p>The agent gets one product URL and is asked what it costs and what is in stock. No navigation,
+           no discovery — the narrowest possible version of the question, and the one where a healthy
+           storefront should do fine.<br>
+           <b>Stores:</b> {{modelStores}}. <b>Graded:</b> the price must match the merchant's API to the
+           cent. Up to 400 KB of the page enters the context, again the same for both arms.</p>
       </div>
     </div>
 
     <h3 style="margin-top:48px">Test 1 · the errand</h3>
     <div class="pane" style="margin-top:16px;max-width:720px">
       <header><span>The prompt, verbatim</span></header>
-<pre>Find the cheapest in-stock PlayStation 5
-game this store sells, and give me a
-link to buy it.
+<pre>Find the cheapest in-stock &lt;thing&gt; this store
+sells, and give me a link to buy it.
 
-  one agent got
-    www.americanas.com.br
+  one run got
+    the store's homepage
   the other got
-    decoindex.com/americanas.com</pre>
+    that same store through decoindex</pre>
     </div>
+    {{errand}}
+
+    <h4 style="margin-top:40px;font-size:16px;font-weight:500">The same errand under Claude Code</h4>
+    <p class="fine" style="margin-top:6px;max-width:660px">Worth its own row because it is the harness most
+       people actually have. Claude Code's WebFetch fetches server-side and summarizes before the model sees
+       a byte, so its token counts are not comparable with the loop above — but whether the errand finishes
+       is.</p>
     {{journeys}}
 
     <h3 style="margin-top:56px">Test 2 · the product page</h3>

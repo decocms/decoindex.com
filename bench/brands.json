@@ -13,7 +13,8 @@
     "origin": "https://www.fila.com.br",
     "platform": "vtex",
     "account": "fila",
-    "listing": "/calcado/tenis"
+    "listing": "/calcado/tenis",
+    "errand": "pair of sneakers (tênis)"
   },
   {
     "brand": "Osklen",
@@ -84,7 +85,8 @@
     "origin": "https://www.americanas.com.br",
     "platform": "vtex",
     "account": "americanas",
-    "listing": "/eletrodomesticos"
+    "listing": "/eletrodomesticos",
+    "errand": "PlayStation 5 game"
   },
   {
     "brand": "Hering",

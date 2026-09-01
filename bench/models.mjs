@@ -39,13 +39,34 @@ const BRAND_LIST = String(flag("brands", flag("brand", "fila.com.br")))
   .split(",").map((x) => x.trim()).filter(Boolean);
 const MODELS = String(flag("models", "google/gemini-2.5-flash,openai/gpt-5-mini"))
   .split(",").map((m) => m.trim()).filter(Boolean);
+/**
+ * Which question to ask.
+ *
+ *   product — one URL, one product page. "What does this cost and what is in stock?"
+ *   errand  — the store's homepage and nothing else. "Find the cheapest X and a
+ *             link to buy it." Multi-step: the agent has to find its own way in.
+ *
+ * Both run through this same loop against the same models, so the only thing
+ * that differs between them is the question. That was not true before: the
+ * errand ran under Claude Code and the product page under this loop, which meant
+ * the two tests differed in harness as well as task and neither result could be
+ * read against the other.
+ */
+const TASK = String(flag("task", "product"));
 const MAX_TURNS = Number(flag("max-turns", 6));
 /**
  * Hard cap on how much of a page can enter the context, so a 5 MB storefront
  * cannot quietly cost dollars. Truncation is recorded and printed, never hidden —
  * an agent that only saw the first half of a page did not really answer.
  */
-const MAX_CHARS = Number(flag("max-chars", 400_000));
+/*
+ * The errand is multi-step, so each fetched page stays in the context for every
+ * later turn and the bill compounds: one uncapped run through americanas cost
+ * 1.75M tokens. A tighter per-fetch budget is also what a developer building
+ * this would actually set. Same cap for both arms within a test, which is what
+ * fairness requires; the figure is stated on the page for each test.
+ */
+const MAX_CHARS = Number(flag("max-chars", TASK === "errand" ? 120_000 : 400_000));
 
 const KEY = (() => {
   if (process.env.OPENROUTER_API_KEY) return process.env.OPENROUTER_API_KEY;
@@ -137,12 +158,22 @@ async function fetchUrl(url) {
 }
 
 const PROMPT = (root, what) =>
-  `Answer from this page only: ${root}\n\n` +
-  `What is the current price of "${what}", and which sizes/variants are in stock?\n\n` +
-  `Fetch the URL, read it, and answer from what it says. Do not guess.\n` +
-  `Reply with ONLY this JSON, no prose, no code fence: ` +
-  `{"price": <number in major units>, "variants": ["..."]}\n` +
-  `If the page does not state a price, use {"price": null, "variants": []}.`;
+  TASK === "errand"
+    ? `You are shopping on this store: ${root}\n\n` +
+      `Find the CHEAPEST in-stock ${what} this store sells, and give me a link to buy it.\n\n` +
+      `Start at that URL and work it out from there. You may fetch any page on the same site.\n` +
+      `Do not use prior knowledge and do not guess a price — read it from the store.\n` +
+      `The first page of results is usually not the whole catalog, and is usually not\n` +
+      `ordered by price.\n\n` +
+      `Reply with ONLY this JSON, no prose, no code fence: ` +
+      `{"price": <number>, "name": "<product>", "url": "<link to the product>"}\n` +
+      `If you cannot find one, use {"price": null, "name": null, "url": null}.`
+    : `Answer from this page only: ${root}\n\n` +
+      `What is the current price of "${what}", and which sizes/variants are in stock?\n\n` +
+      `Fetch the URL, read it, and answer from what it says. Do not guess.\n` +
+      `Reply with ONLY this JSON, no prose, no code fence: ` +
+      `{"price": <number in major units>, "variants": ["..."]}\n` +
+      `If the page does not state a price, use {"price": null, "variants": []}.`;
 
 /** A plain tool-calling loop. Every byte the tool returns is paid for. */
 async function agent(model, prompt) {
@@ -224,6 +255,38 @@ async function agent(model, prompt) {
   return done({ ok: false, error: `hit the ${MAX_TURNS}-turn cap` });
 }
 
+/**
+ * The errand has no computable right answer — "the cheapest X in this store"
+ * depends on a catalog that is not consistently categorized, and an earlier
+ * version of this grader marked a better answer wrong because it disagreed with
+ * a full-text search. So verify instead: whatever product the agent names is
+ * looked up in the merchant's API and confirmed to exist, be in stock, and cost
+ * what was claimed.
+ */
+async function verify(answer, b) {
+  const m = String(answer ?? "").match(/\{[\s\S]*\}/);
+  const p = m ? safeJson(m[0]) : null;
+  if (!p || p.price == null) return { parsed: Boolean(p), priceOk: false, why: "no product named" };
+  const claimed = Math.round(Number(p.price) * 100);
+  const slug = String(p.url ?? "").match(/\/([^/]+)\/p(?:[?#]|$)/)?.[1];
+  if (!slug) return { parsed: true, priceOk: false, why: "no usable product link" };
+  const r = await fetch(
+    `${vtexApi(b)}/api/catalog_system/pub/products/search/${encodeURIComponent(slug)}/p`,
+    { headers: { accept: "application/json" }, signal: AbortSignal.timeout(20_000) },
+  ).catch(() => null);
+  const found = safeJson(r ? await r.text() : "")?.[0];
+  if (!found) return { parsed: true, priceOk: false, why: "product not on the merchant API" };
+  let live = null;
+  for (const it of found.items ?? []) {
+    const o = it.sellers?.[0]?.commertialOffer;
+    if (o && o.AvailableQuantity > 0 && o.IsAvailable !== false) { live = Math.round(o.Price * 100); break; }
+  }
+  if (live === null) return { parsed: true, priceOk: false, why: "out of stock" };
+  const ok = Math.abs(live - claimed) <= 1;
+  return { parsed: true, priceOk: ok, priceMinor: live, name: found.productName,
+           why: ok ? null : `said ${claimed / 100}, merchant says ${live / 100}` };
+}
+
 const grade = (answer, truth) => {
   const m = String(answer ?? "").match(/\{[\s\S]*\}/);
   const p = m ? safeJson(m[0]) : null;
@@ -243,23 +306,36 @@ for (const B of TARGETS) {
     console.log(`${B.brand}: no in-stock product right now — skipped, nothing to grade against.\n`);
     continue;
   }
-  const arms = {
-    site: `${B.origin}${truth.path}`,
-    decoindex: `${BASE}/${B.domain}${truth.path}`,
-  };
+  // The errand starts at the store's front door; the product test starts at one
+  // product page. Same loop, same models, different question.
+  const arms = TASK === "errand"
+    ? { site: B.origin, decoindex: `${BASE}/${B.domain}` }
+    : { site: `${B.origin}${truth.path}`, decoindex: `${BASE}/${B.domain}${truth.path}` };
   stores.push({ brand: B.brand, domain: B.domain, truth, arms });
 
   console.log(`${B.brand} — ${truth.title}  (truth ${(truth.priceMinor / 100).toFixed(2)})`);
   for (const model of MODELS) {
     for (const [arm, url] of Object.entries(arms)) {
-      const r = await agent(model, PROMPT(url, truth.title));
-      const g = r.ok ? grade(r.answer, truth) : { parsed: false, priceOk: false };
-      rows.push({ brand: B.brand, domain: B.domain, model, arm, url, ...r, grade: g });
+      const what = TASK === "errand" ? (B.errand ?? "product") : truth.title;
+      const r = await agent(model, PROMPT(url, what));
+      const g = !r.ok
+        ? { parsed: false, priceOk: false }
+        : TASK === "errand"
+          ? await verify(r.answer, B)
+          : grade(r.answer, truth);
+      // Zero tokens and zero cost means the request never reached the model —
+      // a provider outage or a rate limit, not the model failing the task.
+      // Counting it scores our own plumbing as a storefront or decoindex loss.
+      const noRun = !r.ok && !r.inTok && !r.cost;
+      rows.push({ brand: B.brand, domain: B.domain, model, arm, url, ...r, noRun, grade: g });
       console.log(
         `  ${model.padEnd(26)} ${arm.padEnd(11)} ${(g.priceOk ? "ok" : "MISS").padEnd(5)} ` +
           `${String(r.inTok).padStart(7)} tok ${("$" + r.cost.toFixed(4)).padStart(9)} ` +
           `${((r.wallMs / 1000).toFixed(1) + "s").padStart(7)}` +
-          (r.truncated ? "  [truncated]" : "") + (r.ok ? "" : `  (${r.error})`),
+          (r.truncated ? "  [truncated]" : "") +
+          (g.priceOk && g.name ? `  ${g.name.slice(0, 34)}` : "") +
+          (r.ok ? (g.why ? `  (${g.why})` : "") : `  (${r.error})`) +
+          (!r.ok && !r.inTok && !r.cost ? "  [not counted: no response]" : ""),
       );
     }
   }
@@ -268,13 +344,13 @@ for (const B of TARGETS) {
 
 mkdirSync(join(HERE, "results"), { recursive: true });
 writeFileSync(
-  join(HERE, "results", "models.json"),
-  JSON.stringify({ runAt: new Date().toISOString(), stores, rows }, null, 2),
+  join(HERE, "results", TASK === "errand" ? "models-errand.json" : "models.json"),
+  JSON.stringify({ runAt: new Date().toISOString(), task: TASK, stores, rows }, null, 2),
 );
 
 console.log("by arm, across every model and store:");
 for (const arm of ["site", "decoindex"]) {
-  const rs = rows.filter((r) => r.arm === arm);
+  const rs = rows.filter((r) => r.arm === arm && !r.noRun);
   if (!rs.length) continue;
   const mean = (f) => rs.reduce((a, b) => a + (f(b) ?? 0), 0) / rs.length;
   console.log(

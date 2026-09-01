@@ -30,6 +30,7 @@ import ogImage from "../../assets/og.png";
 import benchResults from "../../bench/results/latest.json";
 import benchJourneys from "../../bench/results/journeys.json";
 import benchModels from "../../bench/results/models.json";
+import benchErrand from "../../bench/results/models-errand.json";
 
 type Ctx = { Bindings: Env };
 const app = new Hono<Ctx>();
@@ -123,6 +124,7 @@ app.get("/benchmark", (c) =>
       benchResults as unknown as BenchResults,
       benchJourneys as unknown as JourneyRun[],
       benchModels as unknown as ModelResults,
+      benchErrand as unknown as ModelResults,
     ),
   ),
 );
