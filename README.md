@@ -107,9 +107,10 @@ it sells out and then reports a bug that isn't there.
 ## Deploy
 
 ```sh
+export CLOUDFLARE_ACCOUNT_ID=...        # wrangler reads this; not in the repo
 wrangler d1 create decoindex
 wrangler kv namespace create CACHE
-# paste both ids into wrangler.jsonc, and set your own account_id
+# paste both ids into wrangler.jsonc
 npm run db:remote
 npm run deploy
 ```

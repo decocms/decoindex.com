@@ -2,8 +2,17 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "decoindex",
   "main": "src/server/main.ts",
-  "account_id": "55dd6d847f366735ef6e0f860c7bdc51",
   "compatibility_date": "2026-08-01",
+
+  // No `account_id` here on purpose: wrangler reads CLOUDFLARE_ACCOUNT_ID from
+  // the environment, so the account this deploys to is not a fact the repo has
+  // to publish. `export CLOUDFLARE_ACCOUNT_ID=...` (or a .env) before deploying.
+  //
+  // The D1 and KV ids below stay. They are not credentials — they only resolve
+  // for a caller already holding an API token for the account that owns them,
+  // and wrangler needs them at deploy time, before any Worker code runs, so a
+  // `wrangler secret` cannot supply them. Gitignoring this file to hide them
+  // would break `npm run deploy` for every fork to buy nothing.
 
   "observability": { "enabled": true },
 
