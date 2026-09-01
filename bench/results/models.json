@@ -1,0 +1,100 @@
+{
+  "runAt": "2026-09-01T15:39:47.328Z",
+  "brand": "Fila",
+  "domain": "fila.com.br",
+  "truth": {
+    "path": "/tenis-fila-speedzone-2-feminino-1423570/p",
+    "title": "Tênis Fila Speedzone 2 Feminino",
+    "priceMinor": 59999
+  },
+  "rows": [
+    {
+      "brand": "Fila",
+      "domain": "fila.com.br",
+      "model": "google/gemini-2.5-flash",
+      "arm": "site",
+      "url": "https://www.fila.com.br/tenis-fila-speedzone-2-feminino-1423570/p",
+      "inTok": 175167,
+      "outTok": 78,
+      "cost": 0.052745099999999996,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": true,
+      "sawBytes": 529396,
+      "wallMs": 7204,
+      "ok": true,
+      "answer": "{\"price\": 599.99, \"variants\": [\"34\", \"35\", \"36\", \"37\", \"38\", \"39\", \"40\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 59999
+      }
+    },
+    {
+      "brand": "Fila",
+      "domain": "fila.com.br",
+      "model": "google/gemini-2.5-flash",
+      "arm": "decoindex",
+      "url": "https://decoindex.com/fila.com.br/tenis-fila-speedzone-2-feminino-1423570/p",
+      "inTok": 2122,
+      "outTok": 81,
+      "cost": 0.0008391000000000001,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": false,
+      "sawBytes": 4490,
+      "wallMs": 3508,
+      "ok": true,
+      "answer": "{\"price\": 599.99, \"variants\": [\"34\", \"35\", \"36\", \"37\", \"38\", \"39\", \"40\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 59999
+      }
+    },
+    {
+      "brand": "Fila",
+      "domain": "fila.com.br",
+      "model": "openai/gpt-5-mini",
+      "arm": "site",
+      "url": "https://www.fila.com.br/tenis-fila-speedzone-2-feminino-1423570/p",
+      "inTok": 148789,
+      "outTok": 704,
+      "cost": 0.03860525,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": true,
+      "sawBytes": 529396,
+      "wallMs": 13259,
+      "ok": true,
+      "answer": "{\"price\":599.99,\"variants\":[\"34\",\"35\",\"36\",\"37\",\"38 (Últimas unidades)\",\"39\",\"40\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 59999
+      }
+    },
+    {
+      "brand": "Fila",
+      "domain": "fila.com.br",
+      "model": "openai/gpt-5-mini",
+      "arm": "decoindex",
+      "url": "https://decoindex.com/fila.com.br/tenis-fila-speedzone-2-feminino-1423570/p",
+      "inTok": 1943,
+      "outTok": 428,
+      "cost": 0.00134175,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": false,
+      "sawBytes": 4490,
+      "wallMs": 6902,
+      "ok": true,
+      "answer": "{\"price\":599.99,\"variants\":[\"34\",\"35\",\"36\",\"37\",\"38\",\"39\",\"40\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 59999
+      }
+    }
+  ]
+}

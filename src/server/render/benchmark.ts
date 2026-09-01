@@ -66,6 +66,27 @@ export interface JourneyRun {
   wallMs: number | null;
 }
 
+export interface ModelRun {
+  brand: string;
+  domain: string;
+  model: string;
+  arm: "site" | "decoindex";
+  inTok: number;
+  cost: number;
+  wallMs: number;
+  fetched: number;
+  truncated: boolean;
+  grade: { parsed: boolean; priceOk: boolean };
+}
+
+export interface ModelResults {
+  runAt: string;
+  brand: string;
+  domain: string;
+  truth: { title: string; priceMinor: number };
+  rows: ModelRun[];
+}
+
 export interface BenchResults {
   runAt: string;
   base: string;
@@ -87,6 +108,52 @@ const median = (xs: number[]) => {
   return s.length % 2 ? s[(s.length - 1) / 2] : Math.round((s[s.length / 2 - 1] + s[s.length / 2]) / 2);
 };
 
+/**
+ * The cross-model table.
+ *
+ * Run through a plain tool-calling loop rather than a coding CLI, because every
+ * CLI extracts the page before the model sees it — which is exactly the cost we
+ * are trying to measure. Here the response body goes into the context verbatim.
+ */
+function modelSection(m: ModelResults | null): string {
+  if (!m?.rows?.length) return `<p class="fine">Not run yet — <code>node bench/models.mjs</code>.</p>`;
+  const names = [...new Set(m.rows.map((x) => x.model))];
+  const rows = names.map((name) => {
+    const cell = (arm: string) => {
+      const x = m.rows.find((y) => y.model === name && y.arm === arm);
+      if (!x) return "<td>—</td><td>—</td><td>—</td>";
+      return (
+        `<td class="mid">${x.grade.priceOk ? "yes" : "<b>no</b>"}</td>` +
+        `<td class="num">${n(x.inTok)}${x.truncated ? '<br><span class="mono dim">truncated</span>' : ""}</td>` +
+        `<td class="num">$${x.cost.toFixed(4)}</td>`
+      );
+    };
+    return `<tr><td><b>${esc(name)}</b></td>${cell("site")}${cell("decoindex")}</tr>`;
+  });
+  const sum = (arm: string, f: (x: ModelRun) => number) =>
+    m.rows.filter((x) => x.arm === arm).reduce((a, b) => a + f(b), 0);
+  const tokRatio = Math.round(sum("site", (x) => x.inTok) / Math.max(1, sum("decoindex", (x) => x.inTok)));
+  const costRatio = Math.round(sum("site", (x) => x.cost) / Math.max(1e-9, sum("decoindex", (x) => x.cost)));
+  return `<div style="overflow-x:auto"><table class="tbl" style="margin-top:28px;min-width:0">
+<thead>
+  <tr><th></th><th colspan="3" style="text-align:center">Through the storefront</th><th colspan="3" style="text-align:center">Through decoindex</th></tr>
+  <tr><th>Model</th><th class="mid">Right?</th><th class="num">Tokens</th><th class="num">Cost</th><th class="mid">Right?</th><th class="num">Tokens</th><th class="num">Cost</th></tr>
+</thead>
+<tbody>${rows.join("\n")}</tbody></table></div>
+<p class="fine"><b>${tokRatio}× fewer tokens, ${costRatio}× cheaper</b>, same answer, on both models.
+   The storefront page had to be truncated to fit a sane budget; the decoindex document is 4 KB.</p>`;
+}
+
+/** Grader reasons, said the way a reader would say them. */
+const FAILURE: Record<string, string> = {
+  "no JSON object in the answer": "gave up without naming a product",
+  "no product slug in the URL it gave": "named a product but no usable link",
+  "product not on the merchant API": "named a product that does not exist",
+  "that product does not exist on the merchant API": "named a product that does not exist",
+  "out of stock": "named a product that is out of stock",
+  "product exists but is out of stock": "named a product that is out of stock",
+};
+
 /** How the storefront answered, in words rather than a status code. */
 const OUTCOME: Record<string, { label: string; note: string }> = {
   ok: { label: "served", note: "the product page, with the product in it" },
@@ -97,7 +164,12 @@ const OUTCOME: Record<string, { label: string; note: string }> = {
   error: { label: "error", note: "no usable response" },
 };
 
-export function benchmarkHtml(origin: string, r: BenchResults, journeys: JourneyRun[] = []): string {
+export function benchmarkHtml(
+  origin: string,
+  r: BenchResults,
+  journeys: JourneyRun[] = [],
+  models: ModelResults | null = null,
+): string {
   const served = r.layer1.filter((x) => x.site.outcome === "ok");
   const shells = r.layer1.filter((x) => x.site.outcome === "js-shell");
   const blocked = r.layer1.filter((x) => x.site.outcome === "blocked");
@@ -139,7 +211,6 @@ export function benchmarkHtml(origin: string, r: BenchResults, journeys: Journey
     })
     .join("\n");
 
-  const l2 = agentSection(r);
 
   const stale = r.stale.length
     ? `<p class="fine">Skipped this run: ${r.stale
@@ -190,8 +261,10 @@ export function benchmarkHtml(origin: string, r: BenchResults, journeys: Journey
         const b = ok("site");
         return `<div><b>${a.hit}/${a.of}</b><span>agent runs got the price right through decoindex, against ${b.hit}/${b.of} through the storefront</span></div>`;
       }
-      case "agents": return l2;
       case "journeys": return journeySection(journeys);
+      case "models": return modelSection(models);
+      case "modelProduct": return models ? esc(models.truth.title) : "a product";
+      case "modelStore": return models ? esc(models.domain) : "the storefront";
       case "stale": return stale;
       case "runAt": return day(r.runAt);
       case "base": return esc(r.base);
@@ -232,7 +305,7 @@ function journeySection(runs: JourneyRun[]): string {
       const mean = (f: (x: JourneyRun) => number | null) =>
         xs.reduce((t, x) => t + (f(x) ?? 0), 0) / xs.length;
       return [
-        `<td>${best.length ? `<b>R$ ${(Math.min(...best) / 100).toFixed(2).replace(".", ",")}</b><br><span class="mono dim">${esc((xs.find((x) => x.verified)?.productName ?? "").slice(0, 48))}</span>` : `<b>nothing</b><br><span class="mono dim">${esc(xs[0]!.reason ?? "no answer")}</span>`}</td>`,
+        `<td>${best.length ? `<b>R$ ${(Math.min(...best) / 100).toFixed(2).replace(".", ",")}</b><br><span class="mono dim">${esc((xs.find((x) => x.verified)?.productName ?? "").slice(0, 48))}</span>` : `<b>nothing</b><br><span class="mono dim">${esc(FAILURE[xs[0]!.reason ?? ""] ?? xs[0]!.reason ?? "no answer")}</span>`}</td>`,
         `<td class="num">${Math.round(mean((x) => x.turns))}</td>`,
         `<td class="num">${n(Math.round(mean((x) => x.inTokens)))}</td>`,
         `<td class="num">$${mean((x) => x.costUsd).toFixed(2)}</td>`,
@@ -240,8 +313,9 @@ function journeySection(runs: JourneyRun[]): string {
       ].join("");
     };
     return `<h3 style="margin-top:36px">${esc(first.what)} on ${esc(first.store)}</h3>
-<p class="fine" style="margin-top:6px">Both arms were given only the store's front door — no category, no search URL,
-   no hint that ordering exists. ${esc(first.model)}.</p>
+<p class="fine" style="margin-top:6px">${esc(first.model)}. Same prompt, same tools, same day.
+   "What it found" is the product each agent named, after we looked it up in ${esc(first.store)}'s own API
+   to confirm it exists, is in stock, and costs what the agent said.</p>
 <div style="overflow-x:auto"><table class="tbl" style="margin-top:18px;min-width:0">
 <thead><tr><th>Arm</th><th>What it found</th><th class="num">Turns</th><th class="num">Tokens</th><th class="num">Cost</th><th class="num">Wall</th></tr></thead>
 <tbody>
@@ -250,53 +324,6 @@ function journeySection(runs: JourneyRun[]): string {
 </tbody></table></div>`;
   });
   return blocks.join("\n");
-}
-
-/** Layer 2 is expensive, so it is often absent. Say that out loud. */
-function agentSection(r: BenchResults): string {
-  if (!r.layer2.length) {
-    return `<div class="card" style="margin-top:28px">
-  <h3>Not run yet</h3>
-  <p class="fine" style="margin-top:0">The agent layer costs real money, so it is not run on every pass.
-     Nothing is being hidden here — when it has been run, this section fills in with the
-     success rate, token count, wall-clock and dollar cost of every run, and each
-     transcript is committed under <code>bench/results/runs/</code> so you can check
-     any grade against what the model actually said.</p>
-  <p class="fine">Run it yourself with <code>node bench/run.mjs --agents --reps 3</code>.</p>
-</div>`;
-  }
-  const arms = (["site", "decoindex"] as const).map((arm) => {
-    const rs = r.layer2.filter((x) => x.arm === arm);
-    const okPrice = rs.filter((x) => x.grade.priceOk).length;
-    // Products with no variants in the catalog score null, not zero — see the
-    // note under the table.
-    const scored = rs.filter((x) => x.grade.variantF1 !== null);
-    const f1 = scored.length
-      ? scored.reduce((a, b) => a + (b.grade.variantF1 ?? 0), 0) / scored.length
-      : null;
-    return `<tr>
-  <td><b>${arm === "site" ? "The storefront" : "decoindex"}</b></td>
-  <td class="num">${okPrice}/${rs.length}</td>
-  <td class="num">${f1 === null ? "—" : f1.toFixed(2)}</td>
-  <td class="num">${n(median(rs.map((x) => x.freshTokens)))}</td>
-  <td class="num">$${(rs.reduce((a, b) => a + (b.costUsd ?? 0), 0) / rs.length).toFixed(3)}</td>
-  <td class="num">${(median(rs.map((x) => x.wallMs)) / 1000).toFixed(1)}s</td>
-</tr>`;
-  });
-  return `<div style="overflow-x:auto"><table class="tbl" style="margin-top:28px">
-<thead><tr>
-  <th>Arm</th><th class="num">Price correct</th><th class="num">Variant F1</th>
-  <th class="num">Median tokens</th><th class="num">Mean cost</th><th class="num">Median wall</th>
-</tr></thead>
-<tbody>${arms.join("\n")}</tbody>
-</table></div>
-<p class="fine">${r.model} · ${r.reps} run${r.reps === 1 ? "" : "s"} per brand per arm ·
-   both arms get the identical question and the identical grader ·
-   graded against the merchant's own API, not against decoindex ·
-   every transcript committed under <code>bench/results/runs/</code>.</p>
-<p class="fine">Variant F1 compares the sizes the agent listed against the ones the catalog says are
-   in stock. Products the catalog gives no variants for score <code>null</code> and are left out of
-   the mean — counting an empty answer as a perfect one flatters both arms and tells you nothing.</p>`;
 }
 
 const TEMPLATE = /* html */ `<!doctype html>
@@ -430,32 +457,42 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
 <section>
   <div class="wrap">
     <h2>One shopping question, start to finish.<br><span class="dim">Handed the front door and nothing else.</span></h2>
-    <p class="lede" style="margin-top:20px">Reading one product page is a fair test of a document. It is not a fair test of a
-       store. So this gives an agent the store's homepage and a real errand — find the cheapest one of these
-       and a link to buy it — and lets it work out the rest. No category, no search URL, no hint that
-       ordering exists. Whatever it reports is then looked up in the merchant's own API and either
-       confirmed or thrown out.</p>
+    <p class="lede" style="margin-top:20px">Two identical agents. Each gets one sentence and one URL —
+       the store's homepage. Nothing else: no category, no search link, no hint that the catalog can be
+       ordered by price. Whatever product they come back with is looked up in the merchant's own API and
+       either confirmed or thrown out.</p>
+    <div class="pane" style="margin-top:28px;max-width:720px">
+      <header><span>The task, verbatim</span></header>
+<pre>Find the cheapest in-stock PlayStation 5 game this store
+sells, and give me a link to buy it.
+
+Store: https://www.americanas.com.br          &lt;- one agent
+       https://decoindex.com/americanas.com   &lt;- the other</pre>
+    </div>
     {{journeys}}
-    <p class="fine">Graded by verification, not by matching. The first version of this compared against
-       "cheapest result of a full-text search" and marked the better answer wrong — the agent had found a
-       real, in-stock game cheaper than both that number and the category listing. A catalog is not
-       consistently categorized, so "the cheapest X in this store" has no computable ground truth, and a
-       grader that pretends otherwise is just a worse shopper than the thing it is grading.</p>
   </div>
 </section>
 
 <section class="band">
   <div class="wrap">
-    <h2>Can an agent actually answer the question?<br><span class="dim">Bytes are a proxy. This is the real test.</span></h2>
-    <p class="lede" style="margin-top:20px">Smaller is only worth something if the answer survives. So the
-       second layer hands a headless Claude one URL and one question — what does this cost, and which sizes
-       are in stock — once against the storefront and once against decoindex, and grades both against the
-       merchant's own API.</p>
-    {{agents}}
+    <h2>Does it hold with other models?<br><span class="dim">Same page, same question, no Anthropic anywhere.</span></h2>
+    <p class="lede" style="margin-top:20px">If the advantage only showed up under one vendor's fetch tool, it would be a
+       property of that tool rather than of the documents. So this runs the plainest agent there is — one
+       tool that returns the response body verbatim, nothing summarizing it on the way — and asks two other
+       models for the price and sizes of one product.</p>
+    <div class="pane" style="margin-top:28px;max-width:720px">
+      <header><span>The task, verbatim</span></header>
+<pre>What is the current price of "{{modelProduct}}",
+and which sizes/variants are in stock?
+
+Page: {{modelStore}} product page   &lt;- one run
+      the same URL through decoindex  &lt;- the other</pre>
+    </div>
+    {{models}}
   </div>
 </section>
 
-<section class="band">
+<section>
   <div class="wrap">
     <h2>Run it yourself.</h2>
     <p class="lede" style="margin-top:20px">The first layer needs no key, no account and no permission.
@@ -486,6 +523,15 @@ node bench/run.mjs --agents --reps 3</pre>
            carries the facts. This benchmark measures what it <em>costs an agent</em> to recover a fact
            the merchant already published — not whether we copied it correctly. Those are different
            claims and we are only making the first one.</p>
+      </div>
+      <div class="row">
+        <h3>Whether the answer was the true cheapest</h3>
+        <p>We confirm the product an agent names is real, in stock, and priced as claimed. We do not
+           claim it is the global optimum. An earlier version tried: it compared against the cheapest
+           full-text search result and marked the better answer wrong — the agent had found a real
+           in-stock game cheaper than both that number and the category listing. A catalog is not
+           consistently categorized, so "the cheapest X in this store" has no computable ground truth,
+           and a grader that pretends otherwise is just a worse shopper than the thing it grades.</p>
       </div>
       <div class="row">
         <h3>Anything live</h3>
