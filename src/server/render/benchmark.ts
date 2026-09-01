@@ -530,14 +530,14 @@ const TEMPLATE = /* html */ `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>decoindex benchmark — what a storefront costs an agent to read</title>
-<meta name="description" content="Nine real Brazilian and US storefronts, one product page each, measured as raw HTML and as a decoindex document. Reproducible with one command.">
+<meta name="description" content="Fifteen real Brazilian and US storefronts, one product page each, measured as raw HTML and as a decoindex document, then handed to five models as a shopping question.">
 <meta name="theme-color" content="#07401A">
 <link rel="canonical" href="{{origin}}/benchmark">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="decoindex">
 <meta property="og:url" content="{{origin}}/benchmark">
 <meta property="og:title" content="decoindex benchmark — what a storefront costs an agent to read">
-<meta property="og:description" content="Nine real storefronts, one product page each, measured both ways. Run it yourself in about a minute.">
+<meta property="og:description" content="Fifteen real storefronts measured both ways, then five models asked to shop them. Every number here came from a run, not an estimate.">
 <meta property="og:image" content="{{origin}}/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="{{origin}}/og.png">
@@ -635,7 +635,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
 <section class="hero" style="padding-bottom:24px">
   <div class="wrap">
     <p class="eyebrow enter">Benchmark · {{runAt}}</p>
-    <h1 class="enter">The same product page,<br>{{ratio}}× cheaper to read.<br><span class="dim">Run it yourself in a minute.</span></h1>
+    <h1 class="enter">The same product page,<br>{{ratio}}× cheaper to read.<br><span class="dim">Measured, not estimated.</span></h1>
     <p class="lede enter" style="--d:120ms;margin-top:24px">
       {{total}} real storefronts — Farm Rio, Fila, Osklen, Allbirds and others — one in-stock product
       each. We fetch that product two ways: as the HTML a storefront hands a browser, and as the
@@ -752,29 +752,6 @@ and which sizes/variants are in stock?
        harnesses differ, so the bars are not competing with each other — each pair is. What they have in
        common is the direction.</p>
     {{costChart}}
-  </div>
-</section>
-
-<section>
-  <div class="wrap">
-    <h2>Run it yourself.</h2>
-    <p class="lede" style="margin-top:20px">The first layer needs no key, no account and no permission.
-       It talks to the merchants' public catalog APIs and to us, and it takes about a minute.</p>
-    <div class="pane" style="margin-top:28px">
-      <header><span>Layer 1 — free, no auth</span><span>~1 min</span></header>
-<pre>git clone https://github.com/deco-cx/decoindex
-cd decoindex
-node bench/run.mjs
-
-# against your own deployment
-node bench/run.mjs --base https://decoindex.com
-
-# the agent layer. costs money, needs a
-# logged-in \`claude\` CLI
-node bench/run.mjs --agents --reps 3</pre>
-      <p class="pane-note">Writes <code>bench/results/latest.json</code> — the exact file this page renders.
-         The published run is committed, so you can diff yours against ours.</p>
-    </div>
   </div>
 </section>
 

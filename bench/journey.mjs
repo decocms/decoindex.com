@@ -101,6 +101,26 @@ const CLAUDE_ARGS = (p) => [
 // harness records as a 600s timeout and zero tokens.
 const OPENCODE_ARGS = (p) => ["run", p, "--format", "json", "--model", MODEL, "--auto"];
 
+/**
+ * Codex, the other coding agent people actually have installed.
+ *
+ * `--ignore-user-config` is the counterpart to Claude's `--setting-sources ""`:
+ * without it the run inherits whatever the operator has configured and stops
+ * being reproducible. Network is off in the default sandbox, so a fetch task
+ * needs full access — the run happens in a temp directory with nothing in it.
+ *
+ * Codex has no WebFetch equivalent; it shells out to curl. That is a real
+ * difference between the two CLIs rather than a flaw in either, and it is part
+ * of what this comparison is for.
+ */
+const CODEX_ARGS = (p, out) => [
+  "exec", p,
+  "--skip-git-repo-check",
+  "--ignore-user-config",
+  "--sandbox", "danger-full-access",
+  "--output-last-message", out,
+];
+
 function exec(cmd, args) {
   return new Promise((resolve) => {
     const started = Date.now();
@@ -111,6 +131,23 @@ function exec(cmd, args) {
 }
 
 async function run(prompt) {
+  if (RUNNER === "codex") {
+    // The final answer comes from --output-last-message; stdout carries the
+    // rest. Codex bills against a ChatGPT subscription and reports no dollar
+    // figure, so cost stays null rather than being invented from a token count
+    // at a rate we would be guessing.
+    const outFile = join(tmpdir(), `codex-${process.pid}-${Math.round(performance.now())}.txt`);
+    const { wallMs, stdout, err } = await exec("codex", CODEX_ARGS(prompt, outFile));
+    let answer = null;
+    try { answer = readFileSync(outFile, "utf8").trim() || null; } catch { /* no answer written */ }
+    const tokens = Number(stdout.match(/tokens used\s*\n\s*([\d,]+)/i)?.[1]?.replace(/,/g, "") ?? 0);
+    return {
+      wallMs, answer, costUsd: null, inTokens: tokens, outTokens: 0,
+      turns: (stdout.match(/^exec$/gm) ?? []).length || null,
+      error: err ?? (answer ? null : "no final message written"),
+      raw: { stdout: stdout.slice(-4000), tokens },
+    };
+  }
   if (RUNNER === "claude") {
     const { wallMs, stdout, err } = await exec("claude", CLAUDE_ARGS(prompt));
     const parsed = safeJson(stdout);

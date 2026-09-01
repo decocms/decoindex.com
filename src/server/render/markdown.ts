@@ -435,7 +435,27 @@ export function renderListing(
   // Ordering has to be discoverable from the document itself: "which is cheapest"
   // is unanswerable from one arbitrary page of a large category, and an agent
   // cannot ask for something it was never told exists.
-  const q = (extra: string) => `${base}${path}?${doc.sort ? `sort=${doc.sort}&` : ""}${extra}`;
+  /**
+   * One builder for every link this document emits.
+   *
+   * There were two. The next-page link was concatenated from `sort` and a page
+   * number and knew nothing about `q`, so paginating a search landed on an empty
+   * search — `?q=playstation+5&page=2` came out as `?page=2`. The "Other orders"
+   * links a few lines below were built from the real incoming query string and
+   * carried it correctly, which is why the bug looked arbitrary. Anything that
+   * builds a URL from a subset of the parameters that got us here will drop one
+   * eventually, so start from all of them and override what changes.
+   */
+  const incoming = new URLSearchParams(query ?? "");
+  const linkTo = (over: Record<string, string | undefined>) => {
+    const p = new URLSearchParams(incoming);
+    for (const [k, v] of Object.entries(over)) {
+      if (v === undefined) p.delete(k);
+      else p.set(k, v);
+    }
+    const qs = p.toString();
+    return `${base}${path}${qs ? `?${qs}` : ""}`;
+  };
   if (doc.sortedWithinPage) {
     out.push(
       `Ordered by \`${doc.sort}\` **within this page only** — this platform cannot order the`,
@@ -462,7 +482,7 @@ export function renderListing(
     );
   }
 
-  const nextPage = q(`page=${doc.page + 1}`);
+  const nextPage = linkTo({ page: String(doc.page + 1) });
   const hasMore = doc.total ? doc.page * doc.products.length < doc.total : doc.products.length >= 24;
   /**
    * Sort options as links, not as documented syntax.
@@ -473,13 +493,8 @@ export function renderListing(
    * handed. Documentation an agent cannot act on is decoration.
    */
   {
-    const q = new URLSearchParams(query ?? "");
-    const link = (value: Sort) => {
-      const p = new URLSearchParams(q);
-      p.set("sort", value);
-      p.delete("page");
-      return `${base}${path}?${p.toString()}`;
-    };
+    // Re-ordering starts the result set again, so the page number goes.
+    const link = (value: Sort) => linkTo({ sort: value, page: undefined });
     out.push(`## Other orders\n`);
     out.push(
       `Each of these re-orders the whole ${doc.query ? "result set" : "category"}, not just this page:\n`,

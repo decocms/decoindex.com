@@ -313,6 +313,18 @@ await check("search + price_asc is strictly ordered, not roughly ordered", async
   assert.deepEqual(prices, [...prices].sort((a, b) => a - b), `not ascending: ${prices.slice(0, 5).join(", ")}`);
 });
 
+await check("paginating a search keeps the search", async () => {
+  // Two URL builders, one of which knew about `sort` and not `q`: the next-page
+  // link on a search dropped the query and landed on an empty result set, while
+  // the sort links beside it carried it fine.
+  const { body } = await get("/farmrio.com.br/search?q=vestido&sort=price_asc");
+  const next = body.match(/^- Next page: (\S+)$/m)?.[1];
+  assert.ok(next, "no next-page link on a paginated search");
+  assert.match(next, /[?&]q=vestido(&|$)/, `next page dropped the query: ${next}`);
+  assert.match(next, /[?&]sort=price_asc(&|$)/, `next page dropped the sort: ${next}`);
+  assert.match(next, /[?&]page=2(&|$)/, `next page did not advance: ${next}`);
+});
+
 await check("a page-local sort says so instead of overclaiming", async () => {
   const { body } = await get("/allbirds.com/collections/mens?sort=price_asc");
   // Shopify cannot order server-side, so the document must not imply it did.

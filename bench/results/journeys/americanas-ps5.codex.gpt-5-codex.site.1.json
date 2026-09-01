@@ -1,0 +1,28 @@
+{
+  "scenario": {
+    "name": "americanas-ps5",
+    "domain": "americanas.com",
+    "account": "americanas",
+    "query": "playstation 5",
+    "what": "PlayStation 5 game"
+  },
+  "runner": "codex",
+  "model": "gpt-5-codex",
+  "arm": "site",
+  "root": "https://www.americanas.com",
+  "prompt": "You are shopping on this store: https://www.americanas.com\n\nTask: find the CHEAPEST in-stock PlayStation 5 game this store sells, and give me a link to buy it.\n\nStart at that URL and work it out from there. You may fetch any page on that same site.\nDo not use prior knowledge and do not guess a price — read it from the store.\nBe careful: the first page of results is usually not the whole catalog, and is usually\nnot ordered by price.\n\nReply with ONLY a JSON object, no prose, no code fence:\n{\"price\": <number in reais, e.g. 189.98>, \"name\": \"<product name>\", \"url\": \"<link to the product>\", \"fetches\": <how many pages you fetched>}",
+  "truth": {
+    "priceMinor": 18998,
+    "name": "Jogo PS5 The Last of Us Part II Remastered Sony Mídia Física",
+    "slug": "game-the-last-of-us-parte-ii-remastered-ps5-7477678339"
+  },
+  "grade": {
+    "parsed": false,
+    "verified": false,
+    "reason": "no JSON object in the answer"
+  },
+  "result": {
+    "stdout": "",
+    "tokens": 0
+  }
+}

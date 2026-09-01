@@ -127,7 +127,7 @@ export function normalizedQuery(query?: URLSearchParams): string {
  * invisible until it expires. It only ever appears in the synthetic cache key,
  * never in a URL we serve or publish.
  */
-export const RENDER_VERSION = "17";
+export const RENDER_VERSION = "18";
 
 /** Cache key: stable, ext-aware, query-normalized. */
 export function cacheKey(
