@@ -18,14 +18,18 @@ Break these and the service stops being viable. They are not preferences.
 
 **1. Reads are bounded, and never crawl.** A request is served from the edge
 cache, from KV, or by resolving *that one URL* against the merchant's public
-platform API — at most two upstream calls, a 5s timeout each, rate-limited per
+platform API — at most two upstream calls, a 6s timeout each, rate-limited per
 domain, and negative-cached. A read never enumerates a catalog and never renders
-HTML. A cold domain additionally pays one detection handshake, once, ever.
+HTML. A cold domain additionally pays one detection handshake (5s), once, ever.
 
 This is what makes "swap the origin and it just works" true, and the bound is
-what stops anyone using us as an amplifier against a storefront. Bulk indexing
-and search are the paid tier and run off the request path. If you find yourself
-adding a third upstream call to a read, you are building the wrong thing.
+what stops anyone using us as an amplifier against a storefront. Note what is
+*not* a violation: `?q=` and `?sort=` are served by the merchant's own search
+and catalog endpoints, so they stay inside the two-call bound. What is still
+unbuilt is an index of *ours* — bulk ingestion, embeddings, cross-storefront
+search. That is the paid tier and it runs off the request path. If you find
+yourself adding a third upstream call to a read, you are building the wrong
+thing.
 
 **2. Catalog facts and commercial facts are never mixed.** Title, attributes,
 variants, categories, observed base price: indexable, cacheable, ours to
@@ -43,23 +47,48 @@ outranks a merchant's own PDP is the day the commercial conversation ends.
 ## Architecture in one screen
 
 ```
-Worker (Hono)  src/server/main.ts
-  GET /{domain}/{...path}
+Worker (Hono)  src/server/main.ts        — one file owns every route
+  GET /{domain}/{...path}[.md|.json]     — the catch-all, and the product
     1. Cache API          hit -> return
     2. KV  md:{domain}{path}   hit -> return (+ refresh in waitUntil if stale)
     3. miss:
          D1 registry -> platform, or detectPlatform() once
-         platform/resolve() -> Doc      <= 2 upstream calls, 5s each
+         platform/resolve() -> Doc      <= 2 upstream calls, 6s each
          render/markdown.ts -> Markdown or JSON
          waitUntil: KV put (no TTL), D1 event
 
 src/server/platform/   detect.ts + vtex.ts + shopify.ts, one resolve() each
-src/server/render/     markdown.ts (documents) + landing.ts (the / page)
+                       + brand.ts (one homepage read per domain, ever)
+                       + order.ts, tree.ts (sorting, category trees)
+src/server/render/     markdown.ts (documents), landing.ts (/), benchmark.ts
+                       (/benchmark), chrome.ts (shared HTML shell)
+src/server/mcp/        the PRIVATE control plane behind /mcp — see below
+src/server/lib/        url.ts (parse + cache keys), store.ts (KV), registry.ts
+                       (D1 + UA classification), feedback.ts, types.ts
 
 D1   registry: which domains exist, platform, origin, account, currency
-     + the append-only events table
+     + the append-only events table + feedback + the improvement-loop tables
 KV   rendered documents. Written WITHOUT a TTL — this is the index, not a cache
 ```
+
+Markdown is the default representation: no extension means `.md`. `.json` is the
+same document structured. Both collapse to one cache entry (`cacheKey` strips
+`.md`), so never teach the suffix as required — "swap the origin" is the pitch
+and an extension contradicts it.
+
+**`/mcp` is private, and is not the product.** It exposes `feedback_*`,
+`traffic_stats`, `domain_list` and the probe tools — operator surface, guarded by
+one bearer secret (`MCP_AUTH_TOKEN`) and failing closed with 503 when unset. The
+public product is the URL. An earlier design had a *public* MCP with
+`search_storefront`/`get_product`; it is gone, and anything still advertising it
+is stale.
+
+Other routes: `/` (HTML for browsers, 302 to `/llms.txt` for agents), `/llms.txt`,
+`/about`, `/opt-out`, `/benchmark` (static, from committed bench results),
+`/feedback` (public, unauthenticated, IP rate-limited), `/robots.txt`, `/og.png`,
+`/healthz`, `POST /e` (cookieless landing beacon). `/{domain}/llms.txt` 308s to
+`/{domain}` — one index per storefront, because pointing agents at a second
+thinner one cost us a real reader.
 
 Platform detection decides everything: VTEX and Shopify address their catalog
 JSON with the same paths their storefront uses, which is the entire reason a URL
