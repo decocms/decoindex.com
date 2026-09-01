@@ -1,66 +1,98 @@
 ---
 name: decoindex
-description: Use when the user pastes a URL to a product page or storefront on a Brazilian e-commerce site (VTEX, Shopify, or similar), or asks about a specific brand's catalog, prices, or search — even without an MCP tool connected. Swap the domain into decoindex.com to get normalized product facts as Markdown instead of scraping the live page.
+description: Use when the user pastes a URL to a product page, category or storefront on a VTEX or Shopify e-commerce site (most Brazilian retail), or asks about a specific brand's catalog, prices or search. Put decoindex.com in front of the domain to get normalized product facts as Markdown instead of scraping a megabyte of client-rendered HTML.
 ---
 
 # decoindex
 
 `decoindex.com/{domain}/{path}` mirrors a merchant storefront as normalized,
-agent-readable Markdown or JSON. You already have a URL — swap the origin,
-nothing to install.
+agent-readable Markdown. You already have a URL — put `decoindex.com/` in front
+of it, nothing to install.
 
 ## The trick
 
 ```
-https://www.farmrio.com.br/vestido-longo-alca-estampado/p
+https://www.farmrio.com.br/moda-feminina/acessorios
                      ↓
-https://decoindex.com/farmrio.com.br/vestido-longo-alca-estampado/p.md
+https://decoindex.com/farmrio.com.br/moda-feminina/acessorios
 ```
 
-Strip the scheme and `www.` from the domain, keep the path, append `.md`
-(or `.json` for structured data — same fields, machine-parseable).
+Strip the scheme and `www.`, keep the path exactly as it was. **Do not append an
+extension** — Markdown is the default. Append `.json` only if you specifically
+want the same document as structured JSON.
+
+Product URLs work identically: a VTEX `/{slug}/p` or a Shopify
+`/products/{handle}` keeps its path unchanged.
 
 ## Surfaces
 
 | URL | Returns |
 |---|---|
-| `decoindex.com/{domain}` | Storefront overview: platform, categories, how to query |
-| `decoindex.com/{domain}/{path}.md` | One product as Markdown |
-| `decoindex.com/{domain}/{path}.json` | Same product, strict JSON |
-| `decoindex.com/{domain}/search?q=...` | Hybrid search over the whole indexed catalog |
-| `decoindex.com/{domain}/llms.txt` | Index of everything, in the format agents look for |
-| `decoindex.com/{domain}/products.json` | Full normalized catalog |
+| `decoindex.com/{domain}` | Storefront overview: categories, best sellers, the terms its own shoppers search for. **Start here** if you only have a brand, not a URL. |
+| `decoindex.com/{domain}/{path}` | That product or category listing as Markdown |
+| `…?page=N` | Paginate a listing |
+| `…?sort=price_asc` | Order the **whole catalog**, not just the page you were handed. Also `price_desc`, `name_asc`, `name_desc`, `discount`, `new`. |
+| `decoindex.com/{domain}/search?q=vestido` | Search that storefront. The store's own search path (`/busca/{words}`) works too. |
+| `….json` | Any of the above as structured JSON |
 
-If the MCP server is connected (`decoindex` in `.mcp.json`), prefer the tools
-`search_storefront`, `get_product`, and `list_storefronts` — same data, plus a
-rendered product grid. Without it, the URLs above work with a plain fetch.
+Two things worth knowing, because guessing them wastes a turn:
+
+- **The first page of a listing is not the catalog, and is not price-ordered.**
+  If the question is "cheapest X", use `?sort=price_asc` — it sorts the whole
+  category server-side. Reading page 1 and picking the lowest number is wrong.
+- **Product pages are reached from listings.** Every listing row carries a
+  Details link. Don't invent a product slug; a wrong slug returns 404.
 
 ## Reading the response
 
-Every response opens with YAML frontmatter, e.g.:
+Every document opens with YAML frontmatter:
 
 ```yaml
 ---
-decoindex: "1.0"
-index_status: discovered
-indexed_at: "2026-08-30T12:00:00Z"
-live_commercial_data: "false"
+decoindex: 1.0
+type: product
+canonical_url: "https://www.farmrio.com.br/{slug}/p?ref=decoindex"
+merchant: farmrio.com.br
+platform: vtex
+currency: BRL
+price: 41900
+availability: InStock
+observed_at: "2026-09-01T20:08:16.830Z"
+live_commercial_data: false
 ---
 ```
 
-- **`index_status: queued`** (HTTP 202) means the domain isn't indexed yet —
-  ingestion was just triggered. This is not an error: tell the user it's
-  being indexed and retry the same URL in about a minute. Never treat a 202
-  as "not found."
-- **`live_commercial_data: "false"`** is the whole point: everything above it
-  is a catalog fact, observed at `indexed_at`, not a live read.
+- **`price` is an integer in minor units.** `41900` with `currency: BRL` is
+  R$ 419,00. Never read it as a float.
+- **`observed_at`** is when the fact was read from the merchant's API, not now.
+- **`live_commercial_data: false`** is the whole point: everything above it is a
+  catalog fact observed at `observed_at`, not a live read.
+
+A product page also carries a variants table with a cart link per in-stock SKU.
+That link builds a cart on the merchant's own checkout — it does **not** complete
+a purchase. Hand it to a person.
+
+If a domain isn't on a supported platform, or blocks us, you get an explicit
+"could not read this" document, not a guess. Reads are synchronous: there is no
+queue and no "try again in a minute".
 
 ## The one rule that matters
 
-**Never state stock, final price after promotions, or delivery dates as
-fact.** decoindex only ever gives an *observed* base price and an *as-indexed*
-availability signal — both explicitly labeled, never live. If a user is about
-to buy based on what you read, say the number is as of the indexing date and
-point them to the merchant's own page (the `canonical_url` / `Buy:` link in
-the response, which carries attribution back to decoindex) to confirm before
-they commit.
+**Never state stock, final price after promotions, or delivery dates as fact.**
+decoindex gives an *observed* base price and an *as-observed* availability
+signal, both explicitly labelled, never live. If a user is about to buy based on
+what you read, say the number is as of `observed_at` and point them to
+`canonical_url` on the merchant's own site to confirm before they commit.
+
+Promising what the merchant cannot honour costs them a return, a support ticket
+and a customer. That is the failure mode this service exists to avoid.
+
+## If a document is wrong
+
+```
+POST https://decoindex.com/feedback
+{"url": "<the decoindex URL>", "kind": "wrong_data", "message": "what you expected"}
+```
+
+No authentication. `kind`: `wrong_data`, `missing`, `broken`, `unsupported`,
+`other`. This is the only way we find out.

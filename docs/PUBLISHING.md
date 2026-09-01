@@ -4,40 +4,36 @@ Handoff for whoever has Cloudflare access (Gui, as of this writing — nobody
 else on this had it during the PR that added `/mcp`). Two independent jobs:
 get this code live, then (optionally, separately) list it publicly.
 
-## 0. Read this first: production has already drifted from git
+## 0. The drift described here has been resolved — read this for the history
 
-`decoindex.com` today runs code that **does not match `main`**. Confirmed by
-probing the live endpoints (no Cloudflare access was available to diff the
-actual deployed script):
+This section used to say `decoindex.com` ran code that matched no commit on any
+branch. That was correct at the time and the diagnosis was right, but the cause
+was not missing code: it was a **local branch that had never been pushed**
+(`vibegui/agent-first-vtex-shopify-proxy`, 28 commits). The live Worker was
+running that branch the whole time.
 
-| | `main` (this repo, incl. PR #1) | Live `decoindex.com` right now |
-|---|---|---|
-| `/mcp` | public, no auth | **requires auth** — 401 with `{"error":{"code":-32001,"message":"Unauthorized. Send Authorization: Bearer <token>, an x-mcp-auth header, or ?token=<token>."}}` |
-| `/llms.txt` | only per-domain (`/{domain}/llms.txt`) | **exists at the root** too — `/` 302s there |
-| catalog query params | `?limit=`/`?offset=` on `/products.json` | **`?page=`, `?sort=price_asc\|price_desc\|name_asc\|name_desc\|discount\|new`** on any path |
+It has since been merged. The three "drifted" behaviours were never experiments:
 
-None of this is in any commit, any branch, or any other `decoindex`-named repo
-in any org we can see (checked). No GitHub Deployment / check-run / commit
-status exists on this repo either — there is **no CI/CD** wired up despite
-what the README's "connect the repo to Workers Builds" line implies; every
-prior deploy was a direct `wrangler deploy` (or a dashboard Quick Edit) that
-was never committed back. That matches this repo's own `CLAUDE.md` loop
-("implement → deploy → record a memory") — deploy was never gated on a
-commit.
+| Behaviour | Status |
+|---|---|
+| `/mcp` requires auth | **Intended.** It is the private operator control plane, not a public product surface. |
+| root `/llms.txt` exists, `/` 302s to it for agents | **Intended.** `/{domain}/llms.txt` now 308s to `/{domain}` — one index per storefront. |
+| `?page=` / `?sort=price_asc\|…` on any path | **Intended**, and the replacement for `?limit=`/`?offset=` on `/products.json`, which no longer exists. |
 
-**Before running `npm run deploy` from this branch:**
+The larger finding stands: the whole DO-plus-ingest-pipeline architecture that
+`main` documented was never deployed. What ships is the bounded read-through
+resolver. `README.md` and `CLAUDE.md` now describe that, and `git log` is the
+source of truth again.
 
-1. Pull the actual live source so nothing gets silently deleted:
-   ```bash
-   npx wrangler login
-   npx wrangler deployments list          # who deployed what, when
-   # Cloudflare dashboard → Workers & Pages → decoindex → Quick Edit
-   # (or "Download" if offered) to get the live src/ tree
-   ```
-2. Port the three drifted pieces (auth on `/mcp`, root `/llms.txt`, `sort`/
-   `page`) into this branch as their own commit(s) — or explicitly decide
-   they were experiments and can be dropped. **Either way, this is a decision
-   for a human, not something to deploy over silently.**
+**Still true and still worth fixing: there is no CI/CD.** No GitHub Deployment,
+check-run or commit status exists on this repo. Every deploy has been a direct
+`wrangler deploy`. The `CLAUDE.md` loop ("implement → deploy → record a memory")
+never gated deploy on a commit, which is exactly how a local branch ended up
+being production. Wiring Workers Builds to `main` is the durable fix.
+
+**Before running `npm run deploy`:** confirm `git log` matches what is live
+(`npx wrangler deployments list`), and deploy from `main`, not from a workspace
+branch.
 3. **The auth decision matters for this PR specifically:** `src/server/mcp.ts`
    in this PR is deliberately public/no-auth (matches the original written
    invariants: read-only, public data, no login). If production's existing
