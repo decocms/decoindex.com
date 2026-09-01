@@ -16,6 +16,17 @@ const MAX_VARIANTS = 40;
 const MAX_CLAIMS = 30;
 /** Category lines on an overview. Roots are never counted against it. */
 const CHILD_BUDGET = 90;
+/**
+ * Roots are shown ahead of any child, but they are not unlimited.
+ *
+ * "Every root, always" was written for americanas, which has 46 of them and was
+ * being misrepresented by depth-first truncation. It assumed a tree. Drogaria
+ * São Paulo's catalog is flat — 1,591 top-level categories and almost no
+ * children — so the same rule produced a 143 KB overview, 36k tokens, on the
+ * one page whose whole purpose is to be small enough to read. Cap them, and say
+ * how many were left out, exactly as we already do for children.
+ */
+const ROOT_BUDGET = 80;
 /** Most children shown under any one root, so no single branch eats the budget. */
 const MAX_CHILDREN_PER_ROOT = 8;
 
@@ -33,7 +44,14 @@ const MAX_CHILDREN_PER_ROOT = 8;
  * has seen 3% will confidently tell a shopper the store does not stock something.
  */
 function renderCategories(all: CategoryRef[], total: number | undefined, base: string): string[] {
-  const roots = all.filter((c) => c.depth === 0);
+  const allRoots = all.filter((c) => c.depth === 0);
+  // Biggest first where the platform tells us how big, so a cut list keeps the
+  // categories a shopper is most likely to want.
+  const ranked = allRoots.some((c) => c.count)
+    ? [...allRoots].sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
+    : allRoots;
+  const roots = ranked.slice(0, ROOT_BUDGET);
+  const droppedRoots = allRoots.length - roots.length;
   const childrenOf = new Map<string, CategoryRef[]>();
   for (const c of all) {
     if (c.depth === 0 || !c.parent) continue;
@@ -60,8 +78,9 @@ function renderCategories(all: CategoryRef[], total: number | undefined, base: s
   const out = [`## Categories\n`];
   const totalKnown = total ?? all.length;
   out.push(
-    `${roots.length} top-level ${roots.length === 1 ? "category" : "categories"}` +
-      (totalKnown > roots.length ? `, ${totalKnown} including subcategories.` : ".") +
+    `${allRoots.length} top-level ${allRoots.length === 1 ? "category" : "categories"}` +
+      (totalKnown > allRoots.length ? `, ${totalKnown} including subcategories.` : ".") +
+      (droppedRoots ? ` Showing the ${roots.length} largest.` : "") +
       ` Every category page lists its products; append \`?page=N\` to paginate.\n`,
   );
 
@@ -77,6 +96,13 @@ function renderCategories(all: CategoryRef[], total: number | undefined, base: s
         `  - _${totalKids - kids.length} more — open [${root.name}](${base}${root.path}) to see them all._`,
       );
     }
+  }
+  if (droppedRoots) {
+    out.push(
+      ``,
+      `_${droppedRoots} more top-level categories are not listed. This catalog is flat — almost every_`,
+      `_category is top-level — so search is the faster way in: \`${base}/search?q={words}\`._`,
+    );
   }
   out.push("");
   return out;
