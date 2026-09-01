@@ -90,6 +90,11 @@ so every push to `main` ships and every PR gets a preview URL.
 reached over JSON-RPC. Connect it, or use the URL trick straight from a skill
 — no server required for that half.
 
+Deploying this yourself, or listing it in the ChatGPT/Claude public
+directories? See [`docs/PUBLISHING.md`](docs/PUBLISHING.md) first — it also
+tracks the current gap between this branch and whatever's actually live on
+`decoindex.com`.
+
 ### Claude Code (skill + plugin)
 
 ```
