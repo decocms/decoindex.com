@@ -116,27 +116,35 @@ const median = (xs: number[]) => {
 function modelSection(m: ModelResults | null): string {
   if (!m?.rows?.length) return `<p class="fine">Not run yet — <code>node bench/models.mjs</code>.</p>`;
   const names = [...new Set(m.rows.map((x) => x.model))];
+  // No colspan group header. It reads well on a desktop and falls apart the
+  // moment a column is hidden on a phone, because CSS cannot renumber a span —
+  // the group label keeps claiming three columns that are no longer there.
+  // Self-describing headers survive any width.
   const rows = names.map((name) => {
-    const cell = (arm: string) => {
-      const x = m.rows.find((y) => y.model === name && y.arm === arm);
-      if (!x) return "<td>—</td><td>—</td><td>—</td>";
-      return (
-        `<td class="mid">${x.grade.priceOk ? "yes" : "<b>no</b>"}</td>` +
-        `<td class="num">${n(x.inTok)}${x.truncated ? '<br><span class="mono dim">truncated</span>' : ""}</td>` +
-        `<td class="num">$${x.cost.toFixed(4)}</td>`
-      );
-    };
-    return `<tr><td><b>${esc(name)}</b></td>${cell("site")}${cell("decoindex")}</tr>`;
+    const at = (arm: string) => m.rows.find((y) => y.model === name && y.arm === arm);
+    const site = at("site");
+    const idx = at("decoindex");
+    const both =
+      site?.grade.priceOk && idx?.grade.priceOk ? "both"
+      : idx?.grade.priceOk ? "decoindex only"
+      : site?.grade.priceOk ? "storefront only"
+      : "<b>neither</b>";
+    const tok = (x?: ModelRun) =>
+      `<td class="num">${x ? n(x.inTok) : "—"}${x?.truncated ? '<br><span class="mono dim">truncated</span>' : ""}</td>`;
+    const money = (x?: ModelRun) => `<td class="num">${x ? "$" + x.cost.toFixed(4) : "—"}</td>`;
+    return `<tr><td><b>${esc(name)}</b></td>${tok(site)}${money(site)}${tok(idx)}${money(idx)}<td class="mid">${both}</td></tr>`;
   });
   const sum = (arm: string, f: (x: ModelRun) => number) =>
     m.rows.filter((x) => x.arm === arm).reduce((a, b) => a + f(b), 0);
   const tokRatio = Math.round(sum("site", (x) => x.inTok) / Math.max(1, sum("decoindex", (x) => x.inTok)));
   const costRatio = Math.round(sum("site", (x) => x.cost) / Math.max(1e-9, sum("decoindex", (x) => x.cost)));
-  return `<div style="overflow-x:auto"><table class="tbl" style="margin-top:28px;min-width:0">
-<thead>
-  <tr><th></th><th colspan="3" style="text-align:center">Through the storefront</th><th colspan="3" style="text-align:center">Through decoindex</th></tr>
-  <tr><th>Model</th><th class="mid">Right?</th><th class="num">Tokens</th><th class="num">Cost</th><th class="mid">Right?</th><th class="num">Tokens</th><th class="num">Cost</th></tr>
-</thead>
+  return `<div style="overflow-x:auto"><table class="tbl m" style="margin-top:28px;min-width:0">
+<thead><tr>
+  <th>Model</th>
+  <th class="num">Storefront<br>tokens</th><th class="num">Storefront<br>cost</th>
+  <th class="num">decoindex<br>tokens</th><th class="num">decoindex<br>cost</th>
+  <th class="mid">Right?</th>
+</tr></thead>
 <tbody>${rows.join("\n")}</tbody></table></div>
 <p class="fine"><b>${tokRatio}× fewer tokens, ${costRatio}× cheaper</b>, same answer, on both models.
    The storefront page had to be truncated to fit a sane budget; the decoindex document is 4 KB.</p>`;
@@ -318,7 +326,7 @@ function journeySection(runs: JourneyRun[]): string {
 <p class="fine" style="margin-top:6px">${esc(first.model)}. Same prompt, same tools, same day.
    "What it found" is the product each agent named, after we looked it up in ${esc(first.store)}'s own API
    to confirm it exists, is in stock, and costs what the agent said.</p>
-<div style="overflow-x:auto"><table class="tbl" style="margin-top:18px;min-width:0">
+<div style="overflow-x:auto"><table class="tbl j" style="margin-top:18px;min-width:0">
 <thead><tr><th>Arm</th><th>What it found</th><th class="num">Turns</th><th class="num">Tokens</th><th class="num">Cost</th><th class="num">Wall</th></tr></thead>
 <tbody>
   <tr><td><b>The storefront</b></td>${cell("site")}</tr>
@@ -510,7 +518,31 @@ const TEMPLATE = /* html */ `<!doctype html>
   /* nowrap headers are what actually set the column widths here — letting the
      two-word ones wrap buys more than any font change. */
   .tbl th{white-space:normal}
-  .tbl .mono{display:none}
+  /* Only the ranked table can spare its second line — there the domain merely
+     repeats the brand. Everywhere else that line is the product the agent
+     actually named, which is the answer, so it stays. */
+  .tbl.terse .mono{display:none}
+  /* The task panes are the one thing a reader must be able to read end to end,
+     so shrink the type rather than let it scroll out of sight. */
+  .pane pre{font-size:11px;line-height:1.6;padding:14px}
+
+  /* Six and seven columns do not fit a phone, and a table that runs off the
+     screen hides the column it was built to show. Drop the supporting numbers,
+     keep the answer. */
+
+  /* Journey: arm, what it found, cost, wall. Turns and tokens are detail. */
+  .tbl.j th:nth-child(3),.tbl.j td:nth-child(3),
+  .tbl.j th:nth-child(4),.tbl.j td:nth-child(4){display:none}
+  /* Give the product name room now that it has some, and stop it going
+     one-word-per-line in a column three characters wide. */
+  .tbl.j td:nth-child(2){min-width:130px}
+  .tbl.j .mono{font-size:10.5px;line-height:1.35}
+
+  /* Models: both arms answered correctly on every store, so the two "Right?"
+     columns carry nothing here. Cost is in the chart directly below, which
+     leaves the table to do the one job the chart cannot: exact token counts. */
+  .tbl.m th:nth-child(3),.tbl.m td:nth-child(3),
+  .tbl.m th:nth-child(5),.tbl.m td:nth-child(5){display:none}
 }
 code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
 </style>
@@ -546,7 +578,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
       <table class="tbl{{terse}}" style="margin-top:28px">
         <thead><tr>
           <th>Brand</th><th>Storefront said</th>
-          <th class="num">HTML</th><th class="num">Tokens</th><th class="mid">Price in it?</th>
+          <th class="num">HTML</th><th class="num">Storefront<br>tokens</th><th class="mid">Price in it?</th>
           <th class="num">decoindex<br>tokens</th><th class="mid">Price in it?</th><th class="num">Ratio</th>
         </tr></thead>
         <tbody>
@@ -587,11 +619,14 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
        either confirmed or thrown out.</p>
     <div class="pane" style="margin-top:28px;max-width:720px">
       <header><span>The task, verbatim</span></header>
-<pre>Find the cheapest in-stock PlayStation 5 game this store
-sells, and give me a link to buy it.
+<pre>Find the cheapest in-stock PlayStation 5
+game this store sells, and give me a
+link to buy it.
 
-Store: https://www.americanas.com.br          &lt;- one agent
-       https://decoindex.com/americanas.com   &lt;- the other</pre>
+  one agent got
+    www.americanas.com.br
+  the other got
+    decoindex.com/americanas.com</pre>
     </div>
     {{journeys}}
   </div>
@@ -606,11 +641,13 @@ Store: https://www.americanas.com.br          &lt;- one agent
        models for the price and sizes of one product.</p>
     <div class="pane" style="margin-top:28px;max-width:720px">
       <header><span>The task, verbatim</span></header>
-<pre>What is the current price of &lt;product&gt;, and which
-sizes/variants are in stock?
+<pre>What is the current price of &lt;product&gt;,
+and which sizes/variants are in stock?
 
-Page: the storefront's own product page  &lt;- one run
-      that same URL through decoindex    &lt;- the other</pre>
+  one run got
+    the storefront's own product page
+  the other got
+    that same URL through decoindex</pre>
     </div>
     {{models}}
     {{costChart}}
@@ -624,13 +661,15 @@ Page: the storefront's own product page  &lt;- one run
        It talks to the merchants' public catalog APIs and to us, and it takes about a minute.</p>
     <div class="pane" style="margin-top:28px">
       <header><span>Layer 1 — free, no auth</span><span>~1 min</span></header>
-<pre>git clone https://github.com/deco-cx/decoindex &amp;&amp; cd decoindex
+<pre>git clone https://github.com/deco-cx/decoindex
+cd decoindex
 node bench/run.mjs
 
 # against your own deployment
 node bench/run.mjs --base https://decoindex.com
 
-# the agent layer. costs real money, needs a logged-in \`claude\` CLI
+# the agent layer. costs money, needs a
+# logged-in \`claude\` CLI
 node bench/run.mjs --agents --reps 3</pre>
       <p class="pane-note">Writes <code>bench/results/latest.json</code> — the exact file this page renders.
          The published run is committed, so you can diff yours against ours.</p>
