@@ -270,14 +270,172 @@ await check("every client gets a content type it can read", async () => {
   assert.match(json.headers.get("content-type") ?? "", /^application\/json/);
 });
 
+await check("price_asc really orders the whole category, not just the page", async () => {
+  const path = "/farmrio.com.br/moda-feminina/acessorios";
+  const { body } = await get(`${path}?sort=price_asc`);
+  assert.match(body, /^sort: price_asc$/m, "sort not echoed in frontmatter");
+
+  // The platform lists in-stock before out-of-stock and orders each run on its
+  // own, so the price column ascends, restarts, then ascends again. Check each
+  // run, not the whole column — asserting one global order fails on correct data.
+  const rows = body.split("\n").filter((l) => l.startsWith("| ") && /R\$/.test(l));
+  assert.ok(rows.length > 5, "no priced rows to check ordering on");
+  const runs = [[], []];
+  for (const r of rows) {
+    const cells = r.split("|");
+    const price = Number(cells[2].replace(/[^\d,]/g, "").replace(",", "."));
+    if (Number.isFinite(price) && price > 0) runs[/\byes\b/.test(cells[4]) ? 0 : 1].push(price);
+  }
+  for (const [i, run] of runs.entries()) {
+    const label = i === 0 ? "in-stock" : "out-of-stock";
+    assert.deepEqual(run, [...run].sort((a, b) => a - b), `${label} run not ascending: ${run.join(", ")}`);
+  }
+  assert.ok(runs[0].length, "no in-stock rows returned for price_asc");
+
+  // The whole point: page 1 of an unsorted 133-product category cannot answer
+  // "which is cheapest", so the unsorted document has to advertise the option.
+  const { body: plain } = await get(path);
+  assert.match(plain, /\?sort=price_asc/, "unsorted listing does not advertise sorting");
+});
+
+await check("a page-local sort says so instead of overclaiming", async () => {
+  const { body } = await get("/allbirds.com/collections/mens?sort=price_asc");
+  // Shopify cannot order server-side, so the document must not imply it did.
+  assert.match(body, /^sorted_within_page: true$/m, "missing the page-local caveat");
+  assert.match(body, /within this page only/i, "no prose warning for a page-local order");
+});
+
 await check("a big catalogue shows every top-level category", async () => {
-  const { res, body } = await get("/americanas.com/");
+  const { res, body } = await get("/americanas.com.br/");
   assert.equal(res.status, 200);
   assert.match(body, /^\d+ top-level categories, \d+ including subcategories\./m, "no honest count");
   const roots = body.split("\n").filter((l) => l.startsWith("- ["));
   // 46 roots upstream. Depth-first truncation used to show two of them.
   assert.ok(roots.length > 30, `only ${roots.length} roots listed`);
   assert.ok(body.includes("  - ["), "no subcategories nested under roots");
+});
+
+/**
+ * A category list says how a merchant files things, not what they sell. These
+ * two sections are what let an agent decide whether a storefront is worth
+ * exploring without opening anything.
+ */
+await check("VTEX overview carries best sellers and real search demand", async () => {
+  const { res, body } = await get("/americanas.com/");
+  assert.equal(res.status, 200);
+  assert.match(body, /^## Best sellers$/m, "no best sellers section");
+  assert.match(body, /^## What shoppers search for here$/m, "no top searches section");
+  const rows = body.split("\n").filter((l) => /^\| .+\| (yes|no) \|/.test(l));
+  assert.ok(rows.length >= 10, `only ${rows.length} best-seller rows`);
+  assert.match(body, /^- .+ — [\d,]+ searches$/m, "search terms carry no volume");
+});
+
+/**
+ * The overview truncates its tree, so the categories it omits have to be
+ * reachable from somewhere. Without this the reader is told "26 more" and given
+ * nowhere to go.
+ */
+await check("a truncated category is reachable from its own page", async () => {
+  const { body: home } = await get("/americanas.com/");
+  const hint = home.match(/_\d+ more — open \[([^\]]+)\]\((\S+?)\) to see them all\._/);
+  assert.ok(hint, "overview truncates without pointing anywhere");
+
+  const { res, body } = await get(new URL(hint[2]).pathname);
+  assert.equal(res.status, 200, `${hint[1]} did not resolve`);
+  assert.match(body, /^## Subcategories$/m, `${hint[1]} lists no subcategories`);
+  const kids = body.split("\n").filter((l) => l.startsWith("- ["));
+  assert.ok(kids.length > 5, `only ${kids.length} subcategories listed`);
+});
+
+/**
+ * Handed the americanas overview, ChatGPT immediately tried
+ * /americanas.com/busca/playstation-5 — it inferred VTEX's own search path,
+ * and we answered 404. Searching a storefront by its own convention is the
+ * first thing an agent reaches for.
+ */
+await check("a storefront can be searched on its own URL conventions", async () => {
+  for (const [path, term] of [
+    ["/americanas.com/busca/playstation-5", "playstation 5"],
+    ["/americanas.com/search?q=playstation%205", "playstation 5"],
+    ["/allbirds.com/search?q=wool%20runner", "wool runner"],
+  ]) {
+    const { res, body } = await get(path);
+    assert.equal(res.status, 200, `${path} -> ${res.status}`);
+    assert.match(body, new RegExp(`^# Search: ${term}$`, "m"), `${path}: wrong title`);
+    const rows = body.split("\n").filter((l) => /^\| .+\| (yes|no) \|/.test(l));
+    assert.ok(rows.length > 0, `${path}: no results`);
+  }
+});
+
+/**
+ * ChatGPT cannot fabricate a URL — it said so plainly, and its own attempt was
+ * blocked. It can only follow a link that was on a page it read. So the search
+ * terms the overview publishes have to be links, not bare words.
+ */
+await check("top search terms are followable links", async () => {
+  const { body } = await get("/americanas.com/");
+  const link = body.match(/^- \[([^\]]+)\]\((\S+?)\) — [\d,]+ searches$/m);
+  assert.ok(link, "top searches are not links");
+
+  const { res, body: results } = await get(new URL(link[2]).pathname);
+  assert.equal(res.status, 200, `${link[1]} did not resolve`);
+  assert.match(results, /^type: product_list$/m);
+});
+
+/**
+ * An agent cannot build a URL — it can only follow one it was handed. So every
+ * affordance the documents describe has to exist as a link: "add ?sort=price_asc"
+ * is unusable prose, six rendered links are not.
+ */
+await check("sort options are links, not documented syntax", async () => {
+  const path = "/americanas.com/consoles-e-games/consoles-playstation";
+  const { body } = await get(path);
+  assert.match(body, /^## Other orders$/m, "no sort links block");
+  const links = [...body.matchAll(/^- \[[^\]]+\]\((\S+\?sort=\w+)\)$/gm)].map((m) => m[1]);
+  assert.ok(links.length >= 5, `only ${links.length} sort links`);
+
+  const { res, body: sorted } = await get(new URL(links[0]).pathname + new URL(links[0]).search);
+  assert.equal(res.status, 200);
+  assert.match(sorted, /^sort: \w+$/m, "following a sort link did not sort");
+});
+
+/** Scaffolding a merchant left in its public tree is not a category. */
+await check("test categories are kept out of the tree", async () => {
+  const { body } = await get("/americanas.com/");
+  assert.ok(!/integration test/i.test(body), "test categories leaked into the overview");
+});
+
+/** Every URL the root index advertises has to actually resolve. */
+await check("the examples in llms.txt all work", async () => {
+  const { body } = await get("/llms.txt");
+  const urls = [...body.matchAll(/^- (https:\/\/\S+?)(?: —|$)/gm)].map((m) => m[1]);
+  assert.ok(urls.length >= 4, `only ${urls.length} examples found`);
+  for (const u of urls) {
+    const { res } = await get(new URL(u).pathname + new URL(u).search);
+    assert.equal(res.status, 200, `advertised example is dead: ${u}`);
+  }
+});
+
+/**
+ * Two searches on one storefront are two documents. `q` was missing from the
+ * significant-query list, so every search on a domain returned whatever the
+ * first search had cached — /search?q=presente answered "Search: playstation 5".
+ */
+await check("each search query is its own document", async () => {
+  const seen = new Map();
+  for (const q of ["presente", "chocolate", "playstation 5"]) {
+    const { res, body } = await get(`/americanas.com/search?q=${encodeURIComponent(q)}`);
+    assert.equal(res.status, 200);
+    assert.match(body, new RegExp(`^title: "Search: ${q}"$`, "m"), `q=${q} got the wrong document`);
+    assert.match(
+      body,
+      new RegExp(`^canonical_url: .*q=${encodeURIComponent(q).replace(/%20/g, "(%20|\\+)")}`, "m"),
+      `q=${q}: canonical drops the search term`,
+    );
+    const first = body.split("\n").find((l) => l.startsWith("| ") && !l.startsWith("| Product"));
+    assert.ok(!seen.has(first), `q=${q} returned the same first row as ${seen.get(first)}`);
+    seen.set(first, q);
+  }
 });
 
 console.log(failures ? `\n${failures} check(s) failed` : "\nall checks passed");

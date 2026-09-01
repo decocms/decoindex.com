@@ -20,6 +20,8 @@ export interface StoredDoc {
   renderedAt: string;
   /** Which renderer produced this. Absent on documents written before v3. */
   renderVersion?: string;
+  /** Set on a 3xx: where the caller should go instead. */
+  redirectTo?: string;
 }
 
 /** How old an entry may get before we refresh it behind the reader's back. */

@@ -105,7 +105,7 @@ export function canonicalUrl(
  * tracking) is dropped, so a hundred decorated variants of one URL share a single
  * index entry instead of a hundred.
  */
-const SIGNIFICANT = ["page"];
+const SIGNIFICANT = ["page", "sort", "q"];
 
 /** Canonical, sorted query string. Shared by the edge cache key and the KV key. */
 export function normalizedQuery(query?: URLSearchParams): string {
@@ -124,7 +124,7 @@ export function normalizedQuery(query?: URLSearchParams): string {
  * invisible until it expires. It only ever appears in the synthetic cache key,
  * never in a URL we serve or publish.
  */
-export const RENDER_VERSION = "8";
+export const RENDER_VERSION = "15";
 
 /** Cache key: stable, ext-aware, query-normalized. */
 export function cacheKey(

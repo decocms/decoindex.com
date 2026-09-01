@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { Env } from "./env";
 import type { Doc, Storefront } from "./lib/types";
 import { RENDER_VERSION, cacheKey, canonicalUrl, normalizedQuery, parsePath, type Ext } from "./lib/url";
-import { getDomain, track, upsertDomain } from "./lib/registry";
+import { classifyClient, getDomain, track, upsertDomain } from "./lib/registry";
 import { docKey, isStale, readDoc, writeDoc, type StoredDoc } from "./lib/store";
 import { detectPlatform, resolve } from "./platform";
 import { fetchBrand } from "./platform/brand";
@@ -12,7 +12,6 @@ import { handleMcp } from "./mcp/server";
 import {
   renderHome,
   renderListing,
-  renderLlmsTxt,
   renderProblem,
   renderProduct,
   type RenderCtx,
@@ -69,6 +68,31 @@ app.get("/healthz", (c) => c.text("ok"));
  * of our own KV — never fetched from the merchant, so the landing page stays
  * within invariant 1 and costs one KV read.
  */
+/**
+ * An agent asking for the root wants to know what this service is; a person
+ * wants the page. Same URL, two audiences, so classify and send agents to the
+ * machine index rather than making them parse marketing HTML.
+ *
+ * `no-store` is what makes this safe. The representation depends on the caller,
+ * and no cache in front of us honours Vary reliably — Cloudflare's zone cache
+ * ignores it outright. An uncacheable redirect is the only version that cannot
+ * be replayed to the wrong audience.
+ */
+app.get("/", async (c, next) => {
+  const cls = classifyClient(c.req.header("user-agent"));
+  const wantsMachine = !["browser", "search-engine", "unknown"].includes(cls);
+  if (wantsMachine && !c.req.query("html")) {
+    track(c.env, c.executionCtx, {
+      name: "read",
+      surface: "root-redirect",
+      ua: c.req.header("user-agent"),
+      country: (c.req.raw.cf?.country as string) ?? undefined,
+    });
+    return c.redirect(`${c.env.PUBLIC_ORIGIN}/llms.txt`, 302);
+  }
+  return next();
+});
+
 app.get("/", async (c) => {
   const stored = await readDoc(c.env, docKey(SAMPLE.domain, SAMPLE.path, "")).catch(() => null);
   const body = landingHtml(c.env.PUBLIC_ORIGIN, stored?.status === 200 ? stored.body : null);
@@ -141,41 +165,71 @@ app.get("/robots.txt", (c) =>
   ),
 );
 
-app.get("/llms.txt", (c) =>
-  c.text(
+app.get("/llms.txt", (c) => {
+  const o = c.env.PUBLIC_ORIGIN;
+  return c.text(
     [
       "# decoindex",
       "",
-      "> Agent-readable mirrors of ecommerce storefronts. Swap the origin of any VTEX or",
-      "> Shopify storefront URL for `decoindex.com/{domain}` and get normalized Markdown",
-      "> instead of client-rendered HTML. Resolved on demand from the merchant's own",
-      "> public API — no crawl, no waiting, works on the first request.",
+      "> Storefronts an agent can read. Take any VTEX or Shopify storefront URL, put",
+      "> `decoindex.com/` in front of the domain, and get normalized Markdown instead of",
+      "> a megabyte of client-rendered HTML. Resolved on demand from the merchant's own",
+      "> public API, so any URL works on the first request.",
       "",
-      "## Usage",
+      "## The whole convention",
       "",
       "```",
-      "https://www.farmrio.com.br/vestido-longo-123/p",
-      `${c.env.PUBLIC_ORIGIN}/farmrio.com.br/vestido-longo-123/p`,
+      "https://www.farmrio.com.br/moda-feminina",
+      `${o}/farmrio.com.br/moda-feminina`,
       "```",
       "",
-      "- Append `.json` to any path for the same document as structured JSON.",
-      "- `/{domain}/` is the storefront overview: categories and URL conventions.",
-      "- `/{domain}/llms.txt` is the per-storefront machine index.",
-      "- Listings paginate with `?page=N`.",
+      `- \`${o}/{domain}\` — start here. The storefront overview: what the merchant`,
+      "  says it is, its categories, its best sellers, and the terms its own shoppers",
+      "  search for. One request, and you know whether this store is worth exploring.",
+      "- Any storefront path works the same way. Product pages, category listings.",
+      "- `?page=N` paginates. `?sort=price_asc` orders the whole catalog, not just the",
+      "  page you were handed (also price_desc, name_asc, name_desc, discount, new).",
+      `- \`${o}/{domain}/search?q={words}\` searches that storefront. \`/busca/{words}\``,
+      "  works too — it is the search path the store itself uses.",
+      "- Append `.json` to any of these for the same document, structured.",
       "",
-      "## What is and is not published",
+      "## Try these",
       "",
-      "- Published: title, brand, attributes, variants, categories, observed price,",
-      "  observed availability, and a cart link on the merchant's own checkout.",
-      "- Not published: live stock, final price after promotions, delivery dates,",
-      "  personalized offers. Verify these with the merchant before promising anything.",
+      "Real storefronts, live right now:",
+      "",
+      `- ${o}/farmrio.com.br — Brazilian fashion label. Best sellers and top searches.`,
+      `- ${o}/farmrio.com.br/moda-feminina?sort=price_asc — cheapest first, across the category`,
+      `- ${o}/farmrio.com.br/busca/vestido — searching a storefront by its own path`,
+      `- ${o}/osklen.com.br — Rio lifestyle brand`,
+      "",
+      "Product pages are reached from any of those: every listing row carries a",
+      "Details link. They are not listed here by hand because a hardcoded SKU is a",
+      "dead link the day it sells out.",
+      `- ${o}/fila.com.br/calcado — footwear listing`,
+      `- ${o}/americanas.com/search?q=playstation%205 — searching a storefront`,
+      `- ${o}/allbirds.com — a Shopify store, same convention`,
+      `- ${o}/americanas.com — a 46-category general retailer`,
+      "",
+      "## What a product page gives you",
+      "",
+      "Frontmatter with the canonical URL, platform, currency, observed price and",
+      "availability. Then every variant with its own SKU, price, stock and a cart link",
+      "that builds a cart on the merchant's own checkout — so a read can end in a",
+      "purchase a person completes, not just a description.",
+      "",
+      "## What is not published",
+      "",
+      "Live stock for a chosen variant, the final price after cart promotions and",
+      "coupons, delivery dates for an address, and anything priced for one shopper.",
+      "Those belong to the merchant. Every document repeats this in its own body, so a",
+      "page read in isolation still knows what it may promise.",
       "",
       "## Telling us something is wrong",
       "",
-      "If a document is wrong, missing or malformed, say so — it is the only way we find out:",
+      "The only way we learn a document is bad:",
       "",
       "```",
-      `curl -X POST ${c.env.PUBLIC_ORIGIN}/feedback -H 'content-type: application/json' \\`,
+      `curl -X POST ${o}/feedback -H 'content-type: application/json' \\`,
       `  -d '{"url":"<the decoindex URL>","kind":"wrong_data","message":"what you expected"}'`,
       "```",
       "",
@@ -183,12 +237,13 @@ app.get("/llms.txt", (c) =>
       "",
       "## Notes",
       "",
-      "- Supported platforms: VTEX, Shopify.",
+      "- Supported platforms: VTEX and Shopify.",
       "- The merchant's own site is always canonical; every response says so.",
-      `- Merchants: ${c.env.PUBLIC_ORIGIN}/opt-out`,
+      `- Cost of reading a storefront both ways: ${o}/benchmark`,
+      `- Merchants: ${o}/opt-out`,
     ].join("\n"),
-  ),
-);
+  );
+});
 
 app.get("/about", (c) =>
   c.text(
@@ -460,46 +515,72 @@ async function build(
     });
   }
 
-  // The per-storefront machine index is the home doc in a different dress.
+  /**
+   * `/{domain}/llms.txt` used to render a second, thinner index. It was a
+   * duplicate of the overview with fewer facts, and pointing agents at it cost
+   * us a real reader: ChatGPT followed our own advice to that path, could not
+   * read it, and concluded the service was broken — while `/{domain}` had been
+   * working the whole time.
+   *
+   * One index per storefront. Anything that still asks for the old path is sent
+   * to it rather than given a 404.
+   */
   if (path === "/llms.txt") {
-    const doc = await resolve(shop, "/", query);
-    if (doc.kind === "upstream_error") return problem("upstream", 502);
-    if (doc.kind !== "home") return problem("notfound", 404);
     return {
-      body: renderLlmsTxt(shop, doc.categories, rctx, doc.totalCategories),
-      status: 200,
+      body: "",
+      status: 308,
       contentType: MARKDOWN_TYPE,
-      canonical: `https://${domain}/`,
+      canonical: `${rctx.publicOrigin}/${domain}`,
+      redirectTo: `${rctx.publicOrigin}/${domain}`,
       renderedAt: new Date().toISOString(),
       renderVersion: RENDER_VERSION,
     };
   }
 
-  const doc = await resolve(shop, path, query);
+  const doc = await resolve(env, shop, path, query);
   if (doc.kind === "upstream_error") return problem("upstream", 502);
   if (doc.kind === "notfound") return problem("notfound", 404);
 
   return {
-    body: ext === "json" ? JSON.stringify({ shop, ...doc }, null, 2) : renderMarkdown(shop, doc, path, rctx),
+    body: ext === "json" ? JSON.stringify({ shop, ...doc }, null, 2) : renderMarkdown(shop, doc, path, rctx, query),
     status: 200,
     contentType: ext === "json" ? "application/json; charset=utf-8" : MARKDOWN_TYPE,
     canonical:
       doc.kind === "product"
         ? canonicalUrl(domain, doc.product.slug, rctx.attribution)
-        : canonicalUrl(domain, path, rctx.attribution),
+        // A search canonical without the term points at an empty search box.
+        : canonicalUrl(
+            domain,
+            path + (normalizedQuery(query) ? `?${normalizedQuery(query)}` : ""),
+            rctx.attribution,
+          ),
     renderedAt: new Date().toISOString(),
     renderVersion: RENDER_VERSION,
   };
 }
 
-function renderMarkdown(shop: Storefront, doc: Doc, path: string, rctx: RenderCtx): string {
+function renderMarkdown(
+  shop: Storefront,
+  doc: Doc,
+  path: string,
+  rctx: RenderCtx,
+  query?: URLSearchParams,
+): string {
   switch (doc.kind) {
     case "product":
       return renderProduct(shop, doc.product, rctx);
     case "listing":
-      return renderListing(shop, doc, path, rctx);
+      return renderListing(shop, doc, path, rctx, normalizedQuery(query));
     case "home":
-      return renderHome(shop, doc.categories, rctx, doc.totalCategories);
+      return renderHome(
+        shop,
+        doc.categories,
+        rctx,
+        doc.totalCategories,
+        doc.popular,
+        doc.popularBasis,
+        doc.topSearches,
+      );
     case "upstream_error":
       return renderProblem(shop.domain, path, "upstream", rctx);
     default:
@@ -531,6 +612,12 @@ function forClient(res: Response): Response {
 
 function toResponse(doc: StoredDoc, surface: string, origin: string): Response {
   const ttl = doc.status === 200 ? (TTL[surface as keyof typeof TTL] ?? TTL.product) : TTL.problem;
+  if (doc.redirectTo) {
+    return new Response(null, {
+      status: doc.status,
+      headers: { location: doc.redirectTo, "cache-control": "public, max-age=3600" },
+    });
+  }
   return new Response(doc.body, {
     status: doc.status,
     headers: {
