@@ -805,11 +805,6 @@ node bench/run.mjs --agents --reps 3</pre>
            blocked that day may answer you fine today — re-run it and see.</p>
       </div>
       <div class="row">
-        <h3>Latency you can compare</h3>
-        <p>We answer warm off an edge cache; a storefront is rendering a page. Both timings are in the
-           JSON and neither belongs in a headline, so there isn't one here.</p>
-      </div>
-      <div class="row">
         <h3>A representative sample of the web</h3>
         <p>These are {{total}} VTEX and Shopify storefronts, most of them deco customers, picked because
            we could verify them. It is not a random sample and a bigger one would move the number.</p>
