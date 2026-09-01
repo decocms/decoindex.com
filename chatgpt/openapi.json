@@ -1,0 +1,100 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "decoindex",
+    "description": "Agent-readable mirror of brand storefronts. Search a merchant's indexed catalog and get normalized product facts — price, variants, composition, availability as last observed. Never live stock, never the final price after promotions, never delivery dates: always tell the user to confirm those with the merchant before they commit to a purchase.",
+    "version": "1.0.0"
+  },
+  "servers": [{ "url": "https://decoindex.com" }],
+  "paths": {
+    "/{domain}/search.json": {
+      "get": {
+        "operationId": "searchStorefront",
+        "summary": "Search one merchant's indexed catalog",
+        "description": "Hybrid lexical + semantic search over a single storefront. Each result already includes full product detail (variants, prices, availability, claims) — no separate product-lookup call is needed. If the response signals the domain isn't indexed yet, tell the user it's being indexed and to retry the same request in about a minute; that is not an error.",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Registrable domain only — no scheme, no www, no path. Example: farmrio.com.br"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Search query, any language."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 12 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results with full product detail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "shop": {
+                      "type": "object",
+                      "properties": {
+                        "domain": { "type": "string" },
+                        "platform": { "type": "string" },
+                        "currency": { "type": "string" }
+                      }
+                    },
+                    "total": { "type": "integer" },
+                    "query": { "type": "string" },
+                    "products": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "slug": { "type": "string" },
+                          "title": { "type": "string" },
+                          "brand": { "type": "string" },
+                          "description": { "type": "string" },
+                          "images": { "type": "array", "items": { "type": "string" } },
+                          "variants": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "priceMinor": { "type": "integer", "description": "Price in cents, as last observed." },
+                                "currency": { "type": "string" },
+                                "available": { "type": "boolean" },
+                                "attributes": { "type": "object" }
+                              }
+                            }
+                          },
+                          "claims": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "predicate": { "type": "string" },
+                                "value": { "type": "string" }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
