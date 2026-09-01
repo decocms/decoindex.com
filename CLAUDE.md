@@ -76,12 +76,9 @@ same document structured. Both collapse to one cache entry (`cacheKey` strips
 `.md`), so never teach the suffix as required — "swap the origin" is the pitch
 and an extension contradicts it.
 
-**`/mcp` is private, and is not the product.** It exposes `feedback_*`,
-`traffic_stats`, `domain_list` and the probe tools — operator surface, guarded by
-one bearer secret (`MCP_AUTH_TOKEN`) and failing closed with 503 when unset. The
-public product is the URL. An earlier design had a *public* MCP with
-`search_storefront`/`get_product`; it is gone, and anything still advertising it
-is stale.
+**`/mcp` is currently private, and is not the product.** The public product is
+the URL. See "The MCP surface" below for what it exposes and the rules a tool
+has to follow.
 
 Other routes: `/` (HTML for browsers, 302 to `/llms.txt` for agents), `/llms.txt`,
 `/about`, `/opt-out`, `/benchmark` (static, from committed bench results),
@@ -111,6 +108,30 @@ cannot be zero-config — it belongs to the paid tier, not here.
   discovers an in-stock product rather than hardcoding one, because a hardcoded
   SKU passes until it sells out and then reports a bug that isn't there.
 
+## The MCP surface (`/mcp`)
+
+**A tool call is a read, full stop.** It obeys the three invariants above
+exactly like a GET route, and must reuse their code rather than reimplement it:
+`getDomain`/`upsertDomain` for the registry, `render/markdown.ts` for the text a
+model reads, `lib/url.ts#cacheKey` for cache identity. A tool that resolves a
+storefront URL goes through the same bounded `resolve()` as everything else.
+
+The one thing POST changes: **the Cache API never caches POST.** A tool handler
+has to build the same cache key by hand and check `caches.default` itself, so a
+tool call and its REST equivalent land in the *same* cache entry instead of the
+tool path quietly costing an upstream call on every invocation.
+
+Today the surface is private — `feedback_*`, `traffic_stats`, `domain_list` and
+the probe tools, guarded by `MCP_AUTH_TOKEN`, failing closed with 503 when
+unset. `src/server/render/widget.ts` is the inline UI from the earlier public
+design, kept because the public tool tier is coming back for the ChatGPT app.
+
+That widget renders a **third-party merchant's** catalog data inside a sandboxed
+iframe on someone else's platform — treat every field in it as
+attacker-controlled. No `innerHTML` with catalog data, ever; build DOM with
+`createElement`/`textContent`, and pass every `href`/`src` through `safeUrl()`
+(https-only, image hosts additionally allowlisted).
+
 ## Gotchas already paid for
 
 1. **A miss is `200 []`, not 404.** VTEX and Shopify both answer a bad slug with
@@ -134,6 +155,10 @@ cannot be zero-config — it belongs to the paid tier, not here.
 6. **Only `active` domains get a registry row.** A failed detection is remembered
    by the expiring negative KV entry instead, so a merchant who lifts a block or
    migrates platforms starts working on its own rather than being wrong forever.
+7. **VTEX refuses `_to` beyond 2500.** Past that, paginate by category, not by
+   offset. (Inherited from the ingestion prototype; still true of the API.)
+8. **Shopify `/products.json` pages are 1-indexed; VTEX cursors are 0-indexed
+   offsets.** Easy to conflate when touching pagination in either resolver.
 
 ## The improvement loop
 
