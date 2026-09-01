@@ -144,7 +144,9 @@ export function header(active: "benchmark" | null = null): string {
   <div class="wrap hd">
     <a class="brand" href="/" target="_self"><b>decoindex</b><span>commerce index by decocms.com</span></a>
     <nav>
-      <a class="hide-sm" href="/benchmark" target="_self"${mark("benchmark")}>Benchmark</a>
+      <!-- Benchmark keeps its place on a phone. It is the one link that argues
+           the case; llms.txt and About are for people already convinced. -->
+      <a href="/benchmark" target="_self"${mark("benchmark")}>Benchmark</a>
       <a class="hide-sm" href="/llms.txt">llms.txt</a>
       <a class="hide-sm" href="/about">About</a>
       <a href="#claim" target="_self" class="btn btn-ink" style="padding:8px 18px;font-size:14px">Claim your store</a>

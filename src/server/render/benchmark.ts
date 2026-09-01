@@ -76,6 +76,8 @@ export interface ModelRun {
   wallMs: number;
   fetched: number;
   truncated: boolean;
+  /** The page was larger than this model's context window. A result, not a bug. */
+  contextOverflow?: boolean;
   grade: { parsed: boolean; priceOk: boolean };
 }
 
@@ -116,28 +118,48 @@ const median = (xs: number[]) => {
 function modelSection(m: ModelResults | null): string {
   if (!m?.rows?.length) return `<p class="fine">Not run yet — <code>node bench/models.mjs</code>.</p>`;
   const names = [...new Set(m.rows.map((x) => x.model))];
-  // No colspan group header. It reads well on a desktop and falls apart the
-  // moment a column is hidden on a phone, because CSS cannot renumber a span —
-  // the group label keeps claiming three columns that are no longer there.
-  // Self-describing headers survive any width.
+  const stores = new Set(m.rows.map((x) => x.domain)).size;
+  const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+
+  // Averaged across every store, over the runs that produced an answer. The
+  // first version of this called .find() and quietly showed one store's numbers
+  // under a heading that said five.
   const rows = names.map((name) => {
-    const at = (arm: string) => m.rows.find((y) => y.model === name && y.arm === arm);
+    const at = (arm: string) => m.rows.filter((y) => y.model === name && y.arm === arm);
     const site = at("site");
     const idx = at("decoindex");
-    const both =
-      site?.grade.priceOk && idx?.grade.priceOk ? "both"
-      : idx?.grade.priceOk ? "decoindex only"
-      : site?.grade.priceOk ? "storefront only"
-      : "<b>neither</b>";
-    const tok = (x?: ModelRun) =>
-      `<td class="num">${x ? n(x.inTok) : "—"}${x?.truncated ? '<br><span class="mono dim">truncated</span>' : ""}</td>`;
-    const money = (x?: ModelRun) => `<td class="num">${x ? "$" + x.cost.toFixed(4) : "—"}</td>`;
-    return `<tr><td><b>${esc(name)}</b></td>${tok(site)}${money(site)}${tok(idx)}${money(idx)}<td class="mid">${both}</td></tr>`;
+    const okOf = (xs: ModelRun[]) => xs.filter((x) => x.grade.priceOk);
+    const cell = (xs: ModelRun[]) => {
+      const good = okOf(xs);
+      const tooBig = xs.filter((x) => x.contextOverflow).length;
+      if (!good.length) {
+        return (
+          `<td class="num"><b>—</b><br><span class="mono dim">${tooBig ? "page too big" : "no answer"}</span></td>` +
+          `<td class="num">—</td>`
+        );
+      }
+      const truncated = good.filter((x) => x.truncated).length;
+      return (
+        `<td class="num">${n(Math.round(mean(good.map((x) => x.inTok))!))}` +
+          (truncated ? '<br><span class="mono dim">truncated</span>' : "") +
+        `</td><td class="num">$${mean(good.map((x) => x.cost))!.toFixed(4)}</td>`
+      );
+    };
+    const score = `${okOf(site).length}/${site.length} vs <b>${okOf(idx).length}/${idx.length}</b>`;
+    return `<tr><td><b>${esc(name)}</b></td>${cell(site)}${cell(idx)}<td class="mid">${score}</td></tr>`;
   });
-  const sum = (arm: string, f: (x: ModelRun) => number) =>
-    m.rows.filter((x) => x.arm === arm).reduce((a, b) => a + f(b), 0);
-  const tokRatio = Math.round(sum("site", (x) => x.inTok) / Math.max(1, sum("decoindex", (x) => x.inTok)));
-  const costRatio = Math.round(sum("site", (x) => x.cost) / Math.max(1e-9, sum("decoindex", (x) => x.cost)));
+
+  const okRows = (arm: string) => m.rows.filter((x) => x.arm === arm && x.grade.priceOk);
+  const tokRatio = Math.round(
+    mean(okRows("site").map((x) => x.inTok))! / Math.max(1, mean(okRows("decoindex").map((x) => x.inTok))!),
+  );
+  const costRatio = Math.round(
+    mean(okRows("site").map((x) => x.cost))! / Math.max(1e-9, mean(okRows("decoindex").map((x) => x.cost))!),
+  );
+  const siteOk = m.rows.filter((x) => x.arm === "site" && x.grade.priceOk).length;
+  const idxOk = m.rows.filter((x) => x.arm === "decoindex" && x.grade.priceOk).length;
+  const total = m.rows.filter((x) => x.arm === "site").length;
+
   return `<div style="overflow-x:auto"><table class="tbl m" style="margin-top:28px;min-width:0">
 <thead><tr>
   <th>Model</th>
@@ -146,8 +168,10 @@ function modelSection(m: ModelResults | null): string {
   <th class="mid">Right?</th>
 </tr></thead>
 <tbody>${rows.join("\n")}</tbody></table></div>
-<p class="fine"><b>${tokRatio}× fewer tokens, ${costRatio}× cheaper</b>, same answer, on both models.
-   The storefront page had to be truncated to fit a sane budget; the decoindex document is 4 KB.</p>`;
+<p class="fine">Each figure is the mean across ${stores} storefronts, over the runs that produced an answer.
+   <b>${tokRatio}× fewer tokens and ${costRatio}× cheaper</b> through decoindex, and it answered
+   <b>${idxOk}/${total}</b> against <b>${siteOk}/${total}</b> from the storefront. Every storefront page had
+   to be truncated to fit a sane budget; the decoindex documents are around 4 KB and were sent whole.</p>`;
 }
 
 /** Grader reasons, said the way a reader would say them. */
@@ -270,8 +294,9 @@ export function benchmarkHtml(
       case "journeys": return journeySection(journeys);
       case "models": return modelSection(models);
       case "tokenChart": return tokenChart(r.layer1);
-      case "costChart": return costChart(models);
+      case "costChart": return costChart(models, journeys);
       case "modelStores": return String(models?.stores?.length ?? 0);
+      case "modelCount": return String(new Set(models?.rows?.map((x) => x.model) ?? []).size);
       case "modelNames": return models
         ? [...new Set(models.rows.map((x) => x.model))].map((x) => esc(x)).join(" and ")
         : "";
@@ -401,45 +426,98 @@ function tokenChart(rows: BenchRow[]): string {
 </figure>`;
 }
 
-/** What one answer costs, per model, both ways. Shared linear scale — the point is the gap. */
-function costChart(m: ModelResults | null): string {
-  if (!m?.rows?.length) return "";
-  const names = [...new Set(m.rows.map((x) => x.model))];
-  const mean = (model: string, arm: string) => {
-    const xs = m.rows.filter((y) => y.model === model && y.arm === arm && y.grade.priceOk);
-    return xs.length ? xs.reduce((a, b) => a + b.cost, 0) / xs.length : 0;
-  };
-  const pairs = names.map((name) => ({ name, site: mean(name, "site"), idx: mean(name, "decoindex") }));
-  const max = Math.max(...pairs.map((p) => p.site)) || 1;
+/**
+ * Every agentic run on one chart: Test 1's Claude Code errand and Test 2's raw
+ * loop, each labelled with the harness it ran under.
+ *
+ * They were separate charts and that was worse. Two near-identical drawings a
+ * screen apart invited the reader to compare bars that were never comparable,
+ * while burying the one comparison that is — the pair within each row. One
+ * chart, one scale, and the harness written on every row.
+ */
+function costChart(m: ModelResults | null, journeys: JourneyRun[] = []): string {
+  const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 
-  const ROW = 58, TOP = 30, LABEL = 190, RIGHT = 96, W = 900;
+  const groups: { label: string; note: string; site: number; idx: number; siteNote: string }[] = [];
+
+  // Test 1 first: it is the harder question and the more striking answer.
+  const jSite = journeys.filter((x) => x.arm === "site" && x.costUsd);
+  const jIdx = journeys.filter((x) => x.arm === "decoindex" && x.costUsd);
+  if (jSite.length && jIdx.length) {
+    const gaveUp = jSite.filter((x) => !x.verified).length;
+    groups.push({
+      label: journeys[0]!.model,
+      note: "Test 1 · Claude Code + WebFetch",
+      site: mean(jSite.map((x) => x.costUsd ?? 0)),
+      idx: mean(jIdx.map((x) => x.costUsd ?? 0)),
+      // Test 1's storefront arm fails by giving up on a page it cannot read,
+      // which is not the same failure as Test 2's context overflow. Saying
+      // "never fit in context" here would describe a run that never happened.
+      siteNote: gaveUp ? `${gaveUp} of ${jSite.length} gave up without an answer` : "",
+    });
+  }
+
+  for (const name of new Set(m?.rows?.map((x) => x.model) ?? [])) {
+    const at = (arm: string) => (m?.rows ?? []).filter((y) => y.model === name && y.arm === arm);
+    const site = at("site");
+    const idx = at("decoindex");
+    const tooBig = site.filter((x) => x.contextOverflow).length;
+    const wrong = site.filter((x) => !x.grade.priceOk && !x.contextOverflow).length;
+    const parts = [];
+    if (tooBig) parts.push(`${tooBig} of ${site.length} too big for the context window`);
+    if (wrong) parts.push(`${wrong} of ${site.length} answered wrong`);
+    groups.push({
+      label: name,
+      note: "Test 2 · raw fetch loop",
+      // Priced over the runs that produced an answer. A run whose page never fit
+      // has no price to report, so it is counted beside the bar rather than
+      // averaged in as a cheap success — which is what dragged DeepSeek to $0.
+      site: mean(site.filter((x) => x.grade.priceOk).map((x) => x.cost)),
+      idx: mean(idx.filter((x) => x.grade.priceOk).map((x) => x.cost)),
+      siteNote: parts.join(" · "),
+    });
+  }
+  if (!groups.length) return "";
+
+  const max = Math.max(...groups.map((g) => g.site)) || 1;
+  // LABEL clears the longest model id plus its harness line; anything narrower
+  // and the subtitle runs under the bars.
+  const ROW = 74, TOP = 32, LABEL = 320, RIGHT = 104, W = 1020;
   const trackW = W - LABEL - RIGHT;
-  const h = TOP + pairs.length * ROW + 10;
+  const h = TOP + groups.length * ROW + 8;
 
-  const bars = pairs.map((p, i) => {
+  const bars = groups.map((g, i) => {
     const y = TOP + i * ROW;
-    const money = (v: number) => `$${v.toFixed(4)}`;
+    const w = (v: number) => Math.max(3, (trackW * v) / max);
+    // No storefront run answered, so there is no price and no ratio. Printing
+    // $0.0000 and "0× cheaper" reads as free and as no advantage — the opposite
+    // of what happened.
+    const noAnswer = g.site === 0;
+    const ratio = !noAnswer && g.idx > 0 ? `${Math.round(g.site / g.idx)}× cheaper` : "";
+    const failed = g.siteNote ? `${ratio ? "  ·  " : ""}${g.siteNote}` : "";
     return `<g>
-  <text x="0" y="${y + 20}" fill="${BAR.ink}" font-size="13" font-family="ui-monospace,Menlo,monospace">${esc(p.name)}</text>
-  <rect x="${LABEL}" y="${y}" width="${Math.max(3, (trackW * p.site) / max)}" height="13" rx="6.5" fill="${BAR.dim}"/>
-  <text x="${W}" y="${y + 11}" text-anchor="end" fill="${BAR.ink}" font-size="12" font-family="ui-monospace,Menlo,monospace">${money(p.site)}</text>
-  <rect x="${LABEL}" y="${y + 19}" width="${Math.max(3, (trackW * p.idx) / max)}" height="13" rx="6.5" fill="${BAR.lime}"/>
-  <text x="${W}" y="${y + 30}" text-anchor="end" fill="${BAR.lime}" font-size="12" font-family="ui-monospace,Menlo,monospace">${money(p.idx)}</text>
-  <text x="${LABEL}" y="${y + 48}" fill="${BAR.dim}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">${(p.site / Math.max(1e-9, p.idx)).toFixed(0)}× cheaper through decoindex</text>
+  <text x="0" y="${y + 14}" fill="${BAR.ink}" font-size="12.5" font-family="ui-monospace,Menlo,monospace">${esc(g.label)}</text>
+  <text x="0" y="${y + 31}" fill="${BAR.dim}" font-size="10.5" font-family="ui-monospace,Menlo,monospace">${esc(g.note)}</text>
+  ${noAnswer ? "" : `<rect x="${LABEL}" y="${y + 2}" width="${w(g.site)}" height="13" rx="6.5" fill="${BAR.dim}"/>`}
+  <text x="${W}" y="${y + 13}" text-anchor="end" fill="${BAR.ink}" font-size="12" font-family="ui-monospace,Menlo,monospace">${noAnswer ? "no answer" : "$" + g.site.toFixed(4)}</text>
+  <rect x="${LABEL}" y="${y + 21}" width="${w(g.idx)}" height="13" rx="6.5" fill="${BAR.lime}"/>
+  <text x="${W}" y="${y + 32}" text-anchor="end" fill="${BAR.lime}" font-size="12" font-family="ui-monospace,Menlo,monospace">$${g.idx.toFixed(4)}</text>
+  <text x="${LABEL}" y="${y + 51}" fill="${BAR.lime}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">${ratio}<tspan fill="${BAR.dim}">${esc(failed)}</tspan></text>
 </g>`;
   });
 
   return `<figure class="chart">
 <svg viewBox="0 0 ${W} ${h}" role="img" width="100%" height="auto"
-     aria-label="Average cost of answering one product question, per model, storefront against decoindex.">
-  <text x="0" y="12" fill="${BAR.dim}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">MODEL</text>
+     aria-label="Average cost of one answered question, per model and harness, storefront against decoindex.">
+  <text x="0" y="12" fill="${BAR.dim}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">MODEL &amp; HARNESS</text>
   <text x="${LABEL}" y="12" fill="${BAR.dim}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">STOREFRONT</text>
   <text x="${LABEL + 108}" y="12" fill="${BAR.lime}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">DECOINDEX</text>
   <text x="${W}" y="12" text-anchor="end" fill="${BAR.dim}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">USD / ANSWER</text>
   ${bars.join("\n  ")}
 </svg>
-<figcaption>Averaged over ${[...new Set(m.rows.map((x) => x.domain))].length} storefronts. Both arms answered
-  correctly everywhere, so this is the price of the same answer.</figcaption>
+<figcaption>One shared scale, so the bars can be read against each other — but the two tests used different
+  harnesses and different questions, so the comparison that means something is the pair within each row.
+  Averaged over runs that produced an answer.</figcaption>
 </figure>`;
 }
 
@@ -612,13 +690,36 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
 
 <section>
   <div class="wrap">
-    <h2>One shopping question, start to finish.<br><span class="dim">Handed the front door and nothing else.</span></h2>
-    <p class="lede" style="margin-top:20px">Two identical agents. Each gets one sentence and one URL —
-       the store's homepage. Nothing else: no category, no search link, no hint that the catalog can be
-       ordered by price. Whatever product they come back with is looked up in the merchant's own API and
-       either confirmed or thrown out.</p>
-    <div class="pane" style="margin-top:28px;max-width:720px">
-      <header><span>The task, verbatim</span></header>
+    <h2>Two agentic tests.<br><span class="dim">Both give an agent a URL and a shopping question.</span></h2>
+    <p class="lede" style="margin-top:20px">Payload size is a proxy. What matters is whether an agent gets
+       the answer, and what that costs. These two tests differ in the harness, the task and the models,
+       and are reported separately for exactly that reason — then priced side by side at the end.</p>
+
+    <div class="rows" style="margin-top:36px">
+      <div class="row">
+        <h3>Test 1 — a whole errand</h3>
+        <p><b>Harness:</b> Claude Code headless, <code>claude -p</code>, its built-in WebFetch as the only
+           tool. WebFetch fetches server-side and summarizes before the model sees a byte, so the payload
+           difference is partly absorbed by Anthropic's infrastructure — this test is about whether the
+           errand completes at all, not about tokens.<br>
+           <b>Model:</b> claude-sonnet-5. <b>Store:</b> americanas.com. <b>Given:</b> the homepage, nothing
+           else. <b>Graded:</b> the product it names is looked up in the merchant's API and confirmed or
+           thrown out.</p>
+      </div>
+      <div class="row">
+        <h3>Test 2 — one product page</h3>
+        <p><b>Harness:</b> a plain tool-calling loop against the OpenRouter API, written for this benchmark.
+           One tool, <code>fetch_url</code>, which returns the response body verbatim with nothing
+           summarizing it. This is what a developer writing their own agent gets, so the payload lands in
+           the context window and is paid for at list price.<br>
+           <b>Models:</b> {{modelCount}}. <b>Stores:</b> {{modelStores}}. <b>Given:</b> one product URL.
+           <b>Graded:</b> the price it reports must match the merchant's API to the cent.</p>
+      </div>
+    </div>
+
+    <h3 style="margin-top:48px">Test 1 · the errand</h3>
+    <div class="pane" style="margin-top:16px;max-width:720px">
+      <header><span>The prompt, verbatim</span></header>
 <pre>Find the cheapest in-stock PlayStation 5
 game this store sells, and give me a
 link to buy it.
@@ -629,18 +730,10 @@ link to buy it.
     decoindex.com/americanas.com</pre>
     </div>
     {{journeys}}
-  </div>
-</section>
 
-<section class="band">
-  <div class="wrap">
-    <h2>Does it hold with other models?<br><span class="dim">Same page, same question, no Anthropic anywhere.</span></h2>
-    <p class="lede" style="margin-top:20px">If the advantage only showed up under one vendor's fetch tool, it would be a
-       property of that tool rather than of the documents. So this runs the plainest agent there is — one
-       tool that returns the response body verbatim, nothing summarizing it on the way — and asks two other
-       models for the price and sizes of one product.</p>
-    <div class="pane" style="margin-top:28px;max-width:720px">
-      <header><span>The task, verbatim</span></header>
+    <h3 style="margin-top:56px">Test 2 · the product page</h3>
+    <div class="pane" style="margin-top:16px;max-width:720px">
+      <header><span>The prompt, verbatim</span></header>
 <pre>What is the current price of &lt;product&gt;,
 and which sizes/variants are in stock?
 
@@ -650,6 +743,15 @@ and which sizes/variants are in stock?
     that same URL through decoindex</pre>
     </div>
     {{models}}
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <h2>What one answer costs.<br><span class="dim">Every agentic run above, on one scale.</span></h2>
+    <p class="lede" style="margin-top:20px">Both tests, every model, priced per answered question. The
+       harnesses differ, so the bars are not competing with each other — each pair is. What they have in
+       common is the direction.</p>
     {{costChart}}
   </div>
 </section>

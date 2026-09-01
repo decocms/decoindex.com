@@ -159,7 +159,21 @@ async function agent(model, prompt) {
       signal: AbortSignal.timeout(180_000),
     }).catch((e) => ({ ok: false, status: 0, text: async () => JSON.stringify({ error: { message: String(e) } }) }));
     const j = safeJson(await res.text());
-    if (!j || j.error) return done({ ok: false, error: j?.error?.message ?? `HTTP ${res.status}` });
+    if (!j || j.error) {
+      const msg = j?.error?.message ?? `HTTP ${res.status}`;
+      // "The page did not fit" is a result, not a malfunction, and it is the
+      // sharpest version of the whole argument: several of these storefront
+      // pages are larger than the context window of the model asked to read one.
+      //
+      // Detected structurally, not by matching the message. Three providers
+      // phrased the same refusal three ways — "max input length", "should not
+      // exceed max_num_tokens", and a bare "Provider returned error" — so the
+      // reliable signal is that we handed over a large page and the prompt never
+      // grew to hold it.
+      const neverArrived = fetched > 0 && sawBytes > 100_000 && inTok < 5_000;
+      const saysSo = /context|max.*(input|token)|token.*limit|too (long|large)|exceed|longer than/i.test(msg);
+      return done({ ok: false, error: msg, contextOverflow: neverArrived || saysSo });
+    }
 
     turns++;
     inTok += j.usage?.prompt_tokens ?? 0;
