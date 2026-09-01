@@ -35,6 +35,11 @@ Product URLs work identically: a VTEX `/{slug}/p` or a Shopify
 | `decoindex.com/{domain}/search?q=vestido` | Search that storefront. The store's own search path (`/busca/{words}`) works too. |
 | `….json` | Any of the above as structured JSON |
 
+If the MCP server is connected (`decoindex` in `.mcp.json`), the same reads are
+available as tools — `navigate_storefront`, `search_storefront`,
+`list_storefronts` — and need no token. Same documents, same cache. Without it,
+a plain fetch of the URLs above works identically.
+
 Two things worth knowing, because guessing them wastes a turn:
 
 - **The first page of a listing is not the catalog, and is not price-ordered.**

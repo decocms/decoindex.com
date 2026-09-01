@@ -326,8 +326,8 @@ app.post("/feedback", async (c) => {
 });
 
 /** Private control plane. Fails closed when MCP_AUTH_TOKEN is unset. */
-app.all("/mcp", (c) => handleMcp(c.req.raw, c.env));
-app.all("/mcp/*", (c) => handleMcp(c.req.raw, c.env));
+app.all("/mcp", (c) => handleMcp(c.req.raw, c.env, c.executionCtx));
+app.all("/mcp/*", (c) => handleMcp(c.req.raw, c.env, c.executionCtx));
 
 /** Client-side beacon for the landing page. Cookieless. */
 app.post("/e", async (c) => {

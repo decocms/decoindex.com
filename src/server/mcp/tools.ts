@@ -22,9 +22,23 @@ import {
 
 export interface ToolDefinition {
   name: string;
+  /** Human-readable label. Apps SDK hosts show this instead of the name. */
+  title?: string;
   description: string;
   inputSchema: Record<string, unknown>;
-  execute: (env: Env, input: Record<string, unknown>) => Promise<unknown>;
+  /** Shape of the return value, when it is worth the model knowing in advance. */
+  outputSchema?: Record<string, unknown>;
+  /** `readOnlyHint` / `openWorldHint` / `destructiveHint` — safety metadata. */
+  annotations?: Record<string, unknown>;
+  /**
+   * `ctx` carries waitUntil: a read tool writes to KV and logs its event after
+   * the response, exactly like the HTTP path.
+   */
+  execute: (
+    env: Env,
+    input: Record<string, unknown>,
+    ctx: { waitUntil(p: Promise<unknown>): void },
+  ) => Promise<unknown>;
 }
 
 const object = (properties: Record<string, unknown>, required: string[] = []) => ({

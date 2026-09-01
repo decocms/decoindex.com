@@ -76,9 +76,9 @@ same document structured. Both collapse to one cache entry (`cacheKey` strips
 `.md`), so never teach the suffix as required — "swap the origin" is the pitch
 and an extension contradicts it.
 
-**`/mcp` is currently private, and is not the product.** The public product is
-the URL. See "The MCP surface" below for what it exposes and the rules a tool
-has to follow.
+**`/mcp` is two tiers on one URL, and is not the product.** The URL is the
+product; `/mcp` is the same reads for hosts that prefer a tool call. See "The MCP
+surface" below for the tiers and the rules a tool has to follow.
 
 Other routes: `/` (HTML for browsers, 302 to `/llms.txt` for agents), `/llms.txt`,
 `/about`, `/opt-out`, `/benchmark` (static, from committed bench results),
@@ -121,10 +121,27 @@ has to build the same cache key by hand and check `caches.default` itself, so a
 tool call and its REST equivalent land in the *same* cache entry instead of the
 tool path quietly costing an upstream call on every invocation.
 
-Today the surface is private — `feedback_*`, `traffic_stats`, `domain_list` and
-the probe tools, guarded by `MCP_AUTH_TOKEN`, failing closed with 503 when
-unset. `src/server/render/widget.ts` is the inline UI from the earlier public
-design, kept because the public tool tier is coming back for the ChatGPT app.
+**Two tiers, one URL** (`mcp/auth.ts`). No token: the public read tools in
+`mcp/public.ts`. Valid `MCP_AUTH_TOKEN`: those plus the control plane in
+`mcp/tools.ts`. A *wrong* token is 401, never a silent downgrade — an operator
+who typo'd should be told, not left wondering where their tools went.
+
+The public tier must work unauthenticated, and that is a hard requirement rather
+than a preference: ChatGPT calls `initialize` and `tools/list` before a human has
+anywhere to type a token, so a 401 there does not read as "locked down", it reads
+as "cannot be installed". It read that way for a while, and blocked the app.
+
+`tools/call` resolves the name against *that caller's* tier, so an anonymous
+guess at `feedback_update` gets "unknown tool" rather than a 403 that would
+confirm the tool exists.
+
+For the Apps SDK specifically: tool descriptors carry `title`, `outputSchema` and
+`annotations.readOnlyHint`; `initialize` echoes the client's `protocolVersion`
+rather than asserting ours, because a host that asked for an older revision and
+is answered with a newer one treats the mismatch as fatal. A widget, when one
+lands, is a `ui://` resource with mimeType `text/html+skybridge` referenced from
+a tool's `_meta["openai/outputTemplate"]` — `src/server/render/widget.ts` is the
+inline UI already built for that, still unwired.
 
 That widget renders a **third-party merchant's** catalog data inside a sandboxed
 iframe on someone else's platform — treat every field in it as

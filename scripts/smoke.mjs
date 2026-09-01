@@ -220,11 +220,66 @@ await check("feedback accepts a report and rejects an empty one", async () => {
   assert.equal(bad.status, 400, "a report with no message should be rejected");
 });
 
-await check("the MCP control plane refuses anonymous callers", async () => {
-  for (const init of [{}, { headers: { authorization: "Bearer wrong-token" } }]) {
-    const res = await fetch(BASE + "/mcp", init);
-    assert.ok([401, 503].includes(res.status), `expected 401/503, got ${res.status}`);
+const rpc = (body, init = {}) =>
+  fetch(BASE + "/mcp", {
+    method: "POST",
+    headers: { "content-type": "application/json", ...(init.headers ?? {}) },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, ...body }),
+  }).then((r) => r.json());
+
+await check("MCP discovery works with no credential at all", async () => {
+  // ChatGPT calls initialize and tools/list before a human has anywhere to type
+  // a token. A 401 here does not read as "locked down", it reads as "cannot be
+  // installed" — which is exactly how this endpoint was broken.
+  const init = await rpc({ method: "initialize", params: { protocolVersion: "2025-06-18" } });
+  assert.ok(init.result?.serverInfo?.name, `initialize failed: ${JSON.stringify(init.error)}`);
+
+  const list = await rpc({ method: "tools/list" });
+  const names = (list.result?.tools ?? []).map((t) => t.name);
+  for (const t of ["navigate_storefront", "search_storefront", "list_storefronts"]) {
+    assert.ok(names.includes(t), `public tier is missing ${t}: got ${names.join(", ")}`);
   }
+});
+
+await check("the control plane stays invisible to anonymous callers", async () => {
+  const names = ((await rpc({ method: "tools/list" })).result?.tools ?? []).map((t) => t.name);
+  for (const t of ["feedback_list", "feedback_update", "traffic_stats", "domain_list"]) {
+    assert.ok(!names.includes(t), `operator tool ${t} is advertised publicly`);
+  }
+  // And it is not merely unlisted: calling it answers "unknown tool" rather than
+  // a 403, which would confirm the tool exists to anyone who guessed the name.
+  const called = await rpc({ method: "tools/call", params: { name: "feedback_list", arguments: {} } });
+  assert.equal(called.result, undefined, "feedback_list executed for an anonymous caller");
+  assert.match(called.error?.message ?? "", /Unknown tool/, `got: ${JSON.stringify(called.error)}`);
+});
+
+await check("a wrong token is rejected, never downgraded to public", async () => {
+  // Silently handing an operator the short tool list would look like the control
+  // plane vanished. Fail loudly instead.
+  const res = await fetch(BASE + "/mcp", { headers: { authorization: "Bearer wrong-token" } });
+  assert.ok([401, 503].includes(res.status), `expected 401/503, got ${res.status}`);
+});
+
+await check("a public tool call is a read: same document, same cache entry", async () => {
+  const viaHttp = await get(VTEX_PDP);
+  const viaTool = await rpc({
+    method: "tools/call",
+    params: { name: "navigate_storefront", arguments: { url: BASE + VTEX_PDP } },
+  });
+  const out = viaTool.result?.structuredContent;
+  assert.ok(out, `tool call failed: ${JSON.stringify(viaTool.error)}`);
+  assert.equal(
+    viaTool.result.content[0].text,
+    viaHttp.body,
+    "the tool returned a different document than the URL did",
+  );
+  // The tool builds the edge cache key by hand precisely so it lands on the
+  // entry the GET already warmed. Identical observed_at is that, proven.
+  assert.match(
+    viaHttp.body,
+    new RegExp(`observed_at: "${out.observed_at}"`),
+    "tool and URL disagree on observed_at — they are not sharing a cache entry",
+  );
 });
 
 await check("html points agents at llms.txt", async () => {

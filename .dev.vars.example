@@ -1,2 +1,6 @@
 # Optional. If unset, the corresponding feature degrades gracefully.
-ADMIN_TOKEN=dev-token-change-me
+#
+# Guards the operator tier of /mcp (feedback triage, traffic stats). Leave it
+# unset and /mcp still serves its public read tools to anyone — only the control
+# plane needs this. In production: wrangler secret put MCP_AUTH_TOKEN
+MCP_AUTH_TOKEN=dev-token-change-me

@@ -10,8 +10,8 @@
     "/{domain}/search.json": {
       "get": {
         "operationId": "searchStorefront",
-        "summary": "Search one merchant's indexed catalog",
-        "description": "Hybrid lexical + semantic search over a single storefront. Each result already includes full product detail (variants, prices, availability, claims) — no separate product-lookup call is needed. If the response signals the domain isn't indexed yet, tell the user it's being indexed and to retry the same request in about a minute; that is not an error.",
+        "summary": "Search one merchant's catalog",
+        "description": "Search a single merchant's catalog, resolved on demand against the store's own search endpoint. Each result already includes full product detail (variants, prices, availability, claims), so no separate product-lookup call is needed. Reads are synchronous — there is no indexing queue and no 'retry in a minute' state; a non-200 means the reason is in the body. Use sort=price_asc for anything about the cheapest option: it orders the whole result set server-side, and results are not price-ordered otherwise.",
         "parameters": [
           {
             "name": "domain",
@@ -28,10 +28,21 @@
             "description": "Search query, any language."
           },
           {
-            "name": "limit",
+            "name": "sort",
             "in": "query",
             "required": false,
-            "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 12 }
+            "schema": {
+              "type": "string",
+              "enum": ["price_asc", "price_desc", "name_asc", "name_desc", "discount", "new"]
+            },
+            "description": "Orders the whole result set, not just the page returned."
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "minimum": 1 },
+            "description": "1-based. Defaults to the first page."
           }
         ],
         "responses": {

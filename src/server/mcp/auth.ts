@@ -27,9 +27,32 @@ export function extractToken(request: Request): string | null {
   }
 }
 
-export type AuthResult = { ok: true } | { ok: false; response: Response };
+/**
+ * Two tiers on one endpoint.
+ *
+ * `public` is what an anonymous caller gets: the read tools, which serve exactly
+ * what `GET /{domain}/{path}` serves. This tier has to work with no credential
+ * at all, because ChatGPT calls `initialize` and `tools/list` before a human has
+ * anywhere to type a token — a 401 there does not read as "locked down", it
+ * reads as "cannot be installed". That is the bug this replaced.
+ *
+ * `operator` additionally gets the control plane (feedback triage, traffic
+ * stats, probes). That needs the shared secret.
+ *
+ * A *wrong* token is still 401 rather than a quiet downgrade to `public`. An
+ * operator who typo'd their token should be told, not handed a short tool list
+ * and left wondering where the rest went.
+ */
+export type Tier = "public" | "operator";
+
+export type AuthResult = { ok: true; tier: Tier } | { ok: false; response: Response };
 
 export function authorize(request: Request, env: Env): AuthResult {
+  const received = extractToken(request);
+  if (!received) return { ok: true, tier: "public" };
+
+  // A token was offered, so this caller is asking for the control plane. From
+  // here, failing closed is the only correct answer.
   const expected = env.MCP_AUTH_TOKEN;
   if (!expected) {
     return {
@@ -37,18 +60,10 @@ export function authorize(request: Request, env: Env): AuthResult {
       response: rpc(503, -32002, "MCP_AUTH_TOKEN is not configured on this deployment."),
     };
   }
-  const received = extractToken(request);
-  if (!received || !timingSafeEqual(received, expected)) {
-    return {
-      ok: false,
-      response: rpc(
-        401,
-        -32001,
-        "Unauthorized. Send Authorization: Bearer <token>, an x-mcp-auth header, or ?token=<token>.",
-      ),
-    };
+  if (!timingSafeEqual(received, expected)) {
+    return { ok: false, response: rpc(401, -32001, "Unauthorized: that token is not valid.") };
   }
-  return { ok: true };
+  return { ok: true, tier: "operator" };
 }
 
 function rpc(status: number, code: number, message: string): Response {

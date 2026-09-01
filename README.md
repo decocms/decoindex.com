@@ -31,6 +31,7 @@ URL works immediately, and costs nothing the second time.
 | `/llms.txt` | Machine index: the convention, and the storefronts checked to work |
 | `/benchmark` | Measured cost of reading a storefront both ways |
 | `POST /feedback` | Tell us a document is wrong. Public, unauthenticated, rate-limited per IP. |
+| `/mcp` | The same reads as MCP tools, for hosts that prefer a tool to a fetch |
 | `/about`, `/opt-out` | The service itself |
 
 Markdown is the default representation — **no extension needed**. `.md` is
@@ -84,9 +85,12 @@ renders HTML. That bound is what stops anyone using this as an amplifier against
 storefront — and it is why `?q=` and `?sort=` are served by the merchant's own
 search and catalog endpoints rather than by an index of ours.
 
-`/mcp` is a **private** operator control plane (feedback triage, traffic stats),
-guarded by one bearer secret and failing closed when unset. It is not the product;
-the URL is.
+`/mcp` serves the same reads over MCP, in two tiers off one URL. Anonymous
+callers get `navigate_storefront`, `search_storefront` and `list_storefronts` —
+each one resolves through the same `readThrough()` as a GET, so a tool call and
+its URL twin share a cache entry. A caller holding `MCP_AUTH_TOKEN` additionally
+gets the operator control plane (feedback triage, traffic stats). Tools a caller
+may not invoke are never advertised to it.
 
 More detail, including the gotchas already paid for, in `CLAUDE.md`.
 
@@ -115,8 +119,9 @@ npm run db:remote
 npm run deploy
 ```
 
-Optional: `wrangler secret put MCP_AUTH_TOKEN` to enable the private control
-plane. Without it `/mcp` answers 503 and everything else works.
+Optional: `wrangler secret put MCP_AUTH_TOKEN` to enable the operator tier of
+`/mcp`. Without it, `/mcp` still serves its public read tools; only the control
+plane is unavailable.
 
 ## The benchmark
 

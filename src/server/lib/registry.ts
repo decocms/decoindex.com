@@ -31,6 +31,23 @@ export async function getDomain(env: Env, domain: string): Promise<RegistryRow |
 }
 
 /**
+ * Storefronts a public caller may be told about, newest first.
+ *
+ * `status = 'active'` is load-bearing, not a tidy default: it is what keeps a
+ * domain that asked to be removed out of a list we hand to strangers. The
+ * operator tool `domain_list` is the one that sees every status, plus origin and
+ * account — do not widen this one to match it.
+ */
+export async function listActiveDomains(env: Env, limit: number): Promise<RegistryRow[]> {
+  const res = await env.DB.prepare(
+    `SELECT * FROM domains WHERE status = 'active' ORDER BY detected_at DESC LIMIT ?`,
+  )
+    .bind(limit)
+    .all<RegistryRow>();
+  return res.results ?? [];
+}
+
+/**
  * Partial upsert: an omitted field keeps whatever is already stored.
  *
  * The conflict branch reads the numbered *parameters* (`?2`, `?3`, …) rather
