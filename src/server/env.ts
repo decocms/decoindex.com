@@ -15,6 +15,11 @@ export interface Env {
   // Inference
   AI: Ai;
 
+  // Rate limiting: caps /mcp callers (tool calls bypass the edge cache on
+  // miss and can trigger an AI.run()). Optional -> unbounded if unconfigured,
+  // matching the "secrets are optional" convention below rather than crashing.
+  MCP_RATE_LIMITER?: RateLimit;
+
   // Vars
   PUBLIC_ORIGIN: string;
   ATTRIBUTION_PARAM: string;

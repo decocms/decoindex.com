@@ -43,6 +43,20 @@
 
   "ai": { "binding": "AI" },
 
+  // Caps /mcp callers at 60 req/min per IP. Tool calls can miss the edge
+  // cache and trigger AI.run() — this is the hard teeth backing the cache
+  // sharing in src/server/mcp.ts, since the Cache API never caches POST.
+  "unsafe": {
+    "bindings": [
+      {
+        "name": "MCP_RATE_LIMITER",
+        "type": "ratelimit",
+        "namespace_id": "1001",
+        "simple": { "limit": 60, "period": 60 }
+      }
+    ]
+  },
+
   "triggers": {
     // hourly: refresh the stalest storefronts
     "crons": ["17 * * * *"]

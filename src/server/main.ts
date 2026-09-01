@@ -8,6 +8,7 @@ import { renderBrand, renderLlmsTxt, renderPlp, renderProduct, renderSearch } fr
 import type { RenderCtx } from "./render/markdown";
 import { runIngestJob } from "./ingest/pipeline";
 import { LANDING_HTML } from "./render/landing";
+import { handleMcp, mcpCors } from "./mcp";
 
 export { StorefrontDO };
 
@@ -68,6 +69,35 @@ app.get("/opt-out", (c) =>
     ].join("\n"),
   ),
 );
+
+app.get("/privacy", (c) =>
+  c.text(
+    [
+      "decoindex — data retention and privacy.",
+      "",
+      "We store, per merchant domain: catalog facts (title, attributes, variants,",
+      "categories, observed base price) and their source/timestamp. We do not",
+      "store shopper personal data, cookies, or session identifiers.",
+      "",
+      "First-party analytics (D1 `events` table) record which agent read what",
+      "surface (openai/anthropic/perplexity/script/browser), a coarse country,",
+      "and timing — never a request body or a user identifier. Pruned after 90",
+      "days.",
+      "",
+      "Merchants: request removal at /opt-out, honoured within 24h.",
+      "Built by deco (https://decocms.com).",
+    ].join("\n"),
+  ),
+);
+
+/**
+ * MCP surface: same StorefrontDO, cache and invariants as the routes below,
+ * reached over JSON-RPC instead of REST. Mounted before the catch-all so
+ * parsePath("/mcp") never mistakes "mcp" for a domain.
+ */
+app.post("/mcp", (c) => handleMcp(c.env, c.req.raw));
+app.options("/mcp", () => mcpCors());
+app.get("/mcp", (c) => c.json({ jsonrpc: "2.0", error: { code: -32000, message: "Use POST for JSON-RPC." } }, 405));
 
 /** Client-side beacon for the landing page. Cookieless. */
 app.post("/e", async (c) => {

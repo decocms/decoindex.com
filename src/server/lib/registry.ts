@@ -40,9 +40,14 @@ export async function upsertDomain(
     .bind(
       domain,
       patch.status ?? "queued",
-      patch.platform ?? null,
-      patch.priority ?? null,
-      patch.product_count ?? null,
+      // platform/priority/product_count are NOT NULL DEFAULT'd in the schema,
+      // but an explicit bound NULL on INSERT overrides a column default (it
+      // only applies to an omitted column) — match the schema defaults here
+      // instead of relying on them. Pre-existing bug: any first insert of an
+      // unseeded domain (e.g. the very first read of a new domain) hit this.
+      patch.platform ?? "unknown",
+      patch.priority ?? 10,
+      patch.product_count ?? 0,
       patch.last_refresh ?? null,
       patch.last_error ?? null,
     )
@@ -55,6 +60,19 @@ export async function stalest(env: Env, limit: number): Promise<RegistryRow[]> {
     `SELECT * FROM domains
       WHERE status IN ('discovered','merchant-verified')
       ORDER BY priority DESC, COALESCE(last_refresh, '1970') ASC
+      LIMIT ?`,
+  )
+    .bind(limit)
+    .all<RegistryRow>();
+  return res.results ?? [];
+}
+
+/** What a caller with no domain in hand can browse. Biggest catalogs first. */
+export async function listDomains(env: Env, limit: number): Promise<RegistryRow[]> {
+  const res = await env.DB.prepare(
+    `SELECT * FROM domains
+      WHERE status IN ('discovered','merchant-verified')
+      ORDER BY product_count DESC
       LIMIT ?`,
   )
     .bind(limit)
