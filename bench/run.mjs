@@ -434,7 +434,7 @@ function opencode(prompt) {
     execFile(
       "opencode",
       OPENCODE_ARGS(prompt),
-      { maxBuffer: 64 * 1024 * 1024, timeout: 300_000, cwd: tmpdir() },
+      { maxBuffer: 64 * 1024 * 1024, timeout: RUNNER === "opencode" ? 1_800_000 : 300_000, cwd: tmpdir() },
       (err, stdout) => {
         const parsed = safeJson(stdout);
         // opencode emits either an event array or one object; the text we want is
@@ -483,7 +483,7 @@ function claude(prompt) {
     execFile(
       "claude",
       CLAUDE_ARGS(prompt),
-      { maxBuffer: 64 * 1024 * 1024, timeout: 300_000, cwd: tmpdir() },
+      { maxBuffer: 64 * 1024 * 1024, timeout: RUNNER === "opencode" ? 1_800_000 : 300_000, cwd: tmpdir() },
       (err, stdout) => {
         // --output-format json emits the event stream; the last `result` event
         // carries usage and the final text.
