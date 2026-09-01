@@ -42,7 +42,9 @@ const flag = (name, fallback = null) => {
 const BASE = String(flag("base", "https://decoindex.com")).replace(/\/$/, "");
 const AGENTS = argv.includes("--agents");
 const REPS = Number(flag("reps", 3));
-const MODEL = String(flag("model", "claude-sonnet-5"));
+const RUNNER = String(flag("runner", "claude"));
+const MODEL = String(flag("model", RUNNER === "opencode" ? "openrouter/anthropic/claude-sonnet-4.5" : "claude-sonnet-5"));
+const TASK_NAMES = String(flag("tasks", "pdp,cheapest")).split(",").map((t) => t.trim()).filter(Boolean);
 const OUT = String(flag("out", join(HERE, "results", "latest.json")));
 const ONLY = flag("only", null);
 
@@ -99,9 +101,20 @@ async function truthVtex(b) {
       .filter(({ offer }) => offer && offer.AvailableQuantity > 0 && offer.IsAvailable !== false);
     if (!live.length) continue;
     // `variations` is an array of property *names*; values live as top-level keys.
-    const variants = live
-      .map(({ it }) => (it.variations ?? []).map((n) => it[n]).flat().filter(Boolean).map(String))
-      .flat();
+    //
+    // Group by axis and keep only the widest one. Flattening every axis into one
+    // list produces ground truth like ["Preto","M"] — a colour and a size — which
+    // an agent correctly answering "which sizes are in stock" can never match.
+    const axes = {};
+    for (const { it } of live) {
+      for (const name of it.variations ?? []) {
+        const values = (it[name] ?? []).filter(Boolean).map(String);
+        (axes[name] ??= new Set());
+        for (const v of values) axes[name].add(v);
+      }
+    }
+    const widest = Object.values(axes).sort((a, b) => b.size - a.size)[0];
+    const variants = widest ? [...widest] : [];
     out.push({
       path: `/${p.linkText}/p`,
       title: p.productName,
@@ -139,6 +152,53 @@ async function truthShopify(b) {
 }
 
 /**
+ * The three cheapest in-stock products in the category, from the merchant's own
+ * API with its own price ordering. This is the answer neither arm can get from
+ * one unordered page, which is exactly why it is worth asking.
+ */
+async function truthCheapest(b, n = 3) {
+  if (b.platform === "vtex") {
+    const res = await timed(
+      `${vtexApi(b)}/api/catalog_system/pub/products/search${b.listing}?_from=0&_to=49&O=OrderByPriceASC`,
+      { accept: "application/json" },
+    );
+    const products = safeJson(res.text);
+    if (!Array.isArray(products)) return null;
+    const prices = [];
+    for (const p of products) {
+      for (const it of p.items ?? []) {
+        const o = it.sellers?.[0]?.commertialOffer;
+        if (o && o.AvailableQuantity > 0 && o.IsAvailable !== false) {
+          prices.push(Math.round(o.Price * 100));
+          break;
+        }
+      }
+    }
+    prices.sort((x, y) => x - y);
+    return prices.length >= n ? prices.slice(0, n) : null;
+  }
+  // Shopify cannot order server-side, so read enough pages to be sure the
+  // cheapest are among them rather than guessing from page 1.
+  const handle = b.listing.replace(/^\/collections\//, "");
+  const prices = [];
+  for (let page = 1; page <= 4; page++) {
+    const res = await timed(
+      `${b.origin}/collections/${handle}/products.json?limit=250&page=${page}`,
+      { accept: "application/json" },
+    );
+    const list = safeJson(res.text)?.products ?? [];
+    if (!list.length) break;
+    for (const p of list) {
+      const live = (p.variants ?? []).filter((v) => v.available !== false && v.price);
+      if (live.length) prices.push(Math.min(...live.map((v) => Math.round(Number(v.price) * 100))));
+    }
+    if (list.length < 250) break;
+  }
+  prices.sort((x, y) => x - y);
+  return prices.length >= n ? prices.slice(0, n) : null;
+}
+
+/**
  * What actually came back from the storefront for this product URL.
  *
  * Three outcomes, kept apart on purpose. A WAF challenge is a small response and
@@ -148,6 +208,9 @@ async function truthShopify(b) {
  *   ok        the requested product page, with the product in the HTML
  *   js-shell  200 and the right URL, but neither the title nor the price is in
  *             the HTML — the catalog arrives later, by script, from an API
+ *   no-price  the product is named in the HTML but its price is not there at all.
+ *             Worse than it sounds: the page looks readable, so an agent that
+ *             finds any number on it will happily report the wrong one
  *   blocked   a challenge or refusal — the agent never sees a catalog at all
  *   mismatch  200, but the storefront served something else (soft 404)
  */
@@ -165,6 +228,7 @@ function siteOutcome(res, gt, facts = null) {
   // Only call it a mismatch when the page says which page it is and disagrees.
   if (canonical && !canonical.includes(slug)) return "mismatch";
   if (facts && !facts.title && !facts.price) return "js-shell";
+  if (facts && !facts.price) return "no-price";
   return "ok";
 }
 
@@ -283,18 +347,55 @@ async function layer1(b, gt) {
 
 // --- layer 2 ----------------------------------------------------------------
 
-const TASK = (url) =>
-  [
-    "You are answering a shopping question. Use ONLY the page at the URL below.",
-    "Fetch it, read it, and answer from what it says. Do not guess and do not use prior knowledge.",
-    "",
-    `URL: ${url}`,
-    "",
-    "Question: what is the current price of this product, and which sizes/variants are in stock?",
-    "",
-    'Reply with ONLY a JSON object, no prose, no code fence: {"price": <number in major units, e.g. 419.90>, "variants": ["..."]}',
-    'If the page does not state a price, use {"price": null, "variants": []}.',
-  ].join("\n");
+/**
+ * Two tasks, because one product page is a ceiling.
+ *
+ * `pdp` is the control: one page, two facts. Any competent extractor passes it on
+ * a healthy storefront, and it ties.
+ *
+ * `cheapest` is the shopping question people actually ask, and it is the one that
+ * separates the arms — a category of 500 products hands back 24, so the answer is
+ * not on the page either side gives you first. Both arms get the plain category
+ * URL and have to work out how to order it. Neither is handed `?sort=`: the
+ * decoindex document advertises it in its own body and the storefront has sort
+ * links in its HTML, so this measures whether ordering is *discoverable*, which
+ * is the actual product difference rather than a head start we granted ourselves.
+ */
+const TASKS = {
+  pdp: {
+    label: "price + variants on one product",
+    prompt: (url) =>
+      [
+        "You are answering a shopping question. Use ONLY the page at the URL below.",
+        "Fetch it, read it, and answer from what it says. Do not guess and do not use prior knowledge.",
+        "",
+        `URL: ${url}`,
+        "",
+        "Question: what is the current price of this product, and which sizes/variants are in stock?",
+        "",
+        'Reply with ONLY a JSON object, no prose, no code fence: {"price": <number in major units, e.g. 419.90>, "variants": ["..."]}',
+        'If the page does not state a price, use {"price": null, "variants": []}.',
+      ].join("\n"),
+  },
+  cheapest: {
+    label: "3 cheapest in-stock in a category",
+    prompt: (url) =>
+      [
+        "You are shopping in the category at the URL below. Start there; you may follow links",
+        "or query parameters on the same site if you need to. Do not use prior knowledge.",
+        "",
+        `URL: ${url}`,
+        "",
+        "Question: what are the 3 CHEAPEST in-stock products in this category?",
+        "Be careful: the first page you see is usually not the whole category, and is usually",
+        "not ordered by price. Make sure your three are the cheapest in the category, not just",
+        "the cheapest on the page in front of you.",
+        "",
+        'Reply with ONLY a JSON object, no prose, no code fence: {"prices": [<number>, <number>, <number>]}',
+        'Prices in major units, ascending. If you cannot determine them, use {"prices": []}.',
+      ].join("\n"),
+  },
+};
 
 /**
  * One headless run, in a deliberately bare environment.
@@ -316,6 +417,65 @@ const CLAUDE_ARGS = (prompt) => [
   "--disallowedTools", "Bash", "WebSearch", "Read", "Write", "Edit", "Task", "Glob", "Grep",
   "--permission-mode", "bypassPermissions",
 ];
+
+/**
+ * opencode drives any OpenRouter model through the same shape of loop, which is
+ * the point: if the advantage only shows up under one vendor's fetch tool, it is
+ * a property of that tool and not of the documents. Auth lives in opencode's own
+ * credential store — the harness never sees a key.
+ */
+const OPENCODE_ARGS = (prompt) => [
+  "run", prompt, "--format", "json", "--model", MODEL, "--auto",
+];
+
+function opencode(prompt) {
+  return new Promise((resolve) => {
+    const started = Date.now();
+    execFile(
+      "opencode",
+      OPENCODE_ARGS(prompt),
+      { maxBuffer: 64 * 1024 * 1024, timeout: 300_000, cwd: tmpdir() },
+      (err, stdout) => {
+        const parsed = safeJson(stdout);
+        // opencode emits either an event array or one object; the text we want is
+        // the last assistant text part either way.
+        const events = Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
+        let answer = null;
+        let inTok = 0, outTok = 0, cost = 0, turns = 0;
+        for (const e of events) {
+          const parts = e?.parts ?? e?.message?.parts ?? [];
+          for (const part of Array.isArray(parts) ? parts : []) {
+            if (part?.type === "text" && part.text) answer = part.text;
+          }
+          if (typeof e?.text === "string") answer = e.text;
+          const u = e?.tokens ?? e?.usage ?? e?.message?.tokens;
+          if (u) {
+            inTok += (u.input ?? u.input_tokens ?? 0) + (u.cache?.write ?? 0);
+            outTok += u.output ?? u.output_tokens ?? 0;
+            turns++;
+          }
+          if (typeof e?.cost === "number") cost += e.cost;
+        }
+        resolve({
+          ok: Boolean(answer) && !err,
+          wallMs: Date.now() - started,
+          durationMs: null,
+          costUsd: cost || null,
+          freshTokens: inTok,
+          cachedTokens: 0,
+          outputTokens: outTok,
+          numTurns: turns || null,
+          answer,
+          error: err ? String(err).split("\n")[0] : answer ? null : "no answer in opencode output",
+          raw: parsed,
+        });
+      },
+    );
+  });
+}
+
+/** One runner per CLI. Same contract, so the rest of the harness cannot tell them apart. */
+const RUNNERS = { claude, opencode };
 
 function claude(prompt) {
   return new Promise((resolve) => {
@@ -359,23 +519,48 @@ const norm = (s) => String(s).trim().toLowerCase().replace(/\s+/g, "");
 function grade(answer, gt) {
   const m = String(answer ?? "").match(/\{[\s\S]*\}/);
   const parsed = m ? safeJson(m[0]) : null;
-  if (!parsed) return { parsed: false, priceOk: false, variantF1: 0 };
+  if (!parsed) return { parsed: false, priceOk: false, variantF1: null };
 
   const priceOk =
     parsed.price != null && Math.abs(Math.round(Number(parsed.price) * 100) - gt.priceMinor) <= 1;
 
   const got = new Set((parsed.variants ?? []).map(norm).filter(Boolean));
   const want = new Set(gt.variants.map(norm).filter(Boolean));
+  // A product with no variants in the catalog cannot be scored on variants:
+  // an empty answer would earn a free 1.0 and quietly inflate both arms. null,
+  // and excluded from the mean.
+  if (want.size === 0) return { parsed: true, priceOk, variantF1: null, got: [...got] };
   let f1 = 0;
-  if (want.size === 0) {
-    f1 = got.size === 0 ? 1 : 0;
-  } else if (got.size) {
+  if (got.size) {
     const hit = [...got].filter((v) => want.has(v)).length;
     const precision = hit / got.size;
     const recall = hit / want.size;
     f1 = hit ? (2 * precision * recall) / (precision + recall) : 0;
   }
   return { parsed: true, priceOk, variantF1: Number(f1.toFixed(3)), got: [...got] };
+}
+
+/**
+ * Grade the category task on prices, not names: the same product is titled
+ * differently on a storefront card and in our table, and we are testing whether
+ * the agent found the cheapest things, not whether it transcribed a name.
+ */
+function gradeCheapest(answer, want) {
+  const m = String(answer ?? "").match(/\{[\s\S]*\}/);
+  const parsed = m ? safeJson(m[0]) : null;
+  const got = (parsed?.prices ?? [])
+    .map((p) => Math.round(Number(p) * 100))
+    .filter((p) => Number.isFinite(p) && p > 0)
+    .sort((a, b) => a - b);
+  if (!got.length) return { parsed: Boolean(parsed), hit: 0, of: want.length, exact: false, got };
+  // Within a cent, and each true price consumed at most once.
+  const pool = [...want];
+  let hit = 0;
+  for (const g of got) {
+    const i = pool.findIndex((w) => Math.abs(w - g) <= 1);
+    if (i !== -1) { pool.splice(i, 1); hit++; }
+  }
+  return { parsed: true, hit, of: want.length, exact: hit === want.length && got.length === want.length, got };
 }
 
 async function pool(tasks, size) {
@@ -400,9 +585,22 @@ if (!brands.length) {
   process.exit(1);
 }
 
+// WebFetch reaches a local base only intermittently — it fails with "Socket is
+// closed" under load and the agent then truthfully reports it could not read the
+// page, which the grader scores as a decoindex loss. That is a harness artifact
+// scored as a result, so refuse it outright rather than publish it.
+if (AGENTS && /^https?:\/\/(127\.0\.0\.1|localhost|0\.0\.0\.0|\[::1\])/.test(BASE)) {
+  console.error(
+    `Refusing to run --agents against ${BASE}.\n` +
+      `WebFetch is unreliable against localhost and scores decoindex as a loss when it fails.\n` +
+      `Point --base at a publicly reachable deployment.`,
+  );
+  process.exit(2);
+}
+
 console.log(`decoindex benchmark — base=${BASE} brands=${brands.length}${AGENTS ? ` agents=on model=${MODEL} reps=${REPS}` : ""}`);
 if (AGENTS) {
-  console.log(`  ${brands.length} brands x 2 arms x ${REPS} reps = ${brands.length * 2 * REPS} paid runs\n`);
+  console.log(`  up to ${brands.length} brands x ${TASK_NAMES.length} tasks x 2 arms x ${REPS} reps\n`);
 }
 
 const l1 = [];
@@ -423,7 +621,12 @@ for (const b of brands) {
   }
   const gt = picked.gt;
   const arms = await layer1(b, gt);
-  l1.push({ brand: b.brand, domain: b.domain, platform: b.platform, groundTruth: gt, ...arms });
+  const cheapest = TASK_NAMES.includes("cheapest") ? await truthCheapest(b) : null;
+  l1.push({
+    brand: b.brand, domain: b.domain, platform: b.platform, groundTruth: gt,
+    category: { site: `${b.origin}${b.listing}`, decoindex: `${BASE}/${b.domain}${b.listing}`, cheapest },
+    ...arms,
+  });
   const ratio =
     arms.site.outcome === "ok" && arms.decoindex.tokens
       ? `${(arms.site.tokens / arms.decoindex.tokens).toFixed(0)}x`
@@ -439,30 +642,53 @@ for (const b of brands) {
 let l2 = [];
 if (AGENTS && l1.length) {
   console.log("\nAgent runs. This spends money.\n");
+  const run = RUNNERS[RUNNER];
   const jobs = [];
   for (const row of l1) {
-    for (const armName of ["site", "decoindex"]) {
-      for (let rep = 0; rep < REPS; rep++) {
-        jobs.push(async () => {
-          const url = row[armName].url;
-          const res = await claude(TASK(url));
-          const g = res.ok ? grade(res.answer, row.groundTruth) : { parsed: false, priceOk: false, variantF1: 0 };
-          console.log(
-            `  ${row.brand.padEnd(13)} ${armName.padEnd(10)} rep${rep + 1}  ` +
-              `${g.priceOk ? "price ok " : "price MISS"}  f1=${g.variantF1}  ` +
-              `${String(res.freshTokens).padStart(7)}tok  $${(res.costUsd ?? 0).toFixed(4)}  ${(res.wallMs / 1000).toFixed(1)}s`,
-          );
-          const { raw, ...rest } = res;
-          mkdirSync(join(dirname(OUT), "runs"), { recursive: true });
-          writeFileSync(
-            join(dirname(OUT), "runs", `${row.domain}.${armName}.${rep + 1}.json`),
-            JSON.stringify({ url, prompt: TASK(url), groundTruth: row.groundTruth, grade: g, result: raw }, null, 2),
-          );
-          return { brand: row.brand, domain: row.domain, arm: armName, rep: rep + 1, ...rest, grade: g };
-        });
+    for (const taskName of TASK_NAMES) {
+      const task = TASKS[taskName];
+      if (!task) continue;
+      // Skip the category task where we could not establish what the cheapest
+      // actually are — an ungradeable run is spend with nothing to show for it.
+      if (taskName === "cheapest" && !row.category.cheapest) continue;
+      for (const armName of ["site", "decoindex"]) {
+        for (let rep = 0; rep < REPS; rep++) {
+          jobs.push(async () => {
+            const url = taskName === "cheapest" ? row.category[armName] : row[armName].url;
+            const prompt = task.prompt(url);
+            const res = await run(prompt);
+            const g = !res.ok
+              ? { parsed: false, priceOk: false, variantF1: null }
+              : taskName === "cheapest"
+                ? gradeCheapest(res.answer, row.category.cheapest)
+                : grade(res.answer, row.groundTruth);
+            const score =
+              taskName === "cheapest"
+                ? `${g.hit}/${g.of} cheapest${g.exact ? " exact" : ""}`
+                : `${g.priceOk ? "price ok " : "price MISS"} f1=${g.variantF1 ?? "n/a"}`;
+            console.log(
+              `  ${row.brand.padEnd(13)} ${taskName.padEnd(9)} ${armName.padEnd(10)} rep${rep + 1}  ` +
+                `${score.padEnd(22)} ${String(res.freshTokens).padStart(7)}tok  ` +
+                `$${(res.costUsd ?? 0).toFixed(4)}  ${(res.wallMs / 1000).toFixed(1)}s`,
+            );
+            const { raw, ...rest } = res;
+            mkdirSync(join(dirname(OUT), "runs"), { recursive: true });
+            writeFileSync(
+              join(dirname(OUT), "runs", `${row.domain}.${taskName}.${armName}.${rep + 1}.json`),
+              JSON.stringify(
+                { url, runner: RUNNER, model: MODEL, prompt,
+                  groundTruth: taskName === "cheapest" ? row.category.cheapest : row.groundTruth,
+                  grade: g, result: raw },
+                null, 2,
+              ),
+            );
+            return { brand: row.brand, domain: row.domain, task: taskName, arm: armName, rep: rep + 1, ...rest, grade: g };
+          });
+        }
       }
     }
   }
+  console.log(`  ${jobs.length} paid runs via ${RUNNER} (${MODEL})\n`);
   l2 = await pool(jobs, 4);
 }
 
@@ -470,6 +696,8 @@ const results = {
   runAt: new Date().toISOString(),
   base: BASE,
   model: AGENTS ? MODEL : null,
+  runner: AGENTS ? RUNNER : null,
+  tasks: AGENTS ? TASK_NAMES : null,
   reps: AGENTS ? REPS : null,
   tokensExact: Boolean(process.env.ANTHROPIC_API_KEY),
   git: process.env.GIT_SHA ?? null,
@@ -509,18 +737,42 @@ if (l1.length) {
   }
 }
 if (l2.length) {
-  const by = (arm) => l2.filter((r) => r.arm === arm);
-  for (const arm of ["site", "decoindex"]) {
-    const rs = by(arm);
-    if (!rs.length) continue;
-    console.log(
-      `Layer 2 ${arm.padEnd(10)} price ${rs.filter((r) => r.grade.priceOk).length}/${rs.length}  ` +
-        `mean f1 ${(sumOf(rs, (r) => r.grade.variantF1) / rs.length).toFixed(2)}  ` +
-        `median ${median(rs.map((r) => r.freshTokens)).toLocaleString()} tok  ` +
-        `total $${sumOf(rs, (r) => r.costUsd ?? 0).toFixed(2)}`,
-    );
+  for (const t of TASK_NAMES) {
+    const rows = l2.filter((r) => r && r.task === t);
+    if (!rows.length) continue;
+    console.log(`\nLayer 2 — ${TASKS[t].label} (${RUNNER}/${MODEL})`);
+    for (const arm of ["site", "decoindex"]) {
+      const rs = rows.filter((r) => r.arm === arm);
+      if (!rs.length) continue;
+      const cost = sumOf(rs, (r) => r.costUsd ?? 0);
+      const wall = median(rs.map((r) => r.wallMs)) / 1000;
+      const tok = median(rs.map((r) => r.freshTokens));
+      if (t === "cheapest") {
+        const exact = rs.filter((r) => r.grade.exact).length;
+        const hit = sumOf(rs, (r) => r.grade.hit ?? 0);
+        const of = sumOf(rs, (r) => r.grade.of ?? 0);
+        console.log(
+          `  ${arm.padEnd(10)} exact ${exact}/${rs.length}  found ${hit}/${of} of the cheapest  ` +
+            `${tok.toLocaleString()} tok  $${cost.toFixed(2)}  ${wall.toFixed(1)}s`,
+        );
+      } else {
+        const scored = rs.filter((r) => r.grade.variantF1 !== null);
+        const f1 = scored.length ? sumOf(scored, (r) => r.grade.variantF1) / scored.length : null;
+        console.log(
+          `  ${arm.padEnd(10)} price ${rs.filter((r) => r.grade.priceOk).length}/${rs.length}  ` +
+            `f1 ${f1 === null ? "n/a" : f1.toFixed(2)} (n=${scored.length})  ` +
+            `${tok.toLocaleString()} tok  $${cost.toFixed(2)}  ${wall.toFixed(1)}s`,
+        );
+      }
+    }
   }
+  console.log(`\nTotal agent spend: $${sumOf(l2.filter(Boolean), (r) => r.costUsd ?? 0).toFixed(2)}`);
 }
 function sumOf(xs, f) {
   return xs.reduce((a, b) => a + f(b), 0);
+}
+/** Products with no variants score null and must not drag the mean. */
+function meanF1(rs) {
+  const scored = rs.filter((r) => r.grade.variantF1 !== null);
+  return scored.length ? sumOf(scored, (r) => r.grade.variantF1) / scored.length : null;
 }

@@ -1,7 +1,8 @@
-import type { CategoryRef, Claim, Doc, Product, Sort, Storefront, Variant } from "../lib/types";
+import type { CategoryRef, Claim, Doc, Product, Storefront, Variant } from "../lib/types";
 import { parseSort } from "../lib/types";
 import { UA } from "./detect";
 import { searchTerm, summarize } from "./vtex";
+import { sortProducts } from "./order";
 
 /**
  * Shopify's storefront paths map one-to-one onto public JSON endpoints, which is
@@ -183,7 +184,7 @@ async function collection(
   // there is no server-side ordering to ask for. So we can only order the page we
   // already hold, and the document has to say `sorted_within_page: true` rather
   // than let a reader believe this is the cheapest of the whole collection.
-  const sortedWithinPage = Boolean(sort && sortInPlace(items, sort));
+  const sortedWithinPage = Boolean(sort && sortProducts(items, sort));
 
   return {
     kind: "listing",
@@ -197,37 +198,6 @@ async function collection(
     sortedWithinPage: sortedWithinPage || undefined,
     products: items,
   };
-}
-
-/** Cheapest live variant, for ordering. Undefined when nothing is purchasable. */
-function fromPrice(p: Product): number | undefined {
-  const live = p.variants.filter((v) => v.available !== false && v.priceMinor != null);
-  return live.length ? Math.min(...live.map((v) => v.priceMinor as number)) : undefined;
-}
-
-/** Returns true when it actually reordered, so the caller only claims what happened. */
-function sortInPlace(products: Product[], sort: Sort): boolean {
-  const byPrice = (dir: number) => (a: Product, b: Product) => {
-    const x = fromPrice(a);
-    const y = fromPrice(b);
-    // Unpriced products sink to the bottom either way rather than sorting as 0.
-    if (x == null && y == null) return 0;
-    if (x == null) return 1;
-    if (y == null) return -1;
-    return (x - y) * dir;
-  };
-  const byName = (dir: number) => (a: Product, b: Product) =>
-    a.title.localeCompare(b.title) * dir;
-
-  switch (sort) {
-    case "price_asc": products.sort(byPrice(1)); return true;
-    case "price_desc": products.sort(byPrice(-1)); return true;
-    case "name_asc": products.sort(byName(1)); return true;
-    case "name_desc": products.sort(byName(-1)); return true;
-    // discount, new and relevance need catalog-wide data this endpoint does not
-    // return. Leave the order alone and report no sort rather than invent one.
-    default: return false;
-  }
 }
 
 function toProduct(p: ShopifyProduct, shop: Storefront): Product {

@@ -1,0 +1,125 @@
+{
+  "url": "https://decoindex.com/drogariasaopaulo.com.br/protetor-solar-facial-biore-perfect-milk-uv-fps50-40ml/p",
+  "prompt": "You are answering a shopping question. Use ONLY the page at the URL below.\nFetch it, read it, and answer from what it says. Do not guess and do not use prior knowledge.\n\nURL: https://decoindex.com/drogariasaopaulo.com.br/protetor-solar-facial-biore-perfect-milk-uv-fps50-40ml/p\n\nQuestion: what is the current price of this product, and which sizes/variants are in stock?\n\nReply with ONLY a JSON object, no prose, no code fence: {\"price\": <number in major units, e.g. 419.90>, \"variants\": [\"...\"]}\nIf the page does not state a price, use {\"price\": null, \"variants\": []}.",
+  "groundTruth": {
+    "path": "/protetor-solar-facial-biore-perfect-milk-uv-fps50-40ml/p",
+    "title": "Protetor Solar Facial Bioré FPS 50 UV Perfect Milk 40ml",
+    "priceMinor": 6055,
+    "currency": "BRL",
+    "variants": [],
+    "totalInListing": 24
+  },
+  "grade": {
+    "parsed": true,
+    "priceOk": false,
+    "variantF1": null,
+    "got": [
+      "40ml"
+    ]
+  },
+  "result": {
+    "is_error": false,
+    "duration_api_ms": 10995,
+    "num_turns": 3,
+    "stop_reason": "end_turn",
+    "session_id": "ba46722e-d2ff-4d31-8499-0a9e152bdebf",
+    "total_cost_usd": 0.020871,
+    "usage": {
+      "input_tokens": 6,
+      "cache_creation_input_tokens": 907,
+      "cache_read_input_tokens": 53210,
+      "output_tokens": 295,
+      "output_tokens_details": {
+        "thinking_tokens": 33
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 907,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 23,
+          "cache_read_input_tokens": 18054,
+          "cache_creation_input_tokens": 431,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 431
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 2689,
+        "outputTokens": 190,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.003639,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "firstParty"
+      },
+      "claude-sonnet-5": {
+        "inputTokens": 6,
+        "outputTokens": 295,
+        "cacheReadInputTokens": 53210,
+        "cacheCreationInputTokens": 907,
+        "webSearchRequests": 0,
+        "costUSD": 0.017232,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "canonicalModel": "claude-sonnet-5",
+        "provider": "firstParty"
+      }
+    },
+    "permission_denials": [],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+        "background": 0,
+        "foreground": 0,
+        "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+        "parent": 0,
+        "user": 0,
+        "system": 0
+      },
+      "refused": {
+        "depth_limit": 0,
+        "concurrency_limit": 0,
+        "budget": 0
+      },
+      "by_type": {}
+    },
+    "subtype": "success",
+    "api_error_status": null,
+    "result": "{\"price\": 46.39, \"variants\": [\"40ml\"]}",
+    "ttft_ms": 2230,
+    "ttft_stream_ms": 1484,
+    "time_to_request_ms": 46,
+    "type": "result",
+    "duration_ms": 10380,
+    "uuid": "bd9cf3fd-894c-46d1-b3b4-3fe746773950",
+    "queued_turn_count": 0
+  }
+}

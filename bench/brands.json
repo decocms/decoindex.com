@@ -69,5 +69,53 @@
     "origin": "https://www.allbirds.com",
     "platform": "shopify",
     "listing": "/collections/mens"
+  },
+  {
+    "brand": "C&A",
+    "domain": "cea.com.br",
+    "origin": "https://www.cea.com.br",
+    "platform": "vtex",
+    "account": "cea",
+    "listing": "/moda-feminina/calcados"
+  },
+  {
+    "brand": "Americanas",
+    "domain": "americanas.com.br",
+    "origin": "https://www.americanas.com.br",
+    "platform": "vtex",
+    "account": "americanas",
+    "listing": "/eletrodomesticos"
+  },
+  {
+    "brand": "Hering",
+    "domain": "hering.com.br",
+    "origin": "https://www.hering.com.br",
+    "platform": "vtex",
+    "account": "hering",
+    "listing": "/feminino"
+  },
+  {
+    "brand": "Vivara",
+    "domain": "vivara.com.br",
+    "origin": "https://www.vivara.com.br",
+    "platform": "vtex",
+    "account": "lojavivara",
+    "listing": "/vivara/relogios"
+  },
+  {
+    "brand": "Pague Menos",
+    "domain": "paguemenos.com.br",
+    "origin": "https://www.paguemenos.com.br",
+    "platform": "vtex",
+    "account": "paguemenos",
+    "listing": "/medicamentos-e-saude/alergias"
+  },
+  {
+    "brand": "Drogaria São Paulo",
+    "domain": "drogariasaopaulo.com.br",
+    "origin": "https://www.drogariasaopaulo.com.br",
+    "platform": "vtex",
+    "account": "drogariasp",
+    "listing": "/protetor-solar"
   }
 ]

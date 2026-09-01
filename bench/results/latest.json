@@ -1,8 +1,10 @@
 {
-  "runAt": "2026-08-31T23:10:05.707Z",
-  "base": "http://127.0.0.1:8799",
-  "model": "claude-sonnet-5",
-  "reps": 1,
+  "runAt": "2026-09-01T02:08:46.188Z",
+  "base": "https://decoindex.com",
+  "model": null,
+  "runner": null,
+  "tasks": null,
+  "reps": null,
   "tokensExact": false,
   "git": null,
   "stale": [],
@@ -12,8 +14,8 @@
       "domain": "farmrio.com.br",
       "platform": "vtex",
       "groundTruth": {
-        "path": "/copo-quencher-stanley-woods-x-farm-rio-887ml-multicolorido-374773-2276/p",
-        "title": "Copo Quencher Stanley Woods x Farm Rio 887ml",
+        "path": "/copo-quencher-stanley-destiny-x-farm-rio-887ml-multicolorido-374774-2276/p",
+        "title": "Copo Quencher Stanley Destiny x Farm Rio 887ml",
         "priceMinor": 41900,
         "currency": "BRL",
         "variants": [
@@ -21,15 +23,24 @@
         ],
         "totalInListing": 24
       },
+      "category": {
+        "site": "https://www.farmrio.com.br/moda-feminina/acessorios",
+        "decoindex": "https://decoindex.com/farmrio.com.br/moda-feminina/acessorios",
+        "cheapest": [
+          2900,
+          2900,
+          2900
+        ]
+      },
       "site": {
-        "url": "https://www.farmrio.com.br/copo-quencher-stanley-woods-x-farm-rio-887ml-multicolorido-374773-2276/p",
+        "url": "https://www.farmrio.com.br/copo-quencher-stanley-destiny-x-farm-rio-887ml-multicolorido-374774-2276/p",
         "status": 200,
         "contentType": "text/html",
-        "bytes": 1316680,
-        "tokens": 329170,
+        "bytes": 1343234,
+        "tokens": 335809,
         "tokensEstimated": true,
-        "msFirst": 36,
-        "msWarm": 30,
+        "msFirst": 27,
+        "msWarm": 24,
         "facts": {
           "title": true,
           "price": true
@@ -38,14 +49,822 @@
         "outcome": "ok"
       },
       "decoindex": {
-        "url": "http://127.0.0.1:8799/farmrio.com.br/copo-quencher-stanley-woods-x-farm-rio-887ml-multicolorido-374773-2276/p",
+        "url": "https://decoindex.com/farmrio.com.br/copo-quencher-stanley-destiny-x-farm-rio-887ml-multicolorido-374774-2276/p",
         "status": 200,
-        "contentType": "text/markdown",
-        "bytes": 5113,
-        "tokens": 1278,
+        "contentType": "text/plain",
+        "bytes": 5067,
+        "tokens": 1267,
         "tokensEstimated": true,
-        "msFirst": 18,
-        "msWarm": 3,
+        "msFirst": 300,
+        "msWarm": 31,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      }
+    },
+    {
+      "brand": "Fila",
+      "domain": "fila.com.br",
+      "platform": "vtex",
+      "groundTruth": {
+        "path": "/tenis-fila-speedzone-2-feminino-1423570/p",
+        "title": "Tênis Fila Speedzone 2 Feminino",
+        "priceMinor": 59999,
+        "currency": "BRL",
+        "variants": [
+          "34",
+          "35",
+          "36",
+          "37",
+          "38",
+          "39",
+          "40"
+        ],
+        "totalInListing": 24
+      },
+      "category": {
+        "site": "https://www.fila.com.br/calcado/tenis",
+        "decoindex": "https://decoindex.com/fila.com.br/calcado/tenis",
+        "cheapest": [
+          12999,
+          13999,
+          13999
+        ]
+      },
+      "site": {
+        "url": "https://www.fila.com.br/tenis-fila-speedzone-2-feminino-1423570/p",
+        "status": 200,
+        "contentType": "text/html",
+        "bytes": 528826,
+        "tokens": 132207,
+        "tokensEstimated": true,
+        "msFirst": 10,
+        "msWarm": 8,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      },
+      "decoindex": {
+        "url": "https://decoindex.com/fila.com.br/tenis-fila-speedzone-2-feminino-1423570/p",
+        "status": 200,
+        "contentType": "text/plain",
+        "bytes": 4592,
+        "tokens": 1148,
+        "tokensEstimated": true,
+        "msFirst": 281,
+        "msWarm": 33,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      }
+    },
+    {
+      "brand": "Osklen",
+      "domain": "osklen.com.br",
+      "platform": "vtex",
+      "groundTruth": {
+        "path": "/tenis-soho-couro-gasto-masc--marrom-39651-59/p",
+        "title": "Tênis soho couro gasto",
+        "priceMinor": 39700,
+        "currency": "BRL",
+        "variants": [
+          "39",
+          "40",
+          "41",
+          "42",
+          "43",
+          "44"
+        ],
+        "totalInListing": 24
+      },
+      "category": {
+        "site": "https://www.osklen.com.br/masculino/vestuario",
+        "decoindex": "https://decoindex.com/osklen.com.br/masculino/vestuario",
+        "cheapest": null
+      },
+      "site": {
+        "url": "https://www.osklen.com.br/tenis-soho-couro-gasto-masc--marrom-39651-59/p",
+        "status": 200,
+        "contentType": "text/html",
+        "bytes": 525943,
+        "tokens": 131486,
+        "tokensEstimated": true,
+        "msFirst": 23,
+        "msWarm": 27,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      },
+      "decoindex": {
+        "url": "https://decoindex.com/osklen.com.br/tenis-soho-couro-gasto-masc--marrom-39651-59/p",
+        "status": 200,
+        "contentType": "text/plain",
+        "bytes": 5589,
+        "tokens": 1397,
+        "tokensEstimated": true,
+        "msFirst": 296,
+        "msWarm": 30,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      }
+    },
+    {
+      "brand": "Monte Carlo",
+      "domain": "montecarlo.com.br",
+      "platform": "vtex",
+      "groundTruth": {
+        "path": "/anelglam-nim040030/p",
+        "title": "Anel Solitário com Topázio em Prata 925 com banho de Ouro Amarelo 18k",
+        "priceMinor": 87000,
+        "currency": "BRL",
+        "variants": [
+          "14",
+          "15",
+          "16",
+          "17",
+          "18",
+          "19",
+          "20",
+          "21",
+          "22"
+        ],
+        "totalInListing": 24
+      },
+      "category": {
+        "site": "https://www.montecarlo.com.br/joias",
+        "decoindex": "https://decoindex.com/montecarlo.com.br/joias",
+        "cheapest": [
+          25000,
+          28000,
+          29000
+        ]
+      },
+      "site": {
+        "url": "https://www.montecarlo.com.br/anelglam-nim040030/p",
+        "status": 200,
+        "contentType": "text/html",
+        "bytes": 297357,
+        "tokens": 74339,
+        "tokensEstimated": true,
+        "msFirst": 634,
+        "msWarm": 644,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      },
+      "decoindex": {
+        "url": "https://decoindex.com/montecarlo.com.br/anelglam-nim040030/p",
+        "status": 200,
+        "contentType": "text/plain",
+        "bytes": 5786,
+        "tokens": 1447,
+        "tokensEstimated": true,
+        "msFirst": 325,
+        "msWarm": 30,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      }
+    },
+    {
+      "brand": "Lojas Torra",
+      "domain": "lojastorra.com.br",
+      "platform": "vtex",
+      "groundTruth": {
+        "path": "/vestido-sarja-feminino-curto-poa-com-alcinha-bege-13161000178507/p",
+        "title": "Vestido Sarja Feminino Curto Poá com Alcinha Bege",
+        "priceMinor": 11999,
+        "currency": "BRL",
+        "variants": [
+          "PP",
+          "P",
+          "G",
+          "GG"
+        ],
+        "totalInListing": 24
+      },
+      "category": {
+        "site": "https://www.lojastorra.com.br/feminino/vestidos-e-macacoes",
+        "decoindex": "https://decoindex.com/lojastorra.com.br/feminino/vestidos-e-macacoes",
+        "cheapest": [
+          2299,
+          2399,
+          2399
+        ]
+      },
+      "site": {
+        "url": "https://www.lojastorra.com.br/vestido-sarja-feminino-curto-poa-com-alcinha-bege-13161000178507/p",
+        "status": 200,
+        "contentType": "text/html",
+        "bytes": 1385676,
+        "tokens": 346419,
+        "tokensEstimated": true,
+        "msFirst": 33,
+        "msWarm": 29,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      },
+      "decoindex": {
+        "url": "https://decoindex.com/lojastorra.com.br/vestido-sarja-feminino-curto-poa-com-alcinha-bege-13161000178507/p",
+        "status": 200,
+        "contentType": "text/plain",
+        "bytes": 5319,
+        "tokens": 1330,
+        "tokensEstimated": true,
+        "msFirst": 280,
+        "msWarm": 34,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      }
+    },
+    {
+      "brand": "Bagaggio",
+      "domain": "bagaggio.com.br",
+      "platform": "vtex",
+      "groundTruth": {
+        "path": "/mala-media-23-kg-abs-4-rodas-26--detroit-preta/p",
+        "title": "Mala Média 23 Kg ABS 4 Rodas 26\" Detroit Preta",
+        "priceMinor": 37990,
+        "currency": "BRL",
+        "variants": [
+          "Preto"
+        ],
+        "totalInListing": 24
+      },
+      "category": {
+        "site": "https://www.bagaggio.com.br/malas/mala-media",
+        "decoindex": "https://decoindex.com/bagaggio.com.br/malas/mala-media",
+        "cheapest": [
+          34990,
+          34990,
+          34990
+        ]
+      },
+      "site": {
+        "url": "https://www.bagaggio.com.br/mala-media-23-kg-abs-4-rodas-26--detroit-preta/p",
+        "status": 200,
+        "contentType": "text/html",
+        "bytes": 1002765,
+        "tokens": 250691,
+        "tokensEstimated": true,
+        "msFirst": 38,
+        "msWarm": 34,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      },
+      "decoindex": {
+        "url": "https://decoindex.com/bagaggio.com.br/mala-media-23-kg-abs-4-rodas-26--detroit-preta/p",
+        "status": 200,
+        "contentType": "text/plain",
+        "bytes": 6754,
+        "tokens": 1689,
+        "tokensEstimated": true,
+        "msFirst": 387,
+        "msWarm": 17,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      }
+    },
+    {
+      "brand": "Technos",
+      "domain": "technos.com.br",
+      "platform": "vtex",
+      "groundTruth": {
+        "path": "/relogio-fossil-feminino-jacqueline-prata-es3545-1kn-es3545-1kn/p",
+        "title": "Relógio Fossil Feminino Jacqueline Prata - ES3545/1KN",
+        "priceMinor": 99900,
+        "currency": "BRL",
+        "variants": [],
+        "totalInListing": 2
+      },
+      "category": {
+        "site": "https://www.technos.com.br/relogio/fossil",
+        "decoindex": "https://decoindex.com/technos.com.br/relogio/fossil",
+        "cheapest": null
+      },
+      "site": {
+        "url": "https://www.technos.com.br/relogio-fossil-feminino-jacqueline-prata-es3545-1kn-es3545-1kn/p",
+        "status": 200,
+        "contentType": "text/html",
+        "bytes": 35975,
+        "tokens": 8994,
+        "tokensEstimated": true,
+        "msFirst": 1799,
+        "msWarm": 369,
+        "facts": {
+          "title": false,
+          "price": false
+        },
+        "error": null,
+        "outcome": "js-shell"
+      },
+      "decoindex": {
+        "url": "https://decoindex.com/technos.com.br/relogio-fossil-feminino-jacqueline-prata-es3545-1kn-es3545-1kn/p",
+        "status": 200,
+        "contentType": "text/plain",
+        "bytes": 4202,
+        "tokens": 1051,
+        "tokensEstimated": true,
+        "msFirst": 290,
+        "msWarm": 17,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      }
+    },
+    {
+      "brand": "Le Biscuit",
+      "domain": "lebiscuit.com.br",
+      "platform": "vtex",
+      "groundTruth": {
+        "path": "/kit-5x-suportes-veicular-p-smartphone-9371-comtac-2022370400/p",
+        "title": "Kit 5x suportes Veicular p/Smartphone 9371 Comtac",
+        "priceMinor": 4499,
+        "currency": "BRL",
+        "variants": [
+          "Unico"
+        ],
+        "totalInListing": 24
+      },
+      "category": {
+        "site": "https://www.lebiscuit.com.br/bebe/hora-de-comer",
+        "decoindex": "https://decoindex.com/lebiscuit.com.br/bebe/hora-de-comer",
+        "cheapest": [
+          598,
+          699,
+          899
+        ]
+      },
+      "site": {
+        "url": "https://www.lebiscuit.com.br/kit-5x-suportes-veicular-p-smartphone-9371-comtac-2022370400/p",
+        "status": 403,
+        "contentType": "text/html",
+        "bytes": 6087,
+        "tokens": 1522,
+        "tokensEstimated": true,
+        "msFirst": 39,
+        "msWarm": 31,
+        "facts": {
+          "title": false,
+          "price": false
+        },
+        "error": null,
+        "outcome": "blocked"
+      },
+      "decoindex": {
+        "url": "https://decoindex.com/lebiscuit.com.br/kit-5x-suportes-veicular-p-smartphone-9371-comtac-2022370400/p",
+        "status": 200,
+        "contentType": "text/plain",
+        "bytes": 4426,
+        "tokens": 1107,
+        "tokensEstimated": true,
+        "msFirst": 270,
+        "msWarm": 17,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      }
+    },
+    {
+      "brand": "Allbirds",
+      "domain": "allbirds.com",
+      "platform": "shopify",
+      "groundTruth": {
+        "path": "/products/mens-dasher-nz-anthracite",
+        "title": "Men's Dasher NZ - Anthracite (Dark Anthracite Sole)",
+        "priceMinor": 14000,
+        "currency": "USD",
+        "variants": [
+          "8",
+          "8.5",
+          "9",
+          "9.5",
+          "10",
+          "10.5",
+          "11",
+          "11.5",
+          "12",
+          "12.5",
+          "13",
+          "14"
+        ],
+        "totalInListing": 24
+      },
+      "category": {
+        "site": "https://www.allbirds.com/collections/mens",
+        "decoindex": "https://decoindex.com/allbirds.com/collections/mens",
+        "cheapest": [
+          5000,
+          5000,
+          5500
+        ]
+      },
+      "site": {
+        "url": "https://www.allbirds.com/products/mens-dasher-nz-anthracite",
+        "status": 200,
+        "contentType": "text/html",
+        "bytes": 690321,
+        "tokens": 172580,
+        "tokensEstimated": true,
+        "msFirst": 286,
+        "msWarm": 368,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      },
+      "decoindex": {
+        "url": "https://decoindex.com/allbirds.com/products/mens-dasher-nz-anthracite",
+        "status": 200,
+        "contentType": "text/plain",
+        "bytes": 4952,
+        "tokens": 1238,
+        "tokensEstimated": true,
+        "msFirst": 268,
+        "msWarm": 15,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      }
+    },
+    {
+      "brand": "C&A",
+      "domain": "cea.com.br",
+      "platform": "vtex",
+      "groundTruth": {
+        "path": "/sandalia-feminina-salto-kitten-heel-off-white-1103706-off_white/p",
+        "title": "sandália feminina salto kitten heel off white",
+        "priceMinor": 15999,
+        "currency": "BRL",
+        "variants": [
+          "36",
+          "38",
+          "37"
+        ],
+        "totalInListing": 24
+      },
+      "category": {
+        "site": "https://www.cea.com.br/moda-feminina/calcados",
+        "decoindex": "https://decoindex.com/cea.com.br/moda-feminina/calcados",
+        "cheapest": [
+          1999,
+          1999,
+          1999
+        ]
+      },
+      "site": {
+        "url": "https://www.cea.com.br/sandalia-feminina-salto-kitten-heel-off-white-1103706-off_white/p",
+        "status": 200,
+        "contentType": "text/html",
+        "bytes": 6020618,
+        "tokens": 1505155,
+        "tokensEstimated": true,
+        "msFirst": 30,
+        "msWarm": 26,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      },
+      "decoindex": {
+        "url": "https://decoindex.com/cea.com.br/sandalia-feminina-salto-kitten-heel-off-white-1103706-off_white/p",
+        "status": 200,
+        "contentType": "text/plain",
+        "bytes": 4441,
+        "tokens": 1110,
+        "tokensEstimated": true,
+        "msFirst": 239,
+        "msWarm": 15,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      }
+    },
+    {
+      "brand": "Americanas",
+      "domain": "americanas.com.br",
+      "platform": "vtex",
+      "groundTruth": {
+        "path": "/micro-ondas-mondial-mo0121b-21-litros-tira-odor-preto-6536704891/p",
+        "title": "Micro-ondas de Bancada Mondial MO0121B 21L Tira Odor 1200W Preto Digital Aço Galvanizado e ABS",
+        "priceMinor": 52999,
+        "currency": "BRL",
+        "variants": [
+          "110V",
+          "220V"
+        ],
+        "totalInListing": 24
+      },
+      "category": {
+        "site": "https://www.americanas.com.br/eletrodomesticos",
+        "decoindex": "https://decoindex.com/americanas.com.br/eletrodomesticos",
+        "cheapest": [
+          173,
+          239,
+          286
+        ]
+      },
+      "site": {
+        "url": "https://www.americanas.com.br/micro-ondas-mondial-mo0121b-21-litros-tira-odor-preto-6536704891/p",
+        "status": 200,
+        "contentType": "text/html",
+        "bytes": 156943,
+        "tokens": 39236,
+        "tokensEstimated": true,
+        "msFirst": 17,
+        "msWarm": 12,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      },
+      "decoindex": {
+        "url": "https://decoindex.com/americanas.com.br/micro-ondas-mondial-mo0121b-21-litros-tira-odor-preto-6536704891/p",
+        "status": 200,
+        "contentType": "text/plain",
+        "bytes": 5706,
+        "tokens": 1427,
+        "tokensEstimated": true,
+        "msFirst": 257,
+        "msWarm": 17,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      }
+    },
+    {
+      "brand": "Hering",
+      "domain": "hering.com.br",
+      "platform": "vtex",
+      "groundTruth": {
+        "path": "/blusao-feminino-em-moletom-kh6n1asn/p",
+        "title": "Blusão Feminino Em Moletom - Azul",
+        "priceMinor": 9999,
+        "currency": "BRL",
+        "variants": [
+          "XP",
+          "P",
+          "M",
+          "G",
+          "XG"
+        ],
+        "totalInListing": 24
+      },
+      "category": {
+        "site": "https://www.hering.com.br/feminino",
+        "decoindex": "https://decoindex.com/hering.com.br/feminino",
+        "cheapest": [
+          1899,
+          2999,
+          2999
+        ]
+      },
+      "site": {
+        "url": "https://www.hering.com.br/blusao-feminino-em-moletom-kh6n1asn/p",
+        "status": 200,
+        "contentType": "text/html",
+        "bytes": 415195,
+        "tokens": 103799,
+        "tokensEstimated": true,
+        "msFirst": 10,
+        "msWarm": 10,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      },
+      "decoindex": {
+        "url": "https://decoindex.com/hering.com.br/blusao-feminino-em-moletom-kh6n1asn/p",
+        "status": 200,
+        "contentType": "text/plain",
+        "bytes": 5649,
+        "tokens": 1412,
+        "tokensEstimated": true,
+        "msFirst": 269,
+        "msWarm": 18,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      }
+    },
+    {
+      "brand": "Vivara",
+      "domain": "vivara.com.br",
+      "platform": "vtex",
+      "groundTruth": {
+        "path": "/relogio-lacoste-lc33-masculino-borracha-azul-2011435-la00001359/p",
+        "title": "Relógio Lacoste Lc33 Masculino em Borracha Azul  2011434",
+        "priceMinor": 35400,
+        "currency": "BRL",
+        "variants": [],
+        "totalInListing": 24
+      },
+      "category": {
+        "site": "https://www.vivara.com.br/vivara/relogios",
+        "decoindex": "https://decoindex.com/vivara.com.br/vivara/relogios",
+        "cheapest": [
+          23400,
+          29400,
+          33000
+        ]
+      },
+      "site": {
+        "url": "https://www.vivara.com.br/relogio-lacoste-lc33-masculino-borracha-azul-2011435-la00001359/p",
+        "status": 200,
+        "contentType": "text/html",
+        "bytes": 351293,
+        "tokens": 87823,
+        "tokensEstimated": true,
+        "msFirst": 13,
+        "msWarm": 12,
+        "facts": {
+          "title": true,
+          "price": false
+        },
+        "error": null,
+        "outcome": "no-price"
+      },
+      "decoindex": {
+        "url": "https://decoindex.com/vivara.com.br/relogio-lacoste-lc33-masculino-borracha-azul-2011435-la00001359/p",
+        "status": 200,
+        "contentType": "text/plain",
+        "bytes": 4103,
+        "tokens": 1026,
+        "tokensEstimated": true,
+        "msFirst": 247,
+        "msWarm": 18,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      }
+    },
+    {
+      "brand": "Pague Menos",
+      "domain": "paguemenos.com.br",
+      "platform": "vtex",
+      "groundTruth": {
+        "path": "/cloridrato-de-fexofenadina-180mg-com-10-comprimidos-generico-cimed/p",
+        "title": "Cloridrato de Fexofenadina 180mg 10 Comprimidos Revestidos Genérico Cimed",
+        "priceMinor": 969,
+        "currency": "BRL",
+        "variants": [],
+        "totalInListing": 24
+      },
+      "category": {
+        "site": "https://www.paguemenos.com.br/medicamentos-e-saude/alergias",
+        "decoindex": "https://decoindex.com/paguemenos.com.br/medicamentos-e-saude/alergias",
+        "cheapest": [
+          599,
+          819,
+          849
+        ]
+      },
+      "site": {
+        "url": "https://www.paguemenos.com.br/cloridrato-de-fexofenadina-180mg-com-10-comprimidos-generico-cimed/p",
+        "status": 200,
+        "contentType": "text/html",
+        "bytes": 2502121,
+        "tokens": 625530,
+        "tokensEstimated": true,
+        "msFirst": 21,
+        "msWarm": 31,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      },
+      "decoindex": {
+        "url": "https://decoindex.com/paguemenos.com.br/cloridrato-de-fexofenadina-180mg-com-10-comprimidos-generico-cimed/p",
+        "status": 200,
+        "contentType": "text/plain",
+        "bytes": 4663,
+        "tokens": 1166,
+        "tokensEstimated": true,
+        "msFirst": 255,
+        "msWarm": 17,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      }
+    },
+    {
+      "brand": "Drogaria São Paulo",
+      "domain": "drogariasaopaulo.com.br",
+      "platform": "vtex",
+      "groundTruth": {
+        "path": "/protetor-solar-facial-biore-perfect-milk-uv-fps50-40ml/p",
+        "title": "Protetor Solar Facial Bioré FPS 50 UV Perfect Milk 40ml",
+        "priceMinor": 6055,
+        "currency": "BRL",
+        "variants": [],
+        "totalInListing": 24
+      },
+      "category": {
+        "site": "https://www.drogariasaopaulo.com.br/protetor-solar",
+        "decoindex": "https://decoindex.com/drogariasaopaulo.com.br/protetor-solar",
+        "cheapest": [
+          1799,
+          1999,
+          2353
+        ]
+      },
+      "site": {
+        "url": "https://www.drogariasaopaulo.com.br/protetor-solar-facial-biore-perfect-milk-uv-fps50-40ml/p",
+        "status": 200,
+        "contentType": "text/html",
+        "bytes": 462412,
+        "tokens": 115603,
+        "tokensEstimated": true,
+        "msFirst": 27,
+        "msWarm": 22,
+        "facts": {
+          "title": true,
+          "price": true
+        },
+        "error": null,
+        "outcome": "ok"
+      },
+      "decoindex": {
+        "url": "https://decoindex.com/drogariasaopaulo.com.br/protetor-solar-facial-biore-perfect-milk-uv-fps50-40ml/p",
+        "status": 200,
+        "contentType": "text/plain",
+        "bytes": 4206,
+        "tokens": 1052,
+        "tokensEstimated": true,
+        "msFirst": 266,
+        "msWarm": 17,
         "facts": {
           "title": true,
           "price": true
@@ -55,46 +874,5 @@
       }
     }
   ],
-  "layer2": [
-    {
-      "brand": "Farm Rio",
-      "domain": "farmrio.com.br",
-      "arm": "site",
-      "rep": 1,
-      "ok": true,
-      "wallMs": 17576,
-      "durationMs": null,
-      "costUsd": null,
-      "inputTokens": 0,
-      "outputTokens": 0,
-      "numTurns": null,
-      "answer": null,
-      "error": null,
-      "grade": {
-        "parsed": false,
-        "priceOk": false,
-        "variantF1": 0
-      }
-    },
-    {
-      "brand": "Farm Rio",
-      "domain": "farmrio.com.br",
-      "arm": "decoindex",
-      "rep": 1,
-      "ok": true,
-      "wallMs": 31609,
-      "durationMs": null,
-      "costUsd": null,
-      "inputTokens": 0,
-      "outputTokens": 0,
-      "numTurns": null,
-      "answer": null,
-      "error": null,
-      "grade": {
-        "parsed": false,
-        "priceOk": false,
-        "variantF1": 0
-      }
-    }
-  ]
+  "layer2": []
 }

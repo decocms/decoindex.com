@@ -1,0 +1,40 @@
+[
+  {
+    "scenario": "americanas-ps5",
+    "store": "americanas.com",
+    "what": "PlayStation 5 game",
+    "runner": "claude",
+    "model": "claude-sonnet-5",
+    "arm": "decoindex",
+    "rep": 1,
+    "runAt": "2026-09-01T13:45:45.721Z",
+    "verified": true,
+    "reason": null,
+    "priceMinor": 8690,
+    "productName": "Marvels Spider-Man Miles Morales para PS5",
+    "fetches": 7,
+    "turns": 12,
+    "inTokens": 14506,
+    "costUsd": 0.1919606,
+    "wallMs": 94826
+  },
+  {
+    "scenario": "americanas-ps5",
+    "store": "americanas.com",
+    "what": "PlayStation 5 game",
+    "runner": "claude",
+    "model": "claude-sonnet-5",
+    "arm": "site",
+    "rep": 1,
+    "runAt": "2026-09-01T13:45:45.722Z",
+    "verified": false,
+    "reason": "no JSON object in the answer",
+    "priceMinor": null,
+    "productName": null,
+    "fetches": null,
+    "turns": 46,
+    "inTokens": 44065,
+    "costUsd": 1.0081994,
+    "wallMs": 470309
+  }
+]

@@ -1,5 +1,6 @@
 import type { CategoryRef, Claim, Doc, Product, Sort, Storefront, Variant } from "../lib/types";
 import { parseSort } from "../lib/types";
+import { sortProducts } from "./order";
 import type { Env } from "../env";
 import { UA } from "./detect";
 import { childrenOf, flatten, getTree } from "./tree";
@@ -88,6 +89,20 @@ export function searchTerm(path: string, query: URLSearchParams): string | undef
   return undefined;
 }
 
+/**
+ * VTEX selects the set catalog-wide — that is the half we cannot do ourselves,
+ * and it is the valuable half. It does not reliably order that set against the
+ * price it reports: `?ft=playstation 5&O=OrderByPriceASC` came back 189.99 then
+ * 189.98. So take the platform's selection and order it by the number we print,
+ * or our own table contradicts its own heading. Used by search and by category
+ * listings alike — both had the bug.
+ */
+function ordered(rows: VtexProduct[], shop: Storefront, sort: Sort | undefined) {
+  const products = rows.map((p) => toProduct(p, shop));
+  if (sort) sortProducts(products, sort);
+  return products;
+}
+
 async function search(shop: Storefront, term: string, query: URLSearchParams): Promise<Doc> {
   const page = Math.max(1, Number(query.get("page") ?? 1) || 1);
   const from = (page - 1) * PER_PAGE;
@@ -109,7 +124,7 @@ async function search(shop: Storefront, term: string, query: URLSearchParams): P
     page,
     sort,
     query: term,
-    products: res.body.map((p) => toProduct(p, shop)),
+    products: ordered(res.body, shop, sort),
   };
 }
 
@@ -208,7 +223,7 @@ async function listing(
     total: totalFromResources(res.resources),
     page,
     sort,
-    products: res.body.map((p) => toProduct(p, shop)),
+    products: ordered(res.body, shop, sort),
     ...(subcategories.length ? { subcategories } : {}),
   };
 }

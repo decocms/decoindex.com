@@ -1,0 +1,125 @@
+{
+  "url": "https://decoindex.com/technos.com.br/relogio-fossil-feminino-jacqueline-prata-es3545-1kn-es3545-1kn/p",
+  "prompt": "You are answering a shopping question. Use ONLY the page at the URL below.\nFetch it, read it, and answer from what it says. Do not guess and do not use prior knowledge.\n\nURL: https://decoindex.com/technos.com.br/relogio-fossil-feminino-jacqueline-prata-es3545-1kn-es3545-1kn/p\n\nQuestion: what is the current price of this product, and which sizes/variants are in stock?\n\nReply with ONLY a JSON object, no prose, no code fence: {\"price\": <number in major units, e.g. 419.90>, \"variants\": [\"...\"]}\nIf the page does not state a price, use {\"price\": null, \"variants\": []}.",
+  "groundTruth": {
+    "path": "/relogio-fossil-feminino-jacqueline-prata-es3545-1kn-es3545-1kn/p",
+    "title": "Relógio Fossil Feminino Jacqueline Prata - ES3545/1KN",
+    "priceMinor": 99900,
+    "currency": "BRL",
+    "variants": [],
+    "totalInListing": 2
+  },
+  "grade": {
+    "parsed": true,
+    "priceOk": true,
+    "variantF1": null,
+    "got": [
+      "sku1000015072-instock"
+    ]
+  },
+  "result": {
+    "is_error": false,
+    "duration_api_ms": 9477,
+    "num_turns": 3,
+    "stop_reason": "end_turn",
+    "session_id": "c9497ad4-10ac-4e7c-970b-563f7414d557",
+    "total_cost_usd": 0.030766799999999997,
+    "usage": {
+      "input_tokens": 6,
+      "cache_creation_input_tokens": 3547,
+      "cache_read_input_tokens": 50529,
+      "output_tokens": 278,
+      "output_tokens_details": {
+        "thinking_tokens": 10
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 3547,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 34,
+          "cache_read_input_tokens": 18030,
+          "cache_creation_input_tokens": 439,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 439
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 2711,
+        "outputTokens": 194,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0036810000000000002,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "firstParty"
+      },
+      "claude-sonnet-5": {
+        "inputTokens": 6,
+        "outputTokens": 278,
+        "cacheReadInputTokens": 50529,
+        "cacheCreationInputTokens": 3547,
+        "webSearchRequests": 0,
+        "costUSD": 0.027085799999999997,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "canonicalModel": "claude-sonnet-5",
+        "provider": "firstParty"
+      }
+    },
+    "permission_denials": [],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+        "background": 0,
+        "foreground": 0,
+        "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+        "parent": 0,
+        "user": 0,
+        "system": 0
+      },
+      "refused": {
+        "depth_limit": 0,
+        "concurrency_limit": 0,
+        "budget": 0
+      },
+      "by_type": {}
+    },
+    "subtype": "success",
+    "api_error_status": null,
+    "result": "{\"price\": 999.00, \"variants\": [\"SKU 1000015072 - In Stock\"]}",
+    "ttft_ms": 1679,
+    "ttft_stream_ms": 847,
+    "time_to_request_ms": 43,
+    "type": "result",
+    "duration_ms": 9017,
+    "uuid": "545b5f9e-9577-413a-bac4-61c486cf0d87",
+    "queued_turn_count": 0
+  }
+}

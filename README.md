@@ -23,6 +23,7 @@ works immediately, and costs nothing the second time.
 | `…?page=N` | Paginate a listing |
 | `….json` | The same document, structured |
 | `/{domain}/llms.txt` | Per-storefront machine index |
+| `/benchmark` | Measured cost of reading a storefront, both ways |
 | `/llms.txt`, `/about`, `/opt-out` | The service itself |
 
 A product page carries frontmatter (canonical URL, platform, currency, price,
@@ -50,6 +51,42 @@ npm run check               # tsc --noEmit
 ```
 
 `npm run smoke <url>` also works against a deployed instance.
+
+## The benchmark
+
+`/benchmark` is rendered from `bench/results/latest.json`, which is produced by
+`bench/run.mjs` and committed. Nothing on that page is typed in by hand.
+
+```sh
+npm run bench                                  # layer 1, free, ~1 min
+node bench/run.mjs --base http://127.0.0.1:8799
+node bench/run.mjs --agents --reps 3           # layer 2, costs real money
+```
+
+**Layer 1** fetches one in-stock product from each brand in `bench/brands.json`
+twice — as the HTML the storefront hands a browser, and as the document we serve
+for the same URL — and records bytes, tokens, latency and whether the price is
+present at all. No key, no account.
+
+**Layer 2** hands a headless `claude -p` one URL and one shopping question per
+arm and grades the answer. It needs a logged-in `claude` CLI and spends real
+money. Every transcript lands in `bench/results/runs/` so any grade can be
+checked against what the model actually said.
+
+Two things the harness is deliberate about:
+
+- **Ground truth never comes from decoindex.** Both the product under test and
+  the facts checked against it come from the merchant's own catalog API, so the
+  benchmark cannot grade us against our own output. It measures what it costs an
+  agent to recover a fact the merchant already published — not whether we copied
+  it correctly.
+- **Storefront outcomes are kept apart, never averaged.** A bot challenge is a
+  small response and so is a soft 404; folding either into "storefront payload
+  size" would invent a flattering number. Rows are tagged `ok`, `js-shell`,
+  `blocked` or `mismatch`, and only `ok` rows enter the token ratio.
+
+Set `ANTHROPIC_API_KEY` for exact token counts from the count-tokens endpoint;
+without it, counts are estimated at 4 bytes/token and labelled as such on the page.
 
 ## Deploy
 

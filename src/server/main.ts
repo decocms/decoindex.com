@@ -17,12 +17,13 @@ import {
   type RenderCtx,
 } from "./render/markdown";
 import { SAMPLE, landingHtml } from "./render/landing";
-import { benchmarkHtml, type BenchResults } from "./render/benchmark";
+import { benchmarkHtml, type BenchResults, type JourneyRun } from "./render/benchmark";
 // Imported as bytes via the "Data" rule in wrangler.jsonc.
 import ogImage from "../../assets/og.png";
 // The committed output of `npm run bench`. Static data — the page makes no
 // upstream call, so the bounded-read invariant is untouched.
 import benchResults from "../../bench/results/latest.json";
+import benchJourneys from "../../bench/results/journeys.json";
 
 type Ctx = { Bindings: Env };
 const app = new Hono<Ctx>();
@@ -110,7 +111,13 @@ app.get("/", async (c) => {
  * is a static page: no KV, no D1, no upstream call.
  */
 app.get("/benchmark", (c) =>
-  c.html(benchmarkHtml(c.env.PUBLIC_ORIGIN, benchResults as unknown as BenchResults)),
+  c.html(
+    benchmarkHtml(
+      c.env.PUBLIC_ORIGIN,
+      benchResults as unknown as BenchResults,
+      benchJourneys as unknown as JourneyRun[],
+    ),
+  ),
 );
 
 /** Social preview. Immutable: regenerating it is a deploy, so cache it hard. */

@@ -1,0 +1,135 @@
+{
+  "url": "https://decoindex.com/hering.com.br/blusao-feminino-em-moletom-kh6n1asn/p",
+  "prompt": "You are answering a shopping question. Use ONLY the page at the URL below.\nFetch it, read it, and answer from what it says. Do not guess and do not use prior knowledge.\n\nURL: https://decoindex.com/hering.com.br/blusao-feminino-em-moletom-kh6n1asn/p\n\nQuestion: what is the current price of this product, and which sizes/variants are in stock?\n\nReply with ONLY a JSON object, no prose, no code fence: {\"price\": <number in major units, e.g. 419.90>, \"variants\": [\"...\"]}\nIf the page does not state a price, use {\"price\": null, \"variants\": []}.",
+  "groundTruth": {
+    "path": "/blusao-feminino-em-moletom-kh6n1asn/p",
+    "title": "Blusão Feminino Em Moletom - Azul",
+    "priceMinor": 9999,
+    "currency": "BRL",
+    "variants": [
+      "XP",
+      "P",
+      "M",
+      "G",
+      "XG"
+    ],
+    "totalInListing": 24
+  },
+  "grade": {
+    "parsed": true,
+    "priceOk": true,
+    "variantF1": 1,
+    "got": [
+      "xp",
+      "p",
+      "m",
+      "g",
+      "xg"
+    ]
+  },
+  "result": {
+    "is_error": false,
+    "duration_api_ms": 9464,
+    "num_turns": 3,
+    "stop_reason": "end_turn",
+    "session_id": "09349695-1908-43d0-925c-626ab55e28cc",
+    "total_cost_usd": 0.020806200000000004,
+    "usage": {
+      "input_tokens": 6,
+      "cache_creation_input_tokens": 825,
+      "cache_read_input_tokens": 53141,
+      "output_tokens": 270,
+      "output_tokens_details": {
+        "thinking_tokens": 12
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 825,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 35,
+          "cache_read_input_tokens": 18017,
+          "cache_creation_input_tokens": 370,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 370
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 3311,
+        "outputTokens": 171,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.004166,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "firstParty"
+      },
+      "claude-sonnet-5": {
+        "inputTokens": 6,
+        "outputTokens": 270,
+        "cacheReadInputTokens": 53141,
+        "cacheCreationInputTokens": 825,
+        "webSearchRequests": 0,
+        "costUSD": 0.0166402,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "canonicalModel": "claude-sonnet-5",
+        "provider": "firstParty"
+      }
+    },
+    "permission_denials": [],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+        "background": 0,
+        "foreground": 0,
+        "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+        "parent": 0,
+        "user": 0,
+        "system": 0
+      },
+      "refused": {
+        "depth_limit": 0,
+        "concurrency_limit": 0,
+        "budget": 0
+      },
+      "by_type": {}
+    },
+    "subtype": "success",
+    "api_error_status": null,
+    "result": "{\"price\": 99.99, \"variants\": [\"XP\", \"P\", \"M\", \"G\", \"XG\"]}",
+    "ttft_ms": 1912,
+    "ttft_stream_ms": 1320,
+    "time_to_request_ms": 43,
+    "type": "result",
+    "duration_ms": 8769,
+    "uuid": "a023aae1-0868-4a40-b3e2-5b46a3fc70d1",
+    "queued_turn_count": 0
+  }
+}

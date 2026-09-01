@@ -298,6 +298,21 @@ await check("price_asc really orders the whole category, not just the page", asy
   assert.match(plain, /\?sort=price_asc/, "unsorted listing does not advertise sorting");
 });
 
+await check("search + price_asc is strictly ordered, not roughly ordered", async () => {
+  // VTEX's own OrderByPriceASC is not monotonic against the price it reports —
+  // it returned 189.99 before 189.98. The platform picks the set catalog-wide,
+  // we order what it gave us, so our table never contradicts its own heading.
+  const { body } = await get("/americanas.com/search?q=playstation%205&sort=price_asc");
+  assert.match(body, /^sort: price_asc$/m, "sort not echoed");
+  const prices = body
+    .split("\n")
+    .filter((l) => l.startsWith("| ") && /R\$/.test(l) && /\byes\b/.test(l))
+    .map((l) => Number(l.split("|")[2].replace(/[^\d,]/g, "").replace(",", ".")))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  assert.ok(prices.length > 3, "not enough in-stock rows to check");
+  assert.deepEqual(prices, [...prices].sort((a, b) => a - b), `not ascending: ${prices.slice(0, 5).join(", ")}`);
+});
+
 await check("a page-local sort says so instead of overclaiming", async () => {
   const { body } = await get("/allbirds.com/collections/mens?sort=price_asc");
   // Shopify cannot order server-side, so the document must not imply it did.
@@ -306,7 +321,7 @@ await check("a page-local sort says so instead of overclaiming", async () => {
 });
 
 await check("a big catalogue shows every top-level category", async () => {
-  const { res, body } = await get("/americanas.com.br/");
+  const { res, body } = await get("/americanas.com/");
   assert.equal(res.status, 200);
   assert.match(body, /^\d+ top-level categories, \d+ including subcategories\./m, "no honest count");
   const roots = body.split("\n").filter((l) => l.startsWith("- ["));

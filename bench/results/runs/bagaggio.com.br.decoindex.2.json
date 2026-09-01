@@ -1,0 +1,127 @@
+{
+  "url": "https://decoindex.com/bagaggio.com.br/mala-media-23-kg-abs-4-rodas-detroit-preta-ii/p",
+  "prompt": "You are answering a shopping question. Use ONLY the page at the URL below.\nFetch it, read it, and answer from what it says. Do not guess and do not use prior knowledge.\n\nURL: https://decoindex.com/bagaggio.com.br/mala-media-23-kg-abs-4-rodas-detroit-preta-ii/p\n\nQuestion: what is the current price of this product, and which sizes/variants are in stock?\n\nReply with ONLY a JSON object, no prose, no code fence: {\"price\": <number in major units, e.g. 419.90>, \"variants\": [\"...\"]}\nIf the page does not state a price, use {\"price\": null, \"variants\": []}.",
+  "groundTruth": {
+    "path": "/mala-media-23-kg-abs-4-rodas-detroit-preta-ii/p",
+    "title": "Mala Média 23 kg ABS 4 Rodas Detroit Preta II",
+    "priceMinor": 34990,
+    "currency": "BRL",
+    "variants": [
+      "Preto"
+    ],
+    "totalInListing": 24
+  },
+  "grade": {
+    "parsed": true,
+    "priceOk": true,
+    "variantF1": 0,
+    "got": [
+      "preto(black)-sizem"
+    ]
+  },
+  "result": {
+    "is_error": false,
+    "duration_api_ms": 8174,
+    "num_turns": 3,
+    "stop_reason": "end_turn",
+    "session_id": "8c25cfb7-82cd-4292-b744-575e29507e8c",
+    "total_cost_usd": 0.0202946,
+    "usage": {
+      "input_tokens": 6,
+      "cache_creation_input_tokens": 791,
+      "cache_read_input_tokens": 53158,
+      "output_tokens": 267,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 791,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 31,
+          "cache_read_input_tokens": 18014,
+          "cache_creation_input_tokens": 349,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 349
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 3147,
+        "outputTokens": 134,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.003817,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "firstParty"
+      },
+      "claude-sonnet-5": {
+        "inputTokens": 6,
+        "outputTokens": 267,
+        "cacheReadInputTokens": 53158,
+        "cacheCreationInputTokens": 791,
+        "webSearchRequests": 0,
+        "costUSD": 0.016477600000000002,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "canonicalModel": "claude-sonnet-5",
+        "provider": "firstParty"
+      }
+    },
+    "permission_denials": [],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+        "background": 0,
+        "foreground": 0,
+        "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+        "parent": 0,
+        "user": 0,
+        "system": 0
+      },
+      "refused": {
+        "depth_limit": 0,
+        "concurrency_limit": 0,
+        "budget": 0
+      },
+      "by_type": {}
+    },
+    "subtype": "success",
+    "api_error_status": null,
+    "result": "{\"price\": 349.90, \"variants\": [\"Preto (Black) - Size M\"]}",
+    "ttft_ms": 1695,
+    "ttft_stream_ms": 1153,
+    "time_to_request_ms": 44,
+    "type": "result",
+    "duration_ms": 7596,
+    "uuid": "5679bccd-0b29-41b6-9a8c-4c5cd00ab6b8",
+    "queued_turn_count": 0
+  }
+}

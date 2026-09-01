@@ -1,0 +1,137 @@
+{
+  "url": "https://decoindex.com/osklen.com.br/tenis-soho-couro-gasto-masc--marrom-39651-59/p",
+  "prompt": "You are answering a shopping question. Use ONLY the page at the URL below.\nFetch it, read it, and answer from what it says. Do not guess and do not use prior knowledge.\n\nURL: https://decoindex.com/osklen.com.br/tenis-soho-couro-gasto-masc--marrom-39651-59/p\n\nQuestion: what is the current price of this product, and which sizes/variants are in stock?\n\nReply with ONLY a JSON object, no prose, no code fence: {\"price\": <number in major units, e.g. 419.90>, \"variants\": [\"...\"]}\nIf the page does not state a price, use {\"price\": null, \"variants\": []}.",
+  "groundTruth": {
+    "path": "/tenis-soho-couro-gasto-masc--marrom-39651-59/p",
+    "title": "Tênis soho couro gasto",
+    "priceMinor": 39700,
+    "currency": "BRL",
+    "variants": [
+      "39",
+      "40",
+      "41",
+      "42",
+      "43",
+      "44"
+    ],
+    "totalInListing": 24
+  },
+  "grade": {
+    "parsed": true,
+    "priceOk": true,
+    "variantF1": 1,
+    "got": [
+      "39",
+      "40",
+      "41",
+      "42",
+      "43",
+      "44"
+    ]
+  },
+  "result": {
+    "is_error": false,
+    "duration_api_ms": 10000,
+    "num_turns": 3,
+    "stop_reason": "end_turn",
+    "session_id": "d642b9de-9c22-43a0-9916-9ac477786e5f",
+    "total_cost_usd": 0.0322052,
+    "usage": {
+      "input_tokens": 6,
+      "cache_creation_input_tokens": 3633,
+      "cache_read_input_tokens": 50511,
+      "output_tokens": 274,
+      "output_tokens_details": {
+        "thinking_tokens": 12
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 3633,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 36,
+          "cache_read_input_tokens": 18022,
+          "cache_creation_input_tokens": 533,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 533
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 3284,
+        "outputTokens": 307,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.004819,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "firstParty"
+      },
+      "claude-sonnet-5": {
+        "inputTokens": 6,
+        "outputTokens": 274,
+        "cacheReadInputTokens": 50511,
+        "cacheCreationInputTokens": 3633,
+        "webSearchRequests": 0,
+        "costUSD": 0.0273862,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "canonicalModel": "claude-sonnet-5",
+        "provider": "firstParty"
+      }
+    },
+    "permission_denials": [],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+        "background": 0,
+        "foreground": 0,
+        "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+        "parent": 0,
+        "user": 0,
+        "system": 0
+      },
+      "refused": {
+        "depth_limit": 0,
+        "concurrency_limit": 0,
+        "budget": 0
+      },
+      "by_type": {}
+    },
+    "subtype": "success",
+    "api_error_status": null,
+    "result": "{\"price\": 397.00, \"variants\": [\"39\", \"40\", \"41\", \"42\", \"43\", \"44\"]}",
+    "ttft_ms": 1499,
+    "ttft_stream_ms": 899,
+    "time_to_request_ms": 44,
+    "type": "result",
+    "duration_ms": 9227,
+    "uuid": "34a52d54-3284-42b9-b458-063d1a355f0f",
+    "queued_turn_count": 0
+  }
+}

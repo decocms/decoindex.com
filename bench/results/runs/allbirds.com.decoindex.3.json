@@ -1,0 +1,149 @@
+{
+  "url": "https://decoindex.com/allbirds.com/products/mens-dasher-nz-anthracite",
+  "prompt": "You are answering a shopping question. Use ONLY the page at the URL below.\nFetch it, read it, and answer from what it says. Do not guess and do not use prior knowledge.\n\nURL: https://decoindex.com/allbirds.com/products/mens-dasher-nz-anthracite\n\nQuestion: what is the current price of this product, and which sizes/variants are in stock?\n\nReply with ONLY a JSON object, no prose, no code fence: {\"price\": <number in major units, e.g. 419.90>, \"variants\": [\"...\"]}\nIf the page does not state a price, use {\"price\": null, \"variants\": []}.",
+  "groundTruth": {
+    "path": "/products/mens-dasher-nz-anthracite",
+    "title": "Men's Dasher NZ - Anthracite (Dark Anthracite Sole)",
+    "priceMinor": 14000,
+    "currency": "USD",
+    "variants": [
+      "8",
+      "8.5",
+      "9",
+      "9.5",
+      "10",
+      "10.5",
+      "11",
+      "11.5",
+      "12",
+      "12.5",
+      "13",
+      "14"
+    ],
+    "totalInListing": 24
+  },
+  "grade": {
+    "parsed": true,
+    "priceOk": true,
+    "variantF1": 1,
+    "got": [
+      "8",
+      "8.5",
+      "9",
+      "9.5",
+      "10",
+      "10.5",
+      "11",
+      "11.5",
+      "12",
+      "12.5",
+      "13",
+      "14"
+    ]
+  },
+  "result": {
+    "is_error": false,
+    "duration_api_ms": 8793,
+    "num_turns": 3,
+    "stop_reason": "end_turn",
+    "session_id": "5c6d3922-d242-4e14-9a3e-3e8097809896",
+    "total_cost_usd": 0.0208856,
+    "usage": {
+      "input_tokens": 6,
+      "cache_creation_input_tokens": 816,
+      "cache_read_input_tokens": 53118,
+      "output_tokens": 311,
+      "output_tokens_details": {
+        "thinking_tokens": 10
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 816,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 64,
+          "cache_read_input_tokens": 18008,
+          "cache_creation_input_tokens": 363,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 363
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 3091,
+        "outputTokens": 157,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.003876,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "firstParty"
+      },
+      "claude-sonnet-5": {
+        "inputTokens": 6,
+        "outputTokens": 311,
+        "cacheReadInputTokens": 53118,
+        "cacheCreationInputTokens": 816,
+        "webSearchRequests": 0,
+        "costUSD": 0.0170096,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "canonicalModel": "claude-sonnet-5",
+        "provider": "firstParty"
+      }
+    },
+    "permission_denials": [],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+        "background": 0,
+        "foreground": 0,
+        "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+        "parent": 0,
+        "user": 0,
+        "system": 0
+      },
+      "refused": {
+        "depth_limit": 0,
+        "concurrency_limit": 0,
+        "budget": 0
+      },
+      "by_type": {}
+    },
+    "subtype": "success",
+    "api_error_status": null,
+    "result": "{\"price\": 140.00, \"variants\": [\"8\", \"8.5\", \"9\", \"9.5\", \"10\", \"10.5\", \"11\", \"11.5\", \"12\", \"12.5\", \"13\", \"14\"]}",
+    "ttft_ms": 1739,
+    "ttft_stream_ms": 930,
+    "time_to_request_ms": 45,
+    "type": "result",
+    "duration_ms": 8106,
+    "uuid": "7f85f211-9e3b-4711-a666-7d76a55d5b6d",
+    "queued_turn_count": 0
+  }
+}
