@@ -1,13 +1,337 @@
 {
-  "runAt": "2026-09-01T15:39:47.328Z",
-  "brand": "Fila",
-  "domain": "fila.com.br",
-  "truth": {
-    "path": "/tenis-fila-speedzone-2-feminino-1423570/p",
-    "title": "Tênis Fila Speedzone 2 Feminino",
-    "priceMinor": 59999
-  },
+  "runAt": "2026-09-01T16:16:11.440Z",
+  "stores": [
+    {
+      "brand": "C&A",
+      "domain": "cea.com.br",
+      "truth": {
+        "path": "/sandalia-feminina-salto-kitten-heel-off-white-1103706-off_white/p",
+        "title": "sandália feminina salto kitten heel off white",
+        "priceMinor": 15999
+      },
+      "arms": {
+        "site": "https://www.cea.com.br/sandalia-feminina-salto-kitten-heel-off-white-1103706-off_white/p",
+        "decoindex": "https://decoindex.com/cea.com.br/sandalia-feminina-salto-kitten-heel-off-white-1103706-off_white/p"
+      }
+    },
+    {
+      "brand": "Pague Menos",
+      "domain": "paguemenos.com.br",
+      "truth": {
+        "path": "/cloridrato-de-fexofenadina-180mg-com-10-comprimidos-generico-cimed/p",
+        "title": "Cloridrato de Fexofenadina 180mg 10 Comprimidos Revestidos Genérico Cimed",
+        "priceMinor": 969
+      },
+      "arms": {
+        "site": "https://www.paguemenos.com.br/cloridrato-de-fexofenadina-180mg-com-10-comprimidos-generico-cimed/p",
+        "decoindex": "https://decoindex.com/paguemenos.com.br/cloridrato-de-fexofenadina-180mg-com-10-comprimidos-generico-cimed/p"
+      }
+    },
+    {
+      "brand": "Farm Rio",
+      "domain": "farmrio.com.br",
+      "truth": {
+        "path": "/copo-quencher-stanley-destiny-x-farm-rio-887ml-multicolorido-374774-2276/p",
+        "title": "Copo Quencher Stanley Destiny x Farm Rio 887ml",
+        "priceMinor": 41900
+      },
+      "arms": {
+        "site": "https://www.farmrio.com.br/copo-quencher-stanley-destiny-x-farm-rio-887ml-multicolorido-374774-2276/p",
+        "decoindex": "https://decoindex.com/farmrio.com.br/copo-quencher-stanley-destiny-x-farm-rio-887ml-multicolorido-374774-2276/p"
+      }
+    },
+    {
+      "brand": "Fila",
+      "domain": "fila.com.br",
+      "truth": {
+        "path": "/tenis-fila-speedzone-2-feminino-1423570/p",
+        "title": "Tênis Fila Speedzone 2 Feminino",
+        "priceMinor": 59999
+      },
+      "arms": {
+        "site": "https://www.fila.com.br/tenis-fila-speedzone-2-feminino-1423570/p",
+        "decoindex": "https://decoindex.com/fila.com.br/tenis-fila-speedzone-2-feminino-1423570/p"
+      }
+    },
+    {
+      "brand": "Allbirds",
+      "domain": "allbirds.com",
+      "truth": {
+        "path": "/products/mens-dasher-nz-anthracite",
+        "title": "Men's Dasher NZ - Anthracite (Dark Anthracite Sole)",
+        "priceMinor": 14000
+      },
+      "arms": {
+        "site": "https://www.allbirds.com/products/mens-dasher-nz-anthracite",
+        "decoindex": "https://decoindex.com/allbirds.com/products/mens-dasher-nz-anthracite"
+      }
+    }
+  ],
   "rows": [
+    {
+      "brand": "C&A",
+      "domain": "cea.com.br",
+      "model": "google/gemini-2.5-flash",
+      "arm": "site",
+      "url": "https://www.cea.com.br/sandalia-feminina-salto-kitten-heel-off-white-1103706-off_white/p",
+      "inTok": 219541,
+      "outTok": 74,
+      "cost": 0.0660473,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": true,
+      "sawBytes": 6017986,
+      "wallMs": 5881,
+      "ok": true,
+      "answer": "{\"price\": 159.99, \"variants\": [\"35\", \"36\", \"37\", \"38\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 15999
+      }
+    },
+    {
+      "brand": "C&A",
+      "domain": "cea.com.br",
+      "model": "google/gemini-2.5-flash",
+      "arm": "decoindex",
+      "url": "https://decoindex.com/cea.com.br/sandalia-feminina-salto-kitten-heel-off-white-1103706-off_white/p",
+      "inTok": 2125,
+      "outTok": 96,
+      "cost": 0.0008775,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": false,
+      "sawBytes": 4521,
+      "wallMs": 3038,
+      "ok": true,
+      "answer": "{\"price\": 159.99, \"variants\": [\"OFF White 36\", \"OFF White 38\", \"OFF White 35\", \"OFF White 39\", \"OFF White 37\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 15999
+      }
+    },
+    {
+      "brand": "C&A",
+      "domain": "cea.com.br",
+      "model": "openai/gpt-5-mini",
+      "arm": "site",
+      "url": "https://www.cea.com.br/sandalia-feminina-salto-kitten-heel-off-white-1103706-off_white/p",
+      "inTok": 165421,
+      "outTok": 598,
+      "cost": 0.04255125,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": true,
+      "sawBytes": 6017986,
+      "wallMs": 17240,
+      "ok": true,
+      "answer": "{\"price\":159.99,\"variants\":[\"35\",\"36\",\"37\",\"38\",\"39\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 15999
+      }
+    },
+    {
+      "brand": "C&A",
+      "domain": "cea.com.br",
+      "model": "openai/gpt-5-mini",
+      "arm": "decoindex",
+      "url": "https://decoindex.com/cea.com.br/sandalia-feminina-salto-kitten-heel-off-white-1103706-off_white/p",
+      "inTok": 1962,
+      "outTok": 509,
+      "cost": 0.0015085,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": false,
+      "sawBytes": 4521,
+      "wallMs": 11163,
+      "ok": true,
+      "answer": "{\"price\":159.99,\"variants\":[\"OFF White - 36\",\"OFF White - 38\",\"OFF White - 35\",\"OFF White - 39\",\"OFF White - 37\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 15999
+      }
+    },
+    {
+      "brand": "Pague Menos",
+      "domain": "paguemenos.com.br",
+      "model": "google/gemini-2.5-flash",
+      "arm": "site",
+      "url": "https://www.paguemenos.com.br/cloridrato-de-fexofenadina-180mg-com-10-comprimidos-generico-cimed/p",
+      "inTok": 210441,
+      "outTok": 72,
+      "cost": 0.0633123,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": true,
+      "sawBytes": 2501586,
+      "wallMs": 11191,
+      "ok": true,
+      "answer": "{\"price\": 9.69, \"variants\": [\"10 Comprimidos Revestidos\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 969
+      }
+    },
+    {
+      "brand": "Pague Menos",
+      "domain": "paguemenos.com.br",
+      "model": "google/gemini-2.5-flash",
+      "arm": "decoindex",
+      "url": "https://decoindex.com/paguemenos.com.br/cloridrato-de-fexofenadina-180mg-com-10-comprimidos-generico-cimed/p",
+      "inTok": 1987,
+      "outTok": 75,
+      "cost": 0.0007836,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": false,
+      "sawBytes": 4536,
+      "wallMs": 3003,
+      "ok": true,
+      "answer": "{\"price\": 9.69, \"variants\": [\"10 Comprimidos Revestidos\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 969
+      }
+    },
+    {
+      "brand": "Pague Menos",
+      "domain": "paguemenos.com.br",
+      "model": "openai/gpt-5-mini",
+      "arm": "site",
+      "url": "https://www.paguemenos.com.br/cloridrato-de-fexofenadina-180mg-com-10-comprimidos-generico-cimed/p",
+      "inTok": 155001,
+      "outTok": 1229,
+      "cost": 0.04120825,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": true,
+      "sawBytes": 2501586,
+      "wallMs": 26802,
+      "ok": true,
+      "answer": "{\"price\":9.69,\"variants\":[\"180mg 10 Comprimidos Revestidos\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 969
+      }
+    },
+    {
+      "brand": "Pague Menos",
+      "domain": "paguemenos.com.br",
+      "model": "openai/gpt-5-mini",
+      "arm": "decoindex",
+      "url": "https://decoindex.com/paguemenos.com.br/cloridrato-de-fexofenadina-180mg-com-10-comprimidos-generico-cimed/p",
+      "inTok": 1902,
+      "outTok": 626,
+      "cost": 0.0017275,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": false,
+      "sawBytes": 4536,
+      "wallMs": 12893,
+      "ok": true,
+      "answer": "{\"price\":9.69,\"variants\":[\"Cloridrato de Fexofenadina 180mg 10 Comprimidos Revestidos Genérico Cimed (SKU 51385)\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 969
+      }
+    },
+    {
+      "brand": "Farm Rio",
+      "domain": "farmrio.com.br",
+      "model": "google/gemini-2.5-flash",
+      "arm": "site",
+      "url": "https://www.farmrio.com.br/copo-quencher-stanley-destiny-x-farm-rio-887ml-multicolorido-374774-2276/p",
+      "inTok": 176683,
+      "outTok": 69,
+      "cost": 0.0531774,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": true,
+      "sawBytes": 1432916,
+      "wallMs": 5605,
+      "ok": true,
+      "answer": "{\"price\": 419, \"variants\": [\"U\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 41900
+      }
+    },
+    {
+      "brand": "Farm Rio",
+      "domain": "farmrio.com.br",
+      "model": "google/gemini-2.5-flash",
+      "arm": "decoindex",
+      "url": "https://decoindex.com/farmrio.com.br/copo-quencher-stanley-destiny-x-farm-rio-887ml-multicolorido-374774-2276/p",
+      "inTok": 2253,
+      "outTok": 75,
+      "cost": 0.0008634,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": false,
+      "sawBytes": 5026,
+      "wallMs": 3264,
+      "ok": true,
+      "answer": "{\"price\": 419.00, \"variants\": [\"U\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 41900
+      }
+    },
+    {
+      "brand": "Farm Rio",
+      "domain": "farmrio.com.br",
+      "model": "openai/gpt-5-mini",
+      "arm": "site",
+      "url": "https://www.farmrio.com.br/copo-quencher-stanley-destiny-x-farm-rio-887ml-multicolorido-374774-2276/p",
+      "inTok": 155208,
+      "outTok": 471,
+      "cost": 0.039744,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": true,
+      "sawBytes": 1432909,
+      "wallMs": 15222,
+      "ok": true,
+      "answer": "{\"price\":419,\"variants\":[\"Multicolorido - U\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 41900
+      }
+    },
+    {
+      "brand": "Farm Rio",
+      "domain": "farmrio.com.br",
+      "model": "openai/gpt-5-mini",
+      "arm": "decoindex",
+      "url": "https://decoindex.com/farmrio.com.br/copo-quencher-stanley-destiny-x-farm-rio-887ml-multicolorido-374774-2276/p",
+      "inTok": 2091,
+      "outTok": 370,
+      "cost": 0.00126275,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": false,
+      "sawBytes": 5026,
+      "wallMs": 7772,
+      "ok": true,
+      "answer": "{\"price\":419,\"variants\":[\"U\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 41900
+      }
+    },
     {
       "brand": "Fila",
       "domain": "fila.com.br",
@@ -21,7 +345,7 @@
       "fetched": 1,
       "truncated": true,
       "sawBytes": 529396,
-      "wallMs": 7204,
+      "wallMs": 5585,
       "ok": true,
       "answer": "{\"price\": 599.99, \"variants\": [\"34\", \"35\", \"36\", \"37\", \"38\", \"39\", \"40\"]}",
       "grade": {
@@ -43,7 +367,7 @@
       "fetched": 1,
       "truncated": false,
       "sawBytes": 4490,
-      "wallMs": 3508,
+      "wallMs": 2812,
       "ok": true,
       "answer": "{\"price\": 599.99, \"variants\": [\"34\", \"35\", \"36\", \"37\", \"38\", \"39\", \"40\"]}",
       "grade": {
@@ -58,14 +382,14 @@
       "model": "openai/gpt-5-mini",
       "arm": "site",
       "url": "https://www.fila.com.br/tenis-fila-speedzone-2-feminino-1423570/p",
-      "inTok": 148789,
-      "outTok": 704,
-      "cost": 0.03860525,
+      "inTok": 148784,
+      "outTok": 957,
+      "cost": 0.03911,
       "turns": 2,
       "fetched": 1,
       "truncated": true,
       "sawBytes": 529396,
-      "wallMs": 13259,
+      "wallMs": 27095,
       "ok": true,
       "answer": "{\"price\":599.99,\"variants\":[\"34\",\"35\",\"36\",\"37\",\"38 (Últimas unidades)\",\"39\",\"40\"]}",
       "grade": {
@@ -80,20 +404,108 @@
       "model": "openai/gpt-5-mini",
       "arm": "decoindex",
       "url": "https://decoindex.com/fila.com.br/tenis-fila-speedzone-2-feminino-1423570/p",
-      "inTok": 1943,
-      "outTok": 428,
-      "cost": 0.00134175,
+      "inTok": 1925,
+      "outTok": 421,
+      "cost": 0.00132325,
       "turns": 2,
       "fetched": 1,
       "truncated": false,
       "sawBytes": 4490,
-      "wallMs": 6902,
+      "wallMs": 7921,
       "ok": true,
       "answer": "{\"price\":599.99,\"variants\":[\"34\",\"35\",\"36\",\"37\",\"38\",\"39\",\"40\"]}",
       "grade": {
         "parsed": true,
         "priceOk": true,
         "got": 59999
+      }
+    },
+    {
+      "brand": "Allbirds",
+      "domain": "allbirds.com",
+      "model": "google/gemini-2.5-flash",
+      "arm": "site",
+      "url": "https://www.allbirds.com/products/mens-dasher-nz-anthracite",
+      "inTok": 174367,
+      "outTok": 93,
+      "cost": 0.0525426,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": true,
+      "sawBytes": 689504,
+      "wallMs": 6628,
+      "ok": true,
+      "answer": "{\"price\": 140.00, \"variants\": [\"8\", \"8.5\", \"9\", \"9.5\", \"10\", \"10.5\", \"11\", \"11.5\", \"12\", \"12.5\", \"13\", \"14\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 14000
+      }
+    },
+    {
+      "brand": "Allbirds",
+      "domain": "allbirds.com",
+      "model": "google/gemini-2.5-flash",
+      "arm": "decoindex",
+      "url": "https://decoindex.com/allbirds.com/products/mens-dasher-nz-anthracite",
+      "inTok": 2408,
+      "outTok": 96,
+      "cost": 0.0009624,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": false,
+      "sawBytes": 4942,
+      "wallMs": 2919,
+      "ok": true,
+      "answer": "{\"price\": 140.00, \"variants\": [\"8\", \"8.5\", \"9\", \"9.5\", \"10\", \"10.5\", \"11\", \"11.5\", \"12\", \"12.5\", \"13\", \"14\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 14000
+      }
+    },
+    {
+      "brand": "Allbirds",
+      "domain": "allbirds.com",
+      "model": "openai/gpt-5-mini",
+      "arm": "site",
+      "url": "https://www.allbirds.com/products/mens-dasher-nz-anthracite",
+      "inTok": 140118,
+      "outTok": 596,
+      "cost": 0.0362215,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": true,
+      "sawBytes": 689504,
+      "wallMs": 17331,
+      "ok": true,
+      "answer": "{\"price\":140,\"variants\":[\"8\",\"8.5\",\"9\",\"9.5\",\"10\",\"10.5\",\"11\",\"11.5\",\"12\",\"12.5\",\"13\",\"14\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 14000
+      }
+    },
+    {
+      "brand": "Allbirds",
+      "domain": "allbirds.com",
+      "model": "openai/gpt-5-mini",
+      "arm": "decoindex",
+      "url": "https://decoindex.com/allbirds.com/products/mens-dasher-nz-anthracite",
+      "inTok": 2094,
+      "outTok": 539,
+      "cost": 0.0016015,
+      "turns": 2,
+      "fetched": 1,
+      "truncated": false,
+      "sawBytes": 4942,
+      "wallMs": 11925,
+      "ok": true,
+      "answer": "{\"price\":140,\"variants\":[\"8\",\"8.5\",\"9\",\"9.5\",\"10\",\"10.5\",\"11\",\"11.5\",\"12\",\"12.5\",\"13\",\"14\"]}",
+      "grade": {
+        "parsed": true,
+        "priceOk": true,
+        "got": 14000
       }
     }
   ]

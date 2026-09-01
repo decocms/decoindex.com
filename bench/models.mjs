@@ -35,7 +35,8 @@ const flag = (n, d = null) => {
 };
 
 const BASE = String(flag("base", "https://decoindex.com")).replace(/\/$/, "");
-const BRAND = String(flag("brand", "fila.com.br"));
+const BRAND_LIST = String(flag("brands", flag("brand", "fila.com.br")))
+  .split(",").map((x) => x.trim()).filter(Boolean);
 const MODELS = String(flag("models", "google/gemini-2.5-flash,openai/gpt-5-mini"))
   .split(",").map((m) => m.trim()).filter(Boolean);
 const MAX_TURNS = Number(flag("max-turns", 6));
@@ -61,13 +62,17 @@ if (!KEY) {
 }
 
 const BRANDS = JSON.parse(readFileSync(join(HERE, "brands.json"), "utf8"));
-const B = BRANDS.find((x) => x.domain === BRAND);
-if (!B) {
-  console.error(`No brand ${BRAND} in brands.json`);
-  process.exit(1);
-}
+const TARGETS = BRAND_LIST.map((d) => {
+  const b = BRANDS.find((x) => x.domain === d);
+  if (!b) {
+    console.error(`No brand ${d} in brands.json`);
+    process.exit(1);
+  }
+  return b;
+});
 
 const safeJson = (t) => { try { return JSON.parse(t); } catch { return null; } };
+const n0 = (x) => x.toLocaleString("en-US");
 const vtexApi = (b) => (b.account ? `https://${b.account}.vtexcommercestable.com.br` : b.origin);
 
 /** Ground truth: one in-stock product and its price, from the merchant's own API. */
@@ -166,7 +171,22 @@ async function agent(model, prompt) {
     messages.push(msg);
 
     const calls = msg.tool_calls ?? [];
-    if (!calls.length) return done({ ok: true, answer: msg.content ?? "" });
+    if (!calls.length) {
+      const answer = String(msg.content ?? "").trim();
+      // An empty completion after we handed over a document is the provider
+      // dropping the tool result, not the model failing the task. Gemini did
+      // this on a 690 KB page: 153 prompt tokens, no answer. Scored as a MISS it
+      // would read as the storefront arm losing, which is a claim about a
+      // storefront we did not actually test. Fail the run instead.
+      if (!answer) {
+        return done({ ok: false, error: "empty completion — the provider dropped the tool result" });
+      }
+      // Same failure, quieter: the reply is fine but the document never arrived.
+      if (fetched && sawBytes > 20_000 && inTok < 2_000) {
+        return done({ ok: false, error: `answered without the page (${n0(sawBytes)} bytes fetched, ${inTok} prompt tokens)` });
+      }
+      return done({ ok: true, answer });
+    }
 
     for (const call of calls) {
       const args = safeJson(call.function?.arguments ?? "{}") ?? {};
@@ -200,50 +220,52 @@ const grade = (answer, truth) => {
 
 // --- go ----------------------------------------------------------------------
 
-const truth = await pick(B);
-if (!truth) {
-  console.error(`No in-stock product for ${BRAND} right now — nothing to grade against.`);
-  process.exit(2);
-}
-
-const ARMS = {
-  site: `${B.origin}${truth.path}`,
-  decoindex: `${BASE}/${B.domain}${truth.path}`,
-};
-
-console.log(`${B.brand} — ${truth.title}`);
-console.log(`truth: ${(truth.priceMinor / 100).toFixed(2)}\n`);
-console.log("model                        arm          price   tokens      cost     wall  fetches");
-
 const rows = [];
-for (const model of MODELS) {
-  for (const [arm, url] of Object.entries(ARMS)) {
-    const r = await agent(model, PROMPT(url, truth.title));
-    const g = r.ok ? grade(r.answer, truth) : { parsed: false, priceOk: false };
-    rows.push({ brand: B.brand, domain: B.domain, model, arm, url, ...r, grade: g });
-    console.log(
-      `${model.padEnd(28)} ${arm.padEnd(12)} ${(g.priceOk ? "ok" : "MISS").padEnd(6)} ` +
-        `${String(r.inTok).padStart(7)} ${("$" + r.cost.toFixed(4)).padStart(9)} ` +
-        `${((r.wallMs / 1000).toFixed(1) + "s").padStart(8)} ${String(r.fetched).padStart(6)}` +
-        (r.truncated ? "  [page truncated]" : "") +
-        (r.ok ? "" : `  (${r.error})`),
-    );
+const stores = [];
+
+for (const B of TARGETS) {
+  const truth = await pick(B);
+  if (!truth) {
+    console.log(`${B.brand}: no in-stock product right now — skipped, nothing to grade against.\n`);
+    continue;
   }
+  const arms = {
+    site: `${B.origin}${truth.path}`,
+    decoindex: `${BASE}/${B.domain}${truth.path}`,
+  };
+  stores.push({ brand: B.brand, domain: B.domain, truth, arms });
+
+  console.log(`${B.brand} — ${truth.title}  (truth ${(truth.priceMinor / 100).toFixed(2)})`);
+  for (const model of MODELS) {
+    for (const [arm, url] of Object.entries(arms)) {
+      const r = await agent(model, PROMPT(url, truth.title));
+      const g = r.ok ? grade(r.answer, truth) : { parsed: false, priceOk: false };
+      rows.push({ brand: B.brand, domain: B.domain, model, arm, url, ...r, grade: g });
+      console.log(
+        `  ${model.padEnd(26)} ${arm.padEnd(11)} ${(g.priceOk ? "ok" : "MISS").padEnd(5)} ` +
+          `${String(r.inTok).padStart(7)} tok ${("$" + r.cost.toFixed(4)).padStart(9)} ` +
+          `${((r.wallMs / 1000).toFixed(1) + "s").padStart(7)}` +
+          (r.truncated ? "  [truncated]" : "") + (r.ok ? "" : `  (${r.error})`),
+      );
+    }
+  }
+  console.log("");
 }
 
 mkdirSync(join(HERE, "results"), { recursive: true });
 writeFileSync(
   join(HERE, "results", "models.json"),
-  JSON.stringify({ runAt: new Date().toISOString(), brand: B.brand, domain: B.domain, truth, rows }, null, 2),
+  JSON.stringify({ runAt: new Date().toISOString(), stores, rows }, null, 2),
 );
 
-console.log("\nby arm, averaged across models:");
-for (const arm of Object.keys(ARMS)) {
+console.log("by arm, across every model and store:");
+for (const arm of ["site", "decoindex"]) {
   const rs = rows.filter((r) => r.arm === arm);
+  if (!rs.length) continue;
   const mean = (f) => rs.reduce((a, b) => a + (f(b) ?? 0), 0) / rs.length;
   console.log(
     `  ${arm.padEnd(10)} ${rs.filter((r) => r.grade.priceOk).length}/${rs.length} correct  ` +
-      `${Math.round(mean((r) => r.inTok)).toLocaleString()} tokens  $${mean((r) => r.cost).toFixed(4)}  ` +
+      `${Math.round(mean((r) => r.inTok)).toLocaleString()} tok  $${mean((r) => r.cost).toFixed(4)}  ` +
       `${(mean((r) => r.wallMs) / 1000).toFixed(1)}s`,
   );
 }

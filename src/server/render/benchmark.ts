@@ -81,9 +81,7 @@ export interface ModelRun {
 
 export interface ModelResults {
   runAt: string;
-  brand: string;
-  domain: string;
-  truth: { title: string; priceMinor: number };
+  stores: { brand: string; domain: string; truth: { title: string; priceMinor: number } }[];
   rows: ModelRun[];
 }
 
@@ -263,8 +261,12 @@ export function benchmarkHtml(
       }
       case "journeys": return journeySection(journeys);
       case "models": return modelSection(models);
-      case "modelProduct": return models ? esc(models.truth.title) : "a product";
-      case "modelStore": return models ? esc(models.domain) : "the storefront";
+      case "tokenChart": return tokenChart(r.layer1);
+      case "costChart": return costChart(models);
+      case "modelStores": return String(models?.stores?.length ?? 0);
+      case "modelNames": return models
+        ? [...new Set(models.rows.map((x) => x.model))].map((x) => esc(x)).join(" and ")
+        : "";
       case "stale": return stale;
       case "runAt": return day(r.runAt);
       case "base": return esc(r.base);
@@ -326,6 +328,113 @@ function journeySection(runs: JourneyRun[]): string {
   return blocks.join("\n");
 }
 
+
+/**
+ * Charts, as inline SVG.
+ *
+ * No chart library: these are two shapes, the data is a dozen numbers, and a
+ * dependency would be larger than the page. Same palette as the social card —
+ * lime on forest — so the argument looks like one thing wherever it is seen.
+ *
+ * viewBox with no fixed width so it scales to any column, and every bar carries
+ * its own number as text: a reader who distrusts the drawing can read the value,
+ * and a screen reader gets the table underneath either way.
+ */
+const BAR = { ink: "#E7E5E4", dim: "rgba(231,229,228,.55)", lime: "#D0EC1A", track: "rgba(255,255,255,.10)" };
+
+/**
+ * One row per store: how much of a product page each side makes you read.
+ *
+ * Each row is scaled to its *own* storefront bar rather than to the largest in
+ * the set. C&A's page is 1.5M tokens and Fila's is 132k, so a shared scale would
+ * squash eleven rows into a hairline to make room for one. The comparison this
+ * page is about is within a row, and the absolute numbers are printed anyway.
+ */
+function tokenChart(rows: BenchRow[]): string {
+  const data = rows
+    .filter((x) => x.site.outcome === "ok" && x.decoindex.tokens)
+    .sort((a, b) => b.site.tokens / b.decoindex.tokens - a.site.tokens / a.decoindex.tokens);
+  if (!data.length) return "";
+
+  // RIGHT has to clear the widest "1,505,155 → 1,110" plus the ratio beside it,
+  // or the two right-hand columns collide on the biggest store in the set.
+  const ROW = 30, TOP = 34, LABEL = 158, RIGHT = 232, W = 940;
+  const trackW = W - LABEL - RIGHT;
+  const h = TOP + data.length * ROW + 16;
+
+  const bars = data.map((x, i) => {
+    const y = TOP + i * ROW;
+    const ratio = x.site.tokens / x.decoindex.tokens;
+    // Never smaller than 3px: at 1356x the honest width is a fifth of a pixel,
+    // which draws as nothing and reads as missing data rather than as tiny.
+    const small = Math.max(3, trackW / ratio);
+    return `<g>
+  <text x="0" y="${y + 13}" fill="${BAR.ink}" font-size="12.5" font-family="ui-monospace,Menlo,monospace">${esc(x.brand.length > 19 ? x.brand.slice(0, 18) + "…" : x.brand)}</text>
+  <rect x="${LABEL}" y="${y + 2}" width="${trackW}" height="9" rx="4.5" fill="${BAR.track}"/>
+  <rect x="${LABEL}" y="${y + 2}" width="${trackW}" height="9" rx="4.5" fill="${BAR.dim}"/>
+  <rect x="${LABEL}" y="${y + 14}" width="${small}" height="9" rx="4.5" fill="${BAR.lime}"/>
+  <text x="${W}" y="${y + 17}" text-anchor="end" fill="${BAR.ink}" font-size="12" font-family="ui-monospace,Menlo,monospace">${n(x.site.tokens)} → ${n(x.decoindex.tokens)}</text>
+  <text x="${W - 132}" y="${y + 17}" text-anchor="end" fill="${BAR.lime}" font-size="12.5" font-family="ui-monospace,Menlo,monospace">${Math.round(ratio)}×</text>
+</g>`;
+  });
+
+  return `<figure class="chart">
+<svg viewBox="0 0 ${W} ${h}" role="img" width="100%" height="auto"
+     aria-label="Tokens per product page, storefront HTML against the decoindex document, for ${data.length} storefronts.">
+  <text x="0" y="12" fill="${BAR.dim}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">STORE</text>
+  <text x="${LABEL}" y="12" fill="${BAR.dim}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">STOREFRONT HTML</text>
+  <text x="${LABEL + 168}" y="12" fill="${BAR.lime}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">DECOINDEX</text>
+  <text x="${W - 132}" y="12" text-anchor="end" fill="${BAR.dim}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">SAVING</text>
+  <text x="${W}" y="12" text-anchor="end" fill="${BAR.dim}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">TOKENS</text>
+  ${bars.join("\n  ")}
+</svg>
+<figcaption>Each row is scaled to its own storefront bar, not to the biggest in the set — the numbers on
+  the right are absolute. Only storefronts that served the product page appear here.</figcaption>
+</figure>`;
+}
+
+/** What one answer costs, per model, both ways. Shared linear scale — the point is the gap. */
+function costChart(m: ModelResults | null): string {
+  if (!m?.rows?.length) return "";
+  const names = [...new Set(m.rows.map((x) => x.model))];
+  const mean = (model: string, arm: string) => {
+    const xs = m.rows.filter((y) => y.model === model && y.arm === arm && y.grade.priceOk);
+    return xs.length ? xs.reduce((a, b) => a + b.cost, 0) / xs.length : 0;
+  };
+  const pairs = names.map((name) => ({ name, site: mean(name, "site"), idx: mean(name, "decoindex") }));
+  const max = Math.max(...pairs.map((p) => p.site)) || 1;
+
+  const ROW = 58, TOP = 30, LABEL = 190, RIGHT = 96, W = 900;
+  const trackW = W - LABEL - RIGHT;
+  const h = TOP + pairs.length * ROW + 10;
+
+  const bars = pairs.map((p, i) => {
+    const y = TOP + i * ROW;
+    const money = (v: number) => `$${v.toFixed(4)}`;
+    return `<g>
+  <text x="0" y="${y + 20}" fill="${BAR.ink}" font-size="13" font-family="ui-monospace,Menlo,monospace">${esc(p.name)}</text>
+  <rect x="${LABEL}" y="${y}" width="${Math.max(3, (trackW * p.site) / max)}" height="13" rx="6.5" fill="${BAR.dim}"/>
+  <text x="${W}" y="${y + 11}" text-anchor="end" fill="${BAR.ink}" font-size="12" font-family="ui-monospace,Menlo,monospace">${money(p.site)}</text>
+  <rect x="${LABEL}" y="${y + 19}" width="${Math.max(3, (trackW * p.idx) / max)}" height="13" rx="6.5" fill="${BAR.lime}"/>
+  <text x="${W}" y="${y + 30}" text-anchor="end" fill="${BAR.lime}" font-size="12" font-family="ui-monospace,Menlo,monospace">${money(p.idx)}</text>
+  <text x="${LABEL}" y="${y + 48}" fill="${BAR.dim}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">${(p.site / Math.max(1e-9, p.idx)).toFixed(0)}× cheaper through decoindex</text>
+</g>`;
+  });
+
+  return `<figure class="chart">
+<svg viewBox="0 0 ${W} ${h}" role="img" width="100%" height="auto"
+     aria-label="Average cost of answering one product question, per model, storefront against decoindex.">
+  <text x="0" y="12" fill="${BAR.dim}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">MODEL</text>
+  <text x="${LABEL}" y="12" fill="${BAR.dim}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">STOREFRONT</text>
+  <text x="${LABEL + 108}" y="12" fill="${BAR.lime}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">DECOINDEX</text>
+  <text x="${W}" y="12" text-anchor="end" fill="${BAR.dim}" font-size="11.5" font-family="ui-monospace,Menlo,monospace">USD / ANSWER</text>
+  ${bars.join("\n  ")}
+</svg>
+<figcaption>Averaged over ${[...new Set(m.rows.map((x) => x.domain))].length} storefronts. Both arms answered
+  correctly everywhere, so this is the price of the same answer.</figcaption>
+</figure>`;
+}
+
 const TEMPLATE = /* html */ `<!doctype html>
 <html lang="en">
 <head>
@@ -365,6 +474,20 @@ const TEMPLATE = /* html */ `<!doctype html>
 .t-js-shell,.t-mismatch,.t-no-price{background:rgba(40,37,36,.05);color:var(--muted)}
 /* A grid, not flex-wrap: four headline numbers should sit on one row or two
    even rows, never three with a single orphan on the last. */
+/* Charts sit on forest, like the social card, so the argument looks like one
+   thing wherever someone meets it. */
+.chart{margin:28px 0 0;padding:26px 24px 18px;background:var(--forest);border-radius:20px}
+.chart svg{display:block;overflow:visible}
+.chart figcaption{margin-top:18px;font-size:12.5px;line-height:1.5;color:rgba(231,229,228,.6);max-width:640px}
+/* A 940-unit viewBox squeezed into a 340px phone renders 12px labels at four
+   pixels. Scroll it instead — the tables on this page already do, and an
+   unreadable chart is worse than one you have to nudge sideways. */
+@media(max-width:700px){
+  .chart{padding:18px 14px 14px;margin-left:-10px;margin-right:-10px;overflow-x:auto}
+  .chart svg{min-width:760px}
+  .chart figcaption{position:sticky;left:0}
+}
+
 .big{display:grid;gap:28px 40px;margin-top:36px;grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(min-width:860px){.big{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .big b{display:block;font-size:clamp(28px,3.6vw,42px);font-weight:400;letter-spacing:-.02em;line-height:1.1}
@@ -431,6 +554,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
         </tbody>
       </table>
     </div>
+    {{tokenChart}}
     {{stale}}
     <p class="fine">{{tokenNote}}</p>
   </div>
@@ -482,13 +606,14 @@ Store: https://www.americanas.com.br          &lt;- one agent
        models for the price and sizes of one product.</p>
     <div class="pane" style="margin-top:28px;max-width:720px">
       <header><span>The task, verbatim</span></header>
-<pre>What is the current price of "{{modelProduct}}",
-and which sizes/variants are in stock?
+<pre>What is the current price of &lt;product&gt;, and which
+sizes/variants are in stock?
 
-Page: {{modelStore}} product page   &lt;- one run
-      the same URL through decoindex  &lt;- the other</pre>
+Page: the storefront's own product page  &lt;- one run
+      that same URL through decoindex    &lt;- the other</pre>
     </div>
     {{models}}
+    {{costChart}}
   </div>
 </section>
 
