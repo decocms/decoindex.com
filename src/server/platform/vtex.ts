@@ -1,5 +1,8 @@
-import type { CategoryRef, Claim, Doc, Product, Storefront, Variant } from "../lib/types";
+import type { CategoryRef, Claim, Doc, Product, Sort, Storefront, Variant } from "../lib/types";
+import { parseSort } from "../lib/types";
+import type { Env } from "../env";
 import { UA } from "./detect";
+import { childrenOf, flatten, getTree } from "./tree";
 
 /**
  * VTEX hands out catalog data as JSON with no auth, addressed by the same paths
@@ -36,11 +39,12 @@ export function vtexApiOrigin(account: string | undefined, origin: string): stri
 }
 
 export async function resolveVtex(
+  env: Env,
   shop: Storefront,
   path: string,
   query: URLSearchParams,
 ): Promise<Doc> {
-  if (path === "/") return home(shop);
+  if (path === "/") return home(env, shop);
 
   if (/\/p\/?$/.test(path)) {
     const slug = path.replace(/\/p\/?$/, "").split("/").filter(Boolean).pop();
@@ -54,41 +58,132 @@ export async function resolveVtex(
       : { kind: "notfound" };
   }
 
-  return listing(shop, path, query);
+  const term = searchTerm(path, query);
+  if (term !== undefined) return search(shop, term, query);
+
+  return listing(env, shop, path, query);
 }
 
-async function home(shop: Storefront): Promise<Doc> {
-  const tree = await getJson<VtexCategory[]>(
-    `${api(shop)}/api/catalog_system/pub/category/tree/2`,
-  );
-  if (tree.failed) return { kind: "upstream_error" };
-  if (!tree.body?.length) return { kind: "notfound" };
-  // Flat, but tagged with depth so the renderer can show every root before it
-  // spends budget on children. americanas has 46 roots and 736 subcategories;
-  // emitting them depth-first meant the first two roots consumed the whole list
-  // and a general retailer looked like it only sold farm equipment and crafts.
-  const categories: CategoryRef[] = [];
-  for (const root of tree.body) {
-    categories.push({ path: pathOf(root.url), name: root.name, depth: 0 });
-    for (const child of root.children ?? []) {
-      categories.push({
-        path: pathOf(child.url),
-        name: child.name,
-        depth: 1,
-        parent: root.name,
-      });
-    }
+/**
+ * Storefront search, on the merchant's own URL conventions.
+ *
+ * This is not a guess about what an agent might want: ChatGPT, handed the
+ * americanas overview, immediately tried `/americanas.com/busca/playstation-5`
+ * — it inferred VTEX's own search path and we answered 404. It is also the
+ * natural next move after reading the top-search terms the overview publishes.
+ *
+ * Still one bounded upstream call against one query, so nothing about the read
+ * invariant changes; this is a listing addressed by words instead of by path.
+ */
+export function searchTerm(path: string, query: URLSearchParams): string | undefined {
+  const q = query.get("q")?.trim();
+  const segments = path.split("/").filter(Boolean);
+  const head = segments[0]?.toLowerCase();
+  if (head === "busca" || head === "search" || head === "s") {
+    const rest = segments.slice(1).join(" ").replace(/[-+]/g, " ").trim();
+    return (q || rest || "").trim() || undefined;
   }
-  return { kind: "home", categories, totalCategories: categories.length };
+  // `/search?q=` with no path segments, and `?q=` on the root.
+  if (q && (segments.length === 0 || head === "busca" || head === "search")) return q;
+  return undefined;
 }
 
-async function listing(shop: Storefront, path: string, query: URLSearchParams): Promise<Doc> {
+async function search(shop: Storefront, term: string, query: URLSearchParams): Promise<Doc> {
+  const page = Math.max(1, Number(query.get("page") ?? 1) || 1);
+  const from = (page - 1) * PER_PAGE;
+  const sort = parseSort(query.get("sort"));
+  const order = sort ? `&O=${VTEX_ORDER[sort]}` : "";
+  // encodeURIComponent, not a `+`: VTEX answers 400 to a plus-encoded space.
+  const res = await getWithHeaders<VtexProduct[]>(
+    `${api(shop)}/api/catalog_system/pub/products/search?ft=${encodeURIComponent(term)}` +
+      `&_from=${from}&_to=${from + PER_PAGE - 1}${order}`,
+  );
+  if (res.failed) return { kind: "upstream_error" };
+  if (!res.body?.length) {
+    return { kind: "listing", title: `Search: ${term}`, total: 0, page, products: [], query: term };
+  }
+  return {
+    kind: "listing",
+    title: `Search: ${term}`,
+    total: totalFromResources(res.resources),
+    page,
+    sort,
+    query: term,
+    products: res.body.map((p) => toProduct(p, shop)),
+  };
+}
+
+const TOP_PRODUCTS = 20;
+const TOP_SEARCHES = 15;
+
+/**
+ * The overview is the one document where three upstream calls are justified.
+ *
+ * It is fetched once per storefront, cached indefinitely, and it is the page an
+ * agent reads *before* deciding whether this merchant is worth exploring. A list
+ * of category names does not answer that; what the store actually sells most of,
+ * and what its shoppers actually type into its own search box, does.
+ *
+ * All three run concurrently and two of them are allowed to fail — a storefront
+ * with no best-seller ordering still gets its categories.
+ */
+async function home(env: Env, shop: Storefront): Promise<Doc> {
+  const [tree, top, searches] = await Promise.all([
+    // Shared with every category page on this domain, so it is fetched once.
+    getTree(env, shop),
+    getJson<VtexProduct[]>(
+      `${api(shop)}/api/catalog_system/pub/products/search?O=OrderByTopSaleDESC&_from=0&_to=${TOP_PRODUCTS - 1}`,
+    ),
+    getJson<{ searches?: { term: string; count?: number }[] }>(
+      `${api(shop)}/api/io/_v/api/intelligent-search/top_searches`,
+    ),
+  ]);
+
+  // Only the tree is load-bearing. The other two are enrichment.
+  if (!tree) return { kind: "upstream_error" };
+  const categories = flatten(tree);
+  if (!categories.length) return { kind: "notfound" };
+
+  const popular = (top.body ?? []).map((p) => toProduct(p, shop));
+  const topSearches = (searches.body?.searches ?? [])
+    .filter((t) => t?.term)
+    .slice(0, TOP_SEARCHES)
+    .map((t) => ({ term: t.term, count: typeof t.count === "number" ? t.count : undefined }));
+
+  return {
+    kind: "home",
+    categories,
+    totalCategories: Object.keys(tree.nodes).length,
+    ...(popular.length ? { popular, popularBasis: "best-selling" as const } : {}),
+    ...(topSearches.length ? { topSearches } : {}),
+  };
+}
+
+/** VTEX orders the whole query server-side, so page 1 really is the cheapest 24. */
+const VTEX_ORDER: Record<Sort, string> = {
+  price_asc: "OrderByPriceASC",
+  price_desc: "OrderByPriceDESC",
+  name_asc: "OrderByNameASC",
+  name_desc: "OrderByNameDESC",
+  discount: "OrderByBestDiscountDESC",
+  new: "OrderByReleaseDateDESC",
+  relevance: "OrderByScoreDESC",
+};
+
+async function listing(
+  env: Env,
+  shop: Storefront,
+  path: string,
+  query: URLSearchParams,
+): Promise<Doc> {
   const page = Math.max(1, Number(query.get("page") ?? 1) || 1);
   const from = (page - 1) * PER_PAGE;
   const segments = path.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+  const sort = parseSort(query.get("sort"));
+  const order = sort ? `&O=${VTEX_ORDER[sort]}` : "";
 
   let res = await getWithHeaders<VtexProduct[]>(
-    `${api(shop)}/api/catalog_system/pub/products/search/${segments}?_from=${from}&_to=${from + PER_PAGE - 1}`,
+    `${api(shop)}/api/catalog_system/pub/products/search/${segments}?_from=${from}&_to=${from + PER_PAGE - 1}${order}`,
   );
 
   // Not a real category. VTEX collections and CMS pages resolve through cluster
@@ -98,19 +193,23 @@ async function listing(shop: Storefront, path: string, query: URLSearchParams): 
     const term = path.split("/").filter(Boolean).join(" ").replace(/-/g, " ").trim();
     if (term) {
       res = await getWithHeaders<VtexProduct[]>(
-        `${api(shop)}/api/catalog_system/pub/products/search?ft=${encodeURIComponent(term)}&_from=0&_to=${PER_PAGE - 1}`,
+        `${api(shop)}/api/catalog_system/pub/products/search?ft=${encodeURIComponent(term)}&_from=0&_to=${PER_PAGE - 1}${order}`,
       );
     }
   }
 
   if (res.failed) return { kind: "upstream_error" };
   if (!res.body?.length) return { kind: "notfound" };
+  // Free: the index is already in KV for this domain after the first read.
+  const subcategories = childrenOf(await getTree(env, shop), path);
   return {
     kind: "listing",
     title: titleFromPath(path),
     total: totalFromResources(res.resources),
     page,
+    sort,
     products: res.body.map((p) => toProduct(p, shop)),
+    ...(subcategories.length ? { subcategories } : {}),
   };
 }
 

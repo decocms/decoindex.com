@@ -251,7 +251,7 @@ tools.push({
     if (page) query.set("page", String(page));
 
     const started = Date.now();
-    const doc = await resolve(shop, required(input, "path"), query);
+    const doc = await resolve(env, shop, required(input, "path"), query);
     return {
       shop: { platform: shop.platform, origin: shop.origin, apiOrigin: shop.apiOrigin, account: shop.account },
       ms: Date.now() - started,

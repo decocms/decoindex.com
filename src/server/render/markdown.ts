@@ -1,4 +1,4 @@
-import type { CategoryRef, Product, Storefront } from "../lib/types";
+import type { CategoryRef, Product, Sort, Storefront } from "../lib/types";
 import { canonicalUrl } from "../lib/url";
 
 /**
@@ -72,12 +72,72 @@ function renderCategories(all: CategoryRef[], total: number | undefined, base: s
       out.push(`  - [${kid.name}](${base}${kid.path})${kid.count ? ` (${kid.count})` : ""}`);
     }
     if (totalKids > kids.length) {
-      out.push(`  - _${totalKids - kids.length} more under ${root.name}, not listed here._`);
+      out.push(
+        `  - _${totalKids - kids.length} more — open [${root.name}](${base}${root.path}) to see them all._`,
+      );
     }
   }
   out.push("");
   return out;
 }
+
+/** No price and not purchasable: a marketplace listing with no live offer. */
+function isDeadOffer(p: Product): boolean {
+  const priced = p.variants.some((v) => (v.priceMinor ?? 0) > 0);
+  const stocked = p.variants.some((v) => v.available);
+  return !priced && !stocked;
+}
+
+/** One row per product: the least an agent needs to choose one and open it. */
+function productTable(products: Product[], shop: Storefront, base: string): string[] {
+  /**
+   * Rows with no price and no stock are marketplace entries whose seller has no
+   * live offer. They are not wrong, but they carry nothing a shopper can act on,
+   * and on some categories they outnumber the real offers badly enough to bury
+   * them — an agent reported 69 of 73 rows like this, drowning the four it
+   * wanted. Stable partition, so real offers come first and nothing is dropped.
+   */
+  const live = products.filter((p) => !isDeadOffer(p));
+  const dead = products.filter(isDeadOffer);
+  const ordered = [...live, ...dead];
+
+  const out = [
+    `| Product | Price | Was | Stock | Details |`,
+    `|---|---:|---:|---|---|`,
+  ];
+  for (const p of ordered) {
+    const prices = p.variants.map((v) => v.priceMinor).filter((n): n is number => n !== undefined);
+    const list = p.variants.map((v) => v.listPriceMinor).filter((n): n is number => n !== undefined);
+    const price = prices.length ? Math.min(...prices) : undefined;
+    const was = list.length ? Math.max(...list) : undefined;
+    out.push(
+      `| ${p.title.replace(/\|/g, "/")} | ${money(price, shop.currency)} | ${
+        was && price && was > price ? money(was, shop.currency) : "—"
+      } | ${p.variants.some((v) => v.available) ? "yes" : "no"} | ${base}${p.slug} |`,
+    );
+  }
+  out.push("");
+  if (dead.length) {
+    out.push(
+      `_${dead.length} of these ${products.length} rows have no price and no stock — marketplace`,
+      `listings with no live offer. They are listed last; the rest are real offers._\n`,
+    );
+  }
+  return out;
+}
+
+/** Human names for the sort values, so the link text says what it does. */
+const ORDER_LABELS: [Sort, string][] = [
+  ["price_asc", "Cheapest first"],
+  ["price_desc", "Most expensive first"],
+  ["discount", "Biggest discount first"],
+  ["new", "Newest first"],
+  ["relevance", "Most relevant first"],
+  ["name_asc", "A to Z"],
+];
+
+/** A neutral second example, so the pattern is obvious from two instances. */
+const EXAMPLE_QUERY = "presente";
 
 export interface RenderCtx {
   publicOrigin: string;
@@ -155,7 +215,6 @@ function nextSteps(shop: Storefront, ctx: RenderCtx, extra: string[] = []): stri
     ...extra,
     `- Any page of this storefront in Markdown: take its URL and swap the origin for \`${base}\``,
     `- Storefront overview: ${base}/`,
-    `- Machine index: ${base}/llms.txt`,
     `- Same document as JSON: append \`.json\` to this URL\n`,
   ];
 }
@@ -253,14 +312,38 @@ export function renderProduct(shop: Storefront, p: Product, ctx: RenderCtx): str
   return out.join("\n");
 }
 
+/**
+ * True when every in-stock row precedes every out-of-stock row and there is at
+ * least one of each — i.e. availability, not price, drove the top-level order.
+ */
+function availableFirst(products: Product[]): boolean {
+  const stock = products.map((p) => p.variants.some((v) => v.available));
+  const firstOut = stock.indexOf(false);
+  if (firstOut === -1 || !stock[0]) return false;
+  return !stock.slice(firstOut).includes(true);
+}
+
 export function renderListing(
   shop: Storefront,
-  doc: { title: string; description?: string; total?: number; page: number; products: Product[] },
+  doc: {
+    title: string;
+    description?: string;
+    total?: number;
+    page: number;
+    products: Product[];
+    sort?: Sort;
+    sortedWithinPage?: boolean;
+    subcategories?: CategoryRef[];
+    query?: string;
+  },
   path: string,
   ctx: RenderCtx,
+  query?: string,
 ): string {
   const base = `${ctx.publicOrigin}/${shop.domain}`;
-  const canonical = canonicalUrl(shop.domain, path, ctx.attribution);
+  // The query is part of the address for a search. Dropping it points the
+  // canonical at an empty search box on the merchant's site.
+  const canonical = canonicalUrl(shop.domain, path + (query ? `?${query}` : ""), ctx.attribution);
   const out: string[] = [];
   out.push(
     frontmatter({
@@ -274,6 +357,10 @@ export function renderListing(
       total_results: doc.total,
       page: doc.page,
       shown: doc.products.length,
+      sort: doc.sort,
+      // Says out loud when the order covers only this page, so an agent never
+      // reports the cheapest of 24 as the cheapest of the catalog.
+      sorted_within_page: doc.sortedWithinPage,
       currency: shop.currency,
       observed_at: new Date().toISOString(),
       live_commercial_data: false,
@@ -281,11 +368,21 @@ export function renderListing(
   );
   out.push(`# ${doc.title}\n`);
   if (doc.description) out.push(`${doc.description}\n`);
-  out.push(
-    doc.total
-      ? `${doc.total} products. Showing ${doc.products.length} (page ${doc.page}).\n`
-      : `Showing ${doc.products.length} products (page ${doc.page}).\n`,
-  );
+  if (doc.query) {
+    out.push(
+      doc.products.length
+        ? `${doc.total ? `${doc.total} matches for ` : "Matches for "}**${doc.query}**` +
+            `. Showing ${doc.products.length}.\n`
+        : `No products matched **${doc.query}** on this storefront. Try a broader term, ` +
+            `or browse the categories on ${base}/.\n`,
+    );
+  } else {
+    out.push(
+      doc.total
+        ? `${doc.total} products. Showing ${doc.products.length} (page ${doc.page}).\n`
+        : `Showing ${doc.products.length} products (page ${doc.page}).\n`,
+    );
+  }
 
   out.push(`| Product | Price | Was | Stock | Details |`);
   out.push(`|---|---:|---:|---|---|`);
@@ -304,8 +401,74 @@ export function renderListing(
   }
   out.push("");
 
-  const nextPage = `${base}${path}?page=${doc.page + 1}`;
+  // Ordering has to be discoverable from the document itself: "which is cheapest"
+  // is unanswerable from one arbitrary page of a large category, and an agent
+  // cannot ask for something it was never told exists.
+  const q = (extra: string) => `${base}${path}?${doc.sort ? `sort=${doc.sort}&` : ""}${extra}`;
+  if (doc.sortedWithinPage) {
+    out.push(
+      `Ordered by \`${doc.sort}\` **within this page only** — this platform cannot order the`,
+      `whole collection for us, so these are the ${doc.products.length} shown here in that order,`,
+      `not the ${doc.total ?? "full"}-product collection. Do not report these as the extremes of the collection.\n`,
+    );
+  } else if (doc.sort) {
+    out.push(`Ordered by \`${doc.sort}\` across the whole result set, ${doc.total ?? "all"} products.`);
+    // VTEX returns available products first and unavailable ones after, each run
+    // ordered independently — so the price column ascends, restarts, and ascends
+    // again. Said only when the rows actually show it, rather than asserting a
+    // platform rule we have not checked everywhere.
+    if (availableFirst(doc.products)) {
+      out.push(
+        `In-stock products come first, then out-of-stock, each ordered separately — so the price`,
+        `column restarts partway down. Compare within a stock group, not across the whole table.`,
+      );
+    }
+    out.push("");
+  } else {
+    out.push(
+      `Catalog default order. Add \`?sort=price_asc\` for the cheapest first`,
+      `(also: price_desc, name_asc, name_desc, discount, new, relevance).\n`,
+    );
+  }
+
+  const nextPage = q(`page=${doc.page + 1}`);
   const hasMore = doc.total ? doc.page * doc.products.length < doc.total : doc.products.length >= 24;
+  /**
+   * Sort options as links, not as documented syntax.
+   *
+   * An agent told us plainly why: "?sort=discount is documented in the footer,
+   * but I could not exercise it, because I can only fetch URLs that appeared in
+   * the navigation." It cannot build a URL — it can only follow one it was
+   * handed. Documentation an agent cannot act on is decoration.
+   */
+  {
+    const q = new URLSearchParams(query ?? "");
+    const link = (value: Sort) => {
+      const p = new URLSearchParams(q);
+      p.set("sort", value);
+      p.delete("page");
+      return `${base}${path}?${p.toString()}`;
+    };
+    out.push(`## Other orders\n`);
+    out.push(
+      `Each of these re-orders the whole ${doc.query ? "result set" : "category"}, not just this page:\n`,
+    );
+    for (const [value, label] of ORDER_LABELS) {
+      if (value === doc.sort) continue;
+      out.push(`- [${label}](${link(value)})`);
+    }
+    out.push("");
+  }
+
+  if (doc.subcategories?.length) {
+    out.push(`## Subcategories\n`);
+    out.push(`${doc.subcategories.length} directly under ${doc.title}:\n`);
+    for (const c of doc.subcategories) {
+      out.push(`- [${c.name}](${base}${c.path})`);
+    }
+    out.push("");
+  }
+
   out.push(...boundaries());
   out.push(...nextSteps(shop, ctx, hasMore ? [`- Next page: ${nextPage}`] : []));
   out.push(...footer(shop, path, ctx));
@@ -317,6 +480,9 @@ export function renderHome(
   categories: CategoryRef[],
   ctx: RenderCtx,
   total?: number,
+  popular?: Product[],
+  popularBasis?: "best-selling" | "featured",
+  topSearches?: { term: string; count?: number }[],
 ): string {
   const base = `${ctx.publicOrigin}/${shop.domain}`;
   const out: string[] = [];
@@ -364,10 +530,63 @@ export function renderHome(
   out.push(`${base}/some/product/path`);
   out.push("```\n");
   out.push(`- Append \`.json\` for the same document as structured JSON.`);
-  out.push(`- Listings paginate with \`?page=N\`.\n`);
+  out.push(`- Listings paginate with \`?page=N\` and order with \`?sort=price_asc\`.`);
+  out.push("");
+
+  const sample = topSearches?.[0]?.term;
+  out.push(`## Search this storefront\n`);
+  out.push(
+    `One request, instead of walking the category tree. Replace the words at the end:\n`,
+  );
+  if (sample) {
+    out.push(`- [${base}/search?q=${encodeURIComponent(sample)}](${base}/search?q=${encodeURIComponent(sample)})`);
+  }
+  out.push(`- [${base}/search?q=${encodeURIComponent(EXAMPLE_QUERY)}](${base}/search?q=${encodeURIComponent(EXAMPLE_QUERY)})`);
+  out.push(`\n\`${base}/busca/{words}\` resolves the same way — it is this storefront's own`);
+  out.push(`search path, so a URL copied from the store works unchanged.\n`);
 
   if (categories.length) {
     out.push(...renderCategories(categories, total, base));
+  }
+
+  /**
+   * A category list tells an agent how the merchant files things. It does not
+   * tell it what the merchant is actually known for, which is the question
+   * being asked when something reads this page before deciding whether to go
+   * deeper. Best sellers answer that in twenty lines.
+   */
+  if (popular?.length) {
+    out.push(
+      popularBasis === "featured"
+        ? `## Featured by the merchant\n`
+        : `## Best sellers\n`,
+    );
+    out.push(
+      popularBasis === "featured"
+        ? `The merchant's own homepage selection, in their order. Not a popularity ranking.\n`
+        : `The storefront's own best-selling order, as its catalog API reports it today.\n`,
+    );
+    out.push(...productTable(popular, shop, base));
+  }
+
+  /**
+   * And what shoppers type. VTEX publishes its own search terms with real
+   * volumes — the merchant's demand data, in the merchant's own words, which is
+   * a far better vocabulary for querying this catalog than anything we'd guess.
+   */
+  if (topSearches?.length) {
+    out.push(`## What shoppers search for here\n`);
+    out.push(
+      `The storefront's own top search terms, with the number of searches it reports.`,
+      `Useful as query vocabulary: these are the words this audience actually uses.\n`,
+    );
+    for (const t of topSearches) {
+      const url = `${base}/busca/${encodeURIComponent(t.term).replace(/%20/g, "-")}`;
+      out.push(
+        `- [${t.term}](${url})${t.count ? ` — ${t.count.toLocaleString("en-US")} searches` : ""}`,
+      );
+    }
+    out.push("");
   }
 
   out.push(`## How to transact\n`);
@@ -377,47 +596,6 @@ export function renderHome(
   out.push(`   shipping and payment.\n`);
   out.push(...boundaries());
   out.push(...footer(shop, "/", ctx));
-  return out.join("\n");
-}
-
-export function renderLlmsTxt(
-  shop: Storefront,
-  categories: CategoryRef[],
-  ctx: RenderCtx,
-  total?: number,
-): string {
-  const base = `${ctx.publicOrigin}/${shop.domain}`;
-  const out = [`# ${shop.name ?? shop.domain}`, ""];
-  out.push(
-    shop.description
-      ? `> ${shop.description}`
-      : `> Agent-readable mirror of the ${shop.domain} storefront.`,
-    "",
-  );
-  out.push(`## Facts`, "");
-  if (shop.name && shop.name !== shop.domain) out.push(`- **Merchant:** ${shop.name}`);
-  out.push(`- **Site:** https://${shop.domain}`);
-  out.push(`- **Platform:** ${shop.platform}`);
-  out.push(`- **Currency:** ${shop.currency}`);
-  if (shop.country) out.push(`- **Country:** ${shop.country}`);
-  if (shop.locale) out.push(`- **Locale:** ${shop.locale}`);
-  if (shop.themeColor) out.push(`- **Brand colour:** ${shop.themeColor}`);
-  out.push(
-    `- **Published here:** catalog facts only — live stock, final price and delivery are not.`,
-    "",
-  );
-  // Most actionable thing in the file, so it goes first: agents truncate.
-  out.push(`## Format for agents`, "");
-  out.push(`- [Storefront overview](${base}/): categories and URL conventions`);
-  out.push(
-    `- Any storefront URL works: replace \`https://${shop.domain}\` with \`${base}\``,
-  );
-  out.push(`- Append \`.json\` to any of these for structured JSON`);
-  out.push("");
-  out.push(...renderCategories(categories, total, base));
-  out.push("", `## Notes`, "");
-  out.push(`- Prices and availability are observed, not guaranteed. Verify before promising.`);
-  out.push(`- The merchant's own site is canonical: https://${shop.domain}`);
   return out.join("\n");
 }
 

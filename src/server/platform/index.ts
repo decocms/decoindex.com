@@ -1,3 +1,4 @@
+import type { Env } from "../env";
 import type { Doc, Storefront } from "../lib/types";
 import { resolveShopify } from "./shopify";
 import { resolveVtex } from "./vtex";
@@ -10,10 +11,15 @@ export type { Detection } from "./detect";
  * calls, a 6s timeout each, and never a catalog enumeration. That bound is what
  * makes it safe to do this inside a request handler.
  */
-export function resolve(shop: Storefront, path: string, query: URLSearchParams): Promise<Doc> {
+export function resolve(
+  env: Env,
+  shop: Storefront,
+  path: string,
+  query: URLSearchParams,
+): Promise<Doc> {
   switch (shop.platform) {
     case "vtex":
-      return resolveVtex(shop, path, query);
+      return resolveVtex(env, shop, path, query);
     case "shopify":
       return resolveShopify(shop, path, query);
     default:
