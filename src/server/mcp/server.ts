@@ -119,7 +119,30 @@ interface JsonRpcRequest {
   params?: Record<string, unknown>;
 }
 
+/**
+ * Nothing under /mcp may be cached by anything, ever.
+ *
+ * Cloudflare does not cache POST and does not cache an extensionless GET by
+ * default, so this changes nothing today — measured: no cf-cache-status, no age,
+ * two distinct rays on repeated calls. It is here because "no cache-control at
+ * all" leaves the decision to whatever sits in the middle, and the responses are
+ * both caller-specific and tier-specific: a cached tools/list is one operator's
+ * catalogue replayed to an anonymous caller. State it rather than rely on the
+ * absence of a rule nobody has written yet.
+ */
 export async function handleMcp(
+  request: Request,
+  env: Env,
+  ctx: { waitUntil(p: Promise<unknown>): void },
+): Promise<Response> {
+  const res = await route(request, env, ctx);
+  // A tier decides the body, so a shared cache must never key on the URL alone.
+  res.headers.set("cache-control", "no-store");
+  res.headers.set("vary", "authorization, x-mcp-auth");
+  return res;
+}
+
+async function route(
   request: Request,
   env: Env,
   ctx: { waitUntil(p: Promise<unknown>): void },
