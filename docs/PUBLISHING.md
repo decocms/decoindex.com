@@ -16,7 +16,7 @@ It has since been merged. The three "drifted" behaviours were never experiments:
 
 | Behaviour | Status |
 |---|---|
-| `/mcp` requires auth | **Intended.** It is the private operator control plane, not a public product surface. |
+| `/mcp` requires auth | **Was intended** — it was the operator control plane. Since superseded: `/mcp` is now two tiers, public read tools with no token plus the control plane with one. |
 | root `/llms.txt` exists, `/` 302s to it for agents | **Intended.** `/{domain}/llms.txt` now 308s to `/{domain}` — one index per storefront. |
 | `?page=` / `?sort=price_asc\|…` on any path | **Intended**, and the replacement for `?limit=`/`?offset=` on `/products.json`, which no longer exists. |
 
@@ -61,7 +61,9 @@ Developer mode doesn't require any review. Once deployed:
 1. ChatGPT → Settings → Apps & Connectors → Advanced → enable **Developer
    mode**.
 2. Create app → MCP server URL `https://decoindex.com/mcp` → Create.
-3. Confirm the model calls `search_storefront` and the widget renders.
+3. Confirm the model calls `search_storefront` and gets a product back. No
+   widget yet — `render/widget.ts` exists but is not registered as a `ui://`
+   resource, so results render as text. Wiring it is a separate task.
 
 This alone satisfies "usable in ChatGPT" — everything past here is about
 **public discoverability** (showing up in ChatGPT's app picker for users who
@@ -79,11 +81,11 @@ haven't manually added the connector), which is a separate, reviewed step:
     policy the code doesn't enforce yet. Build the cron before submitting,
     not before deploying.
   - An app icon/logo (none exists yet in this repo).
-- Not blocking: auth. The server is intentionally public/read-only; Apps SDK
-  review only requires auth when a tool reads private data or acts on a
-  user's behalf, neither of which applies here — *unless* the reconciliation
-  in §0 keeps the token-gated `/mcp` production had, in which case document
-  the auth flow for reviewers too.
+- Not blocking: auth. Resolved — the public tier of `/mcp` is unauthenticated
+  and read-only, which is what Apps SDK review asks for. It only requires auth
+  when a tool reads private data or acts for a user, and no public tool does
+  either. The operator tier is token-gated but is never advertised to an
+  anonymous caller, so a reviewer never sees it.
 
 ## 3. Claude Code — already installable, no submission needed
 
