@@ -78,6 +78,21 @@ export function parsePath(pathname: string): ParsedRequest | null {
     ext = m[1]!.toLowerCase() as Ext;
     rest = rest.slice(0, -m[0].length);
   }
+
+  /**
+   * `%2F` is a real slash. Anything that models a storefront path as a single
+   * path *parameter* — ChatGPT's Actions runtime does exactly this — percent-
+   * encodes the separator inside it, so a VTEX product arrives as
+   * `vestido-longo%2Fp` rather than `vestido-longo/p`.
+   *
+   * Left encoded, the slug no longer ends in `/p`, the resolver stops seeing a
+   * product, and the request falls through to a category listing — which is a
+   * perfectly healthy `200`. That is gotcha 1 in CLAUDE.md wearing a new hat:
+   * the failure is in the payload, never the status, so "both URLs returned
+   * 200" reads as success right up until a shopper is handed the wrong page.
+   */
+  rest = rest.replace(/%2f/gi, "/");
+
   return { domain, path: "/" + rest, ext };
 }
 

@@ -260,6 +260,20 @@ await check("a wrong token is rejected, never downgraded to public", async () =>
   assert.ok([401, 503].includes(res.status), `expected 401/503, got ${res.status}`);
 });
 
+await check("a %2F-encoded product slug resolves to the product, not a listing", async () => {
+  // ChatGPT Actions models a storefront path as one path parameter, so it
+  // percent-encodes the internal slash. Both forms answer 200 — a listing is a
+  // healthy response — so status alone cannot tell these apart. Compare the
+  // document.
+  const { body: literal } = await get(VTEX_PDP + ".json");
+  const encoded = VTEX_PDP.replace(/^\/([^/]+)\/(.*)$/, (_, d, p) => `/${d}/${encodeURIComponent(p)}`);
+  const { body: viaEncoded } = await get(encoded + ".json");
+  const a = JSON.parse(literal);
+  const b = JSON.parse(viaEncoded);
+  assert.equal(b.kind, "product", `%2F slug resolved to "${b.kind}", not a product`);
+  assert.equal(b.product?.slug, a.product?.slug, "%2F slug resolved to a different product");
+});
+
 await check("a public tool call is a read: same document, same cache entry", async () => {
   const viaHttp = await get(VTEX_PDP);
   const viaTool = await rpc({
