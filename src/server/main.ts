@@ -273,6 +273,35 @@ app.get("/opt-out", (c) =>
 );
 
 /**
+ * OpenAI Plugin directory domain verification. One-time challenge, not a
+ * secret — it exists specifically to be read at this fixed public URL, so
+ * committing it is correct, not a leak.
+ */
+app.get("/.well-known/openai-apps-challenge", (c) => c.text("v2E1ZHPwOGh720oMzrX_Un5fhOMgdzkH2f3Ye-XWThc"));
+
+app.get("/support", (c) =>
+  c.text(
+    [
+      "decoindex support.",
+      "",
+      "A tool call or a page returned something wrong? File it at POST /feedback — no",
+      "key needed, and it goes straight into triage:",
+      "",
+      "  curl -X POST https://decoindex.com/feedback \\",
+      "    -H 'content-type: application/json' \\",
+      "    -d '{\"url\":\"https://decoindex.com/<domain><path>\",\"kind\":\"wrong_data\",\"message\":\"what you expected vs what you got\"}'",
+      "",
+      "kind: wrong_data · missing · broken · unsupported · other.",
+      "",
+      "Anything else — email builders+indexsupport@decocms.com. Merchant asking about a",
+      "domain: see /opt-out. What this service is and isn't: see /about.",
+      "",
+      "Built by deco (https://decocms.com).",
+    ].join("\n"),
+  ),
+);
+
+/**
  * Agent feedback. Public and unauthenticated on purpose: an agent that just hit
  * a wrong document will not stop to go get a key, and a report we never receive
  * is a bug we never learn about. Rate limited per IP instead.
