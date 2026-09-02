@@ -206,7 +206,15 @@ async function dispatch(
         // the mismatch as fatal and drops the connection.
         protocolVersion:
           typeof params.protocolVersion === "string" ? params.protocolVersion : PROTOCOL_VERSION,
-        capabilities: { tools: { listChanged: false }, resources: {} },
+        // Stated explicitly rather than left as `{}`. A client reads these to
+        // decide what it may call, and "resources exist, but do not subscribe
+        // and do not expect change notifications" is information — an empty
+        // object leaves it guessing, and some clients guess subscribe.
+        capabilities: {
+          tools: { listChanged: false },
+          resources: { subscribe: false, listChanged: false },
+          prompts: { listChanged: false },
+        },
         serverInfo: { name: "decoindex", version: "1.0.0" },
         instructions: tier === "operator" ? OPERATOR_INSTRUCTIONS : PUBLIC_INSTRUCTIONS,
       };
@@ -275,6 +283,22 @@ async function dispatch(
      */
     case "resources/list":
       return { resources: resourcesFor(tier) };
+
+    /**
+     * Answered, not errored, and that distinction is the whole point.
+     *
+     * Declaring a `resources` capability is a promise to answer the methods
+     * inside it. A client walking discovery calls `resources/list` and then
+     * `resources/templates/list`; returning -32601 to the second aborts the
+     * sequence, and the tab renders empty even though the first call succeeded.
+     * That is exactly how the widget came to be "missing" in deco Studio while
+     * `resources/list` was returning it correctly all along.
+     *
+     * We publish no templated resources — every widget here is a fixed `ui://`
+     * URI — so the honest answer is an empty list rather than an error.
+     */
+    case "resources/templates/list":
+      return { resourceTemplates: [] };
 
     case "resources/read": {
       const uri = String(params.uri ?? "");

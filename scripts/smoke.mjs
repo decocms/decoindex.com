@@ -241,6 +241,40 @@ await check("MCP discovery works with no credential at all", async () => {
   }
 });
 
+await check("every method a declared capability implies actually answers", async () => {
+  // Declaring a capability is a promise to answer the methods inside it. A
+  // client walking discovery stops at the first -32601, so erroring on one of
+  // these empties the whole tab even when its sibling call succeeded — which is
+  // how the widget read as "missing" in deco Studio while resources/list was
+  // returning it the entire time.
+  const caps = (await rpc({ method: "initialize", params: { protocolVersion: "2025-06-18" } }))
+    .result?.capabilities ?? {};
+  const implied = [
+    ...(caps.tools ? ["tools/list"] : []),
+    ...(caps.resources ? ["resources/list", "resources/templates/list"] : []),
+    ...(caps.prompts ? ["prompts/list"] : []),
+  ];
+  assert.ok(implied.length >= 3, `too few capabilities declared: ${JSON.stringify(caps)}`);
+  for (const method of implied) {
+    const res = await rpc({ method });
+    assert.equal(res.error, undefined, `${method} -> ${JSON.stringify(res.error)}`);
+  }
+});
+
+await check("the deco install handshake answers at either tier", async () => {
+  // Studio runs this before a token has been entered anywhere. Answering
+  // "unknown tool" put a 40% error rate on the app's own dashboard.
+  for (const name of ["MCP_CONFIGURATION", "ON_MCP_CONFIGURATION"]) {
+    const res = await rpc({ method: "tools/call", params: { name } });
+    assert.equal(res.error, undefined, `${name} -> ${JSON.stringify(res.error)}`);
+  }
+  const names = ((await rpc({ method: "tools/list" })).result?.tools ?? []).map((t) => t.name);
+  assert.ok(
+    !names.some((n) => n.includes("CONFIGURATION")),
+    "host plumbing must not be advertised to models",
+  );
+});
+
 await check("the control plane stays invisible to anonymous callers", async () => {
   const names = ((await rpc({ method: "tools/list" })).result?.tools ?? []).map((t) => t.name);
   for (const t of ["feedback_list", "feedback_update", "traffic_stats", "domain_list"]) {
