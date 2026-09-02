@@ -63,6 +63,40 @@ function toolsFor(tier: Tier): ToolDefinition[] {
   return tier === "operator" ? [...publicTools, ...operatorTools] : publicTools;
 }
 
+/**
+ * deco Studio's install handshake.
+ *
+ * Studio calls `MCP_CONFIGURATION` to learn what an app needs configured and
+ * what it is allowed to do, and `ON_MCP_CONFIGURATION` after a user saves that
+ * configuration. Answering "unknown tool" is what put a 40% error rate on the
+ * app's own dashboard — the tools all listed and worked, but every install
+ * logged two failures against us.
+ *
+ * decoindex needs neither. It is a public read service: there is nothing to
+ * configure per installation and no scope to request, because a tool call here
+ * reaches exactly the same public documents the URL does. So the honest answer
+ * is an empty schema and an empty scope list, said explicitly, rather than an
+ * error that reads as a broken integration.
+ *
+ * Deliberately NOT in `tools/list`. These are host plumbing, not capabilities a
+ * model should ever choose to invoke — advertising them would put two
+ * meaningless entries in front of every ChatGPT user. Answering a call for a
+ * tool we do not advertise is safe here precisely because they expose nothing:
+ * no data in, no data out.
+ */
+const HOST_TOOLS: Record<string, () => unknown> = {
+  MCP_CONFIGURATION: () => ({
+    stateSchema: {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+    scopes: [],
+  }),
+  ON_MCP_CONFIGURATION: () => ({}),
+};
+
 /** Must match `_meta["openai/outputTemplate"]` on traffic_stats exactly. */
 export const TRAFFIC_WIDGET_URI = "ui://widget/decoindex-traffic.html";
 
@@ -195,6 +229,19 @@ async function dispatch(
 
     case "tools/call": {
       const name = String(params.name ?? "");
+
+      // Host plumbing first, at either tier: Studio runs this handshake before a
+      // token has been entered anywhere.
+      const host = HOST_TOOLS[name];
+      if (host) {
+        const out = host();
+        return {
+          content: [{ type: "text", text: JSON.stringify(out) }],
+          structuredContent: out,
+          isError: false,
+        };
+      }
+
       // Resolved against this tier's list, not the full one: an anonymous caller
       // that guesses `feedback_update` must get "unknown tool", never a 403 that
       // confirms the tool exists — and never the tool.
