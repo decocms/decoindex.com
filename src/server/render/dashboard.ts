@@ -301,7 +301,15 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
     var d = (window.openai && window.openai.toolOutput) || window.__DATA__ || {};
 
     if (!d.byAgent) {
-      root.appendChild(el("div", { class: "empty", text: "No traffic data." }));
+      // Inside a host frame, "no data" almost always means the handshake has not
+      // completed yet, and saying "no traffic" there reads as a broken service
+      // rather than a pending one.
+      root.appendChild(el("div", {
+        class: "empty",
+        text: window.parent === window
+          ? "No traffic data."
+          : "Waiting for the host to deliver traffic_stats…",
+      }));
       return;
     }
 
@@ -383,8 +391,82 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
     }));
   }
 
+  /**
+   * Three hosts, three ways in, one render().
+   *
+   * - window.__DATA__      GET /mcp/ui inlines the tool result server-side.
+   * - window.openai        OpenAI Apps SDK injects toolOutput on the global.
+   * - postMessage          deco Studio implements MCP Apps: the iframe is an MCP
+   *                        client that JSON-RPCs to window.parent. It handshakes
+   *                        with ui/initialize, then the host pushes results as
+   *                        ui/notifications/tool-result, and the app may also
+   *                        request tools/call itself.
+   *
+   * Written defensively on purpose. The MCP Apps envelope was read off a
+   * working app rather than a published spec, so anything unrecognised is
+   * ignored rather than thrown, and a host that never answers leaves the
+   * "waiting" state on screen instead of a blank frame.
+   */
+  var PROTOCOL = "2026-01-26";
+  var nextId = 1;
+  var pending = {};
+
+  function send(method, params, onResult) {
+    if (window.parent === window) return;
+    var id = nextId++;
+    if (onResult) pending[id] = onResult;
+    try {
+      window.parent.postMessage({ jsonrpc: "2.0", id: id, method: method, params: params || {} }, "*");
+    } catch (e) { /* host gone; the inline and openai paths still apply */ }
+  }
+
+  function adopt(result) {
+    if (!result) return false;
+    // structuredContent is where traffic_stats' object actually lives; some
+    // hosts hand over the whole tool result instead.
+    var data = result.structuredContent || result.toolResult || result;
+    if (data && data.structuredContent) data = data.structuredContent;
+    if (!data || !data.byAgent) return false;
+    window.__DATA__ = data;
+    render();
+    return true;
+  }
+
+  window.addEventListener("message", function (ev) {
+    var msg = ev.data;
+    if (!msg || msg.jsonrpc !== "2.0") return;
+
+    if (msg.id !== undefined && pending[msg.id]) {
+      var cb = pending[msg.id];
+      delete pending[msg.id];
+      cb(msg.result, msg.error);
+      return;
+    }
+    // Host-pushed tool results arrive as a notification, not a reply.
+    if (typeof msg.method === "string" && msg.method.indexOf("tool-result") !== -1) {
+      adopt(msg.params);
+    }
+  });
+
   render();
   window.addEventListener("openai:set_globals", render);
+
+  // Announce the app, then ask for the data ourselves rather than waiting to be
+  // handed it — the host may have already delivered its tool result before this
+  // script ran, in which case the notification never comes.
+  send(
+    "ui/initialize",
+    {
+      appInfo: { name: "decoindex traffic", version: "1.0.0" },
+      appCapabilities: {},
+      protocolVersion: PROTOCOL,
+    },
+    function () {
+      send("tools/call", { name: "traffic_stats", arguments: { days: 14 } }, function (result) {
+        adopt(result);
+      });
+    },
+  );
 })();
 </script>
 </body>

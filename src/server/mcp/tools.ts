@@ -148,7 +148,11 @@ export const tools: ToolDefinition[] = [
       days: { type: "integer", minimum: 1, maximum: 90, default: 7 },
     }),
     annotations: { readOnlyHint: true },
+    // Both spellings, because the two hosts read different keys and ignore the
+    // other's. `ui.resourceUri` is what deco Studio pairs on; the openai/* keys
+    // are the Apps SDK equivalent. See resourcesFor() in mcp/server.ts.
     meta: {
+      ui: { resourceUri: "ui://decoindex/traffic" },
       "openai/outputTemplate": "ui://widget/decoindex-traffic.html",
       "openai/toolInvocation/invoking": "Reading traffic",
       "openai/toolInvocation/invoked": "Traffic loaded",

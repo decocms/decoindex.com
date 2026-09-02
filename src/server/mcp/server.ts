@@ -97,18 +97,32 @@ const HOST_TOOLS: Record<string, () => unknown> = {
   ON_MCP_CONFIGURATION: () => ({}),
 };
 
-/** Must match `_meta["openai/outputTemplate"]` on traffic_stats exactly. */
-export const TRAFFIC_WIDGET_URI = "ui://widget/decoindex-traffic.html";
+/**
+ * The same screen, published twice, because two hosts disagree about how UI is
+ * declared and neither will accept the other's spelling.
+ *
+ * deco Studio implements MCP Apps: mimeType `text/html;profile=mcp-app`, paired
+ * from a tool through `_meta.ui.resourceUri`, and it asserts on that exact
+ * string. OpenAI's Apps SDK wants `text/html+skybridge`, paired through
+ * `_meta["openai/outputTemplate"]`. Publishing only the OpenAI form is why this
+ * widget was invisible in Studio while `resources/list` looked correct.
+ *
+ * One HTML document behind both URIs. The template detects which host it is in
+ * at runtime, so the duplication stops at the manifest.
+ */
+export const TRAFFIC_WIDGET_URI_MCP_APP = "ui://decoindex/traffic";
+export const TRAFFIC_WIDGET_URI_SKYBRIDGE = "ui://widget/decoindex-traffic.html";
+
+const TRAFFIC_RESOURCE = {
+  name: "decoindex traffic",
+  description: "Reads by agent class, surface and storefront, over time.",
+};
 
 function resourcesFor(tier: Tier) {
   if (tier !== "operator") return [];
   return [
-    {
-      uri: TRAFFIC_WIDGET_URI,
-      name: "decoindex traffic",
-      description: "Reads by agent class, surface and storefront, over time.",
-      mimeType: "text/html+skybridge",
-    },
+    { uri: TRAFFIC_WIDGET_URI_MCP_APP, ...TRAFFIC_RESOURCE, mimeType: "text/html;profile=mcp-app" },
+    { uri: TRAFFIC_WIDGET_URI_SKYBRIDGE, ...TRAFFIC_RESOURCE, mimeType: "text/html+skybridge" },
   ];
 }
 
