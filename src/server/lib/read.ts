@@ -2,7 +2,7 @@ import type { Env } from "../env";
 import type { Doc, Storefront } from "../lib/types";
 import { RENDER_VERSION, cacheKey, canonicalUrl, normalizedQuery, type Ext } from "./url";
 import { getDomain, upsertDomain } from "./registry";
-import { docKey, isStale, readDoc, writeDoc, type StoredDoc } from "./store";
+import { FRESH_SECONDS, docKey, isStale, readDoc, writeDoc, type StoredDoc } from "./store";
 import { detectPlatform, resolve } from "../platform";
 import { fetchBrand } from "../platform/brand";
 import { vtexApiOrigin } from "../platform/vtex";
@@ -41,11 +41,24 @@ import {
  */
 export const MARKDOWN_TYPE = "text/plain; charset=utf-8";
 
+/**
+ * `edge` is how long the Cache API keeps its copy, and it is deliberately the
+ * same hour as `FRESH_SECONDS` in lib/store.ts.
+ *
+ * These two are one policy wearing two hats, and they have to agree. The Cache
+ * API sits in *front* of KV: while an entry is still held there, layer 1 returns
+ * and the KV staleness check never runs at all. Set the edge longer than the
+ * freshness window and the window silently stops existing — a document would go
+ * on being served for the edge's full TTL with no refresh ever scheduled.
+ *
+ * A problem document is the exception and stays short: it is a 404 or a block,
+ * not an answer, and it must not outlive the condition that produced it.
+ */
 export const TTL = {
-  product: { browser: 300, edge: 86_400 },
-  listing: { browser: 120, edge: 21_600 },
-  home: { browser: 300, edge: 86_400 },
-  llms: { browser: 300, edge: 86_400 },
+  product: { browser: 300, edge: FRESH_SECONDS },
+  listing: { browser: 120, edge: FRESH_SECONDS },
+  home: { browser: 300, edge: FRESH_SECONDS },
+  llms: { browser: 300, edge: FRESH_SECONDS },
   problem: { browser: 0, edge: 60 },
 } as const;
 
@@ -114,7 +127,7 @@ export async function readThrough(
   const kvKey = docKey(domain, path, normalizedQuery(query)) + (ext === "md" ? "" : `.${ext}`);
   const stored = await readDoc(env, kvKey);
   if (stored) {
-    const stale = isStale(stored, surface);
+    const stale = isStale(stored);
     if (stale) {
       ctx.waitUntil(
         build(env, domain, path, ext, query, rctx)

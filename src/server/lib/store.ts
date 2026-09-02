@@ -24,13 +24,21 @@ export interface StoredDoc {
   redirectTo?: string;
 }
 
-/** How old an entry may get before we refresh it behind the reader's back. */
-const MAX_AGE_SECONDS: Record<string, number> = {
-  product: 86_400,
-  listing: 21_600,
-  home: 86_400,
-  llms: 86_400,
-};
+/**
+ * How old an entry may get before we refresh it behind the reader's back.
+ *
+ * One hour for everything. Catalog facts move on their own schedule — a price
+ * changes at 9am because someone ran a promotion, not because a document aged
+ * out — so a per-surface window was tuning a number nobody could justify. One
+ * knob, and the cost of shortening it is bounded: a stale document is still
+ * served instantly, so this buys freshness with a background refresh rather
+ * than with reader latency.
+ *
+ * This must stay in step with `TTL.*.edge` in lib/read.ts. The Cache API layer
+ * sits in front of KV, so if the edge holds an entry longer than this, the
+ * staleness check here simply never runs for that entry.
+ */
+export const FRESH_SECONDS = 3_600;
 
 /** A genuine miss: expires so a merchant can fix it by publishing the product. */
 const NEGATIVE_TTL = 600;
@@ -60,13 +68,12 @@ export async function writeDoc(env: Env, key: string, doc: StoredDoc): Promise<v
   await env.CACHE.put(key, JSON.stringify(doc), options);
 }
 
-export function isStale(doc: StoredDoc, surface: string): boolean {
+export function isStale(doc: StoredDoc): boolean {
   // A document written by an older renderer is stale no matter how fresh it is.
   // Versioning the KV *key* instead would strand every old entry forever, since
   // index documents are deliberately written without a TTL; this way the reader
   // gets the old body once and the next reader gets the new one.
   if (doc.renderVersion !== RENDER_VERSION) return true;
-  const maxAge = MAX_AGE_SECONDS[surface] ?? 86_400;
   const age = (Date.now() - Date.parse(doc.renderedAt)) / 1000;
-  return !Number.isFinite(age) || age > maxAge;
+  return !Number.isFinite(age) || age > FRESH_SECONDS;
 }
