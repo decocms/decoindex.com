@@ -167,15 +167,32 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
   function hideTip() { tip.style.opacity = "0"; }
 
   // ---- daily stacked series ------------------------------------------------
-  function series(root, byDay) {
+  function series(root, byDay, windowDays) {
     if (!byDay || !byDay.length) return;
-    var days = [], index = {};
+    var index = {};
     byDay.forEach(function (r) {
       var d = r.day;
-      if (!index[d]) { index[d] = { day: d, classes: {}, total: 0 }; days.push(index[d]); }
+      if (!index[d]) index[d] = { day: d, classes: {}, total: 0 };
       index[d].classes[r.ua_class || "unknown"] = Number(r.n || 0);
       index[d].total += Number(r.n || 0);
     });
+
+    /**
+     * Fill the whole window, including days with no events.
+     *
+     * A day with zero reads is a real observation, not a missing category. Drop
+     * it and the bars close ranks, so a fortnight with three active days draws
+     * three adjacent bars and reads as continuous activity — the axis lies about
+     * exactly the thing this panel exists to show.
+     */
+    var days = [];
+    var last = byDay[byDay.length - 1].day;
+    var cursor = new Date(last + "T00:00:00Z");
+    var span = Math.max(Number(windowDays) || byDay.length, 1);
+    for (var i = span - 1; i >= 0; i--) {
+      var t = new Date(cursor.getTime() - i * 86400000).toISOString().slice(0, 10);
+      days.push(index[t] || { day: t, classes: {}, total: 0 });
+    }
     var peak = days.reduce(function (m, d) { return Math.max(m, d.total); }, 0) || 1;
 
     var panel = el("div", { class: "panel" }, [el("h2", { text: "Reads per day" })]);
@@ -329,7 +346,7 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
       ])
     ]));
 
-    series(root, d.byDay);
+    series(root, d.byDay, d.days);
 
     var cols = el("div", { class: "cols" });
     cols.appendChild(ranking("By agent", d.byAgent, "ua_class", {
