@@ -2,6 +2,7 @@ import type { Env } from "../env";
 import { authorize, type Tier } from "./auth";
 import { tools as operatorTools, type ToolDefinition } from "./tools";
 import { publicTools } from "./public";
+import { TRAFFIC_WIDGET_HTML } from "../render/dashboard";
 
 /**
  * MCP over JSON-RPC 2.0 on POST /mcp: initialize, ping, tools/list, tools/call,
@@ -62,6 +63,21 @@ function toolsFor(tier: Tier): ToolDefinition[] {
   return tier === "operator" ? [...publicTools, ...operatorTools] : publicTools;
 }
 
+/** Must match `_meta["openai/outputTemplate"]` on traffic_stats exactly. */
+export const TRAFFIC_WIDGET_URI = "ui://widget/decoindex-traffic.html";
+
+function resourcesFor(tier: Tier) {
+  if (tier !== "operator") return [];
+  return [
+    {
+      uri: TRAFFIC_WIDGET_URI,
+      name: "decoindex traffic",
+      description: "Reads by agent class, surface and storefront, over time.",
+      mimeType: "text/html+skybridge",
+    },
+  ];
+}
+
 interface JsonRpcRequest {
   jsonrpc?: string;
   id?: string | number | null;
@@ -77,6 +93,33 @@ export async function handleMcp(
   const auth = authorize(request, env);
   if (!auth.ok) return auth.response;
   const { tier } = auth;
+
+  /**
+   * `GET /mcp/ui` — the same widget, in a browser.
+   *
+   * A `ui://` resource only renders inside a host that implements the Apps SDK,
+   * which makes the screen impossible to look at while building it and
+   * impossible to check after deploying. Serving the identical HTML over a plain
+   * GET, with the tool's own output inlined, costs one branch and means there is
+   * exactly one template to keep correct rather than a widget and a shadow copy.
+   *
+   * Operator only, and `no-store`: this is our traffic, and it names merchants.
+   */
+  if (request.method === "GET" && new URL(request.url).pathname.replace(/\/+$/, "").endsWith("/ui")) {
+    if (tier !== "operator") {
+      return new Response("Not found", { status: 404 });
+    }
+    const days = Number(new URL(request.url).searchParams.get("days")) || 7;
+    const tool = operatorTools.find((t) => t.name === "traffic_stats")!;
+    const data = await tool.execute(env, { days }, ctx);
+    return new Response(inlineData(TRAFFIC_WIDGET_HTML, data), {
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+        "x-robots-tag": "noindex",
+      },
+    });
+  }
 
   // A plain GET is what you curl to see which tier you are in.
   if (request.method === "GET") {
@@ -139,13 +182,14 @@ async function dispatch(
 
     case "tools/list":
       return {
-        tools: available.map(({ name, title, description, inputSchema, outputSchema, annotations }) => ({
+        tools: available.map(({ name, title, description, inputSchema, outputSchema, annotations, meta }) => ({
           name,
           ...(title ? { title } : {}),
           description,
           inputSchema,
           ...(outputSchema ? { outputSchema } : {}),
           ...(annotations ? { annotations } : {}),
+          ...(meta ? { _meta: meta } : {}),
         })),
       };
 
@@ -172,18 +216,50 @@ async function dispatch(
       };
     }
 
-    // Declared as a capability, so answer rather than erroring. No widget bundle
-    // is registered yet — when one is, it belongs here as a `ui://` resource
-    // with mimeType `text/html+skybridge`, referenced from a tool's
-    // `_meta["openai/outputTemplate"]`.
+    /**
+     * Widgets. A host discovers UI by looking for tools that publish an
+     * `openai/outputTemplate` and matching it against a `ui://` resource with
+     * mimeType `text/html+skybridge` — the URI in the tool and the URI here have
+     * to be the same string or the pairing silently does not happen.
+     *
+     * Listed per tier for the same reason tools are: the traffic screen is an
+     * operator surface, and advertising a resource an anonymous caller cannot
+     * usefully fill would just be a dead entry in their UI.
+     */
     case "resources/list":
-      return { resources: [] };
+      return { resources: resourcesFor(tier) };
+
+    case "resources/read": {
+      const uri = String(params.uri ?? "");
+      const resource = resourcesFor(tier).find((r) => r.uri === uri);
+      if (!resource) throw rpc(-32602, `Unknown resource: ${uri}`);
+      return {
+        contents: [{ uri, mimeType: resource.mimeType, text: TRAFFIC_WIDGET_HTML }],
+      };
+    }
+
     case "prompts/list":
       return { prompts: [] };
 
     default:
       throw rpc(-32601, `Method not found: ${body.method}`);
   }
+}
+
+/**
+ * Inline a tool result as `window.__DATA__` for the browser view.
+ *
+ * `</script>` inside a string literal ends the enclosing script element no
+ * matter where it appears, and `<!--` opens a comment; both are how a JSON blob
+ * becomes markup. Escaping the `<` is the fix that does not depend on the shape
+ * of the data. U+2028/9 are legal in JSON and illegal in a JS string literal.
+ */
+function inlineData(html: string, data: unknown): string {
+  const json = JSON.stringify(data)
+    .replace(/</g, "\\u003c")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+  return html.replace("<div id=\"root\"></div>", `<div id="root"></div>\n<script>window.__DATA__=${json}</script>`);
 }
 
 function rpc(code: number, message: string): Error & { code: number } {

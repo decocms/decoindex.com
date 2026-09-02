@@ -31,6 +31,12 @@ export interface ToolDefinition {
   /** `readOnlyHint` / `openWorldHint` / `destructiveHint` — safety metadata. */
   annotations?: Record<string, unknown>;
   /**
+   * Host-specific metadata, hidden from the model. Carries
+   * `openai/outputTemplate` — the `ui://` URI of this tool's widget, which must
+   * match a resource from `resources/list` exactly or no UI is paired.
+   */
+  meta?: Record<string, unknown>;
+  /**
    * `ctx` carries waitUntil: a read tool writes to KV and logs its event after
    * the response, exactly like the HTTP path.
    */
@@ -135,22 +141,46 @@ export const tools: ToolDefinition[] = [
   },
   {
     name: "traffic_stats",
+    title: "Traffic",
     description:
-      "Reads of the service grouped by agent class and surface. ua_class is the number that matters — reads from openai, anthropic, perplexity and script are the business; browser pageviews are vanity.",
+      "Reads of the service grouped by agent class, surface, storefront and day. ua_class is the number that matters — reads from openai, anthropic, perplexity and script are the business; browser pageviews are vanity. Returns agentReads and total so the split does not have to be recomputed.",
     inputSchema: object({
       days: { type: "integer", minimum: 1, maximum: 90, default: 7 },
     }),
+    annotations: { readOnlyHint: true },
+    meta: {
+      "openai/outputTemplate": "ui://widget/decoindex-traffic.html",
+      "openai/toolInvocation/invoking": "Reading traffic",
+      "openai/toolInvocation/invoked": "Traffic loaded",
+    },
     execute: async (env, input) => {
       const days = num(input, "days") ?? 7;
       const since = new Date(Date.now() - days * 86_400_000).toISOString();
       const q = async (sql: string) => (await env.DB.prepare(sql).bind(since).all()).results ?? [];
-      const [byAgent, bySurface, byDomain, byCache] = await Promise.all([
+      const [byAgent, bySurface, byDomain, byCache, byDay] = await Promise.all([
         q("SELECT ua_class, COUNT(*) n FROM events WHERE ts >= ? AND name='read' GROUP BY 1 ORDER BY n DESC"),
         q("SELECT surface, COUNT(*) n FROM events WHERE ts >= ? AND name='read' GROUP BY 1 ORDER BY n DESC"),
         q("SELECT domain, COUNT(*) n FROM events WHERE ts >= ? AND name='read' AND domain IS NOT NULL GROUP BY 1 ORDER BY n DESC LIMIT 20"),
         q("SELECT json_extract(meta,'$.cache') cache, COUNT(*) n FROM events WHERE ts >= ? AND name='read' GROUP BY 1 ORDER BY n DESC"),
+        // Day *and* class in one pass: a total per day cannot answer "is agent
+        // traffic growing", which is the only question this panel exists for.
+        // substr over date() because ts is stored as a full ISO string.
+        q(`SELECT substr(ts,1,10) day, ua_class, COUNT(*) n
+             FROM events WHERE ts >= ? AND name='read'
+            GROUP BY 1,2 ORDER BY 1 ASC`),
       ]);
-      return { since, days, byAgent, bySurface, byDomain, byCache };
+
+      // The headline. CLAUDE.md is explicit that browser pageviews are vanity
+      // and reads from the model vendors plus scripted clients are the business,
+      // so the split is computed here rather than left for a reader to eyeball
+      // off a list — a dashboard that makes you do the arithmetic gets ignored.
+      const AGENTS = new Set(["openai", "anthropic", "perplexity", "google-ai", "other-crawler", "script"]);
+      const total = byAgent.reduce((s, r) => s + Number((r as { n: number }).n), 0);
+      const agents = byAgent
+        .filter((r) => AGENTS.has(String((r as { ua_class: string }).ua_class)))
+        .reduce((s, r) => s + Number((r as { n: number }).n), 0);
+
+      return { since, days, total, agentReads: agents, byAgent, bySurface, byDomain, byCache, byDay };
     },
   },
   {
