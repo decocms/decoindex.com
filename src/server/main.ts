@@ -272,6 +272,13 @@ app.get("/opt-out", (c) =>
   ),
 );
 
+/**
+ * OpenAI Plugin directory domain verification. One-time challenge, not a
+ * secret — it exists specifically to be read at this fixed public URL, so
+ * committing it is correct, not a leak.
+ */
+app.get("/.well-known/openai-apps-challenge", (c) => c.text("v2E1ZHPwOGh720oMzrX_Un5fhOMgdzkH2f3Ye-XWThc"));
+
 app.get("/support", (c) =>
   c.text(
     [

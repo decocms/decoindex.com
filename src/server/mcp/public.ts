@@ -129,7 +129,7 @@ export const publicTools: ToolDefinition[] = [
       ["url"],
     ),
     outputSchema: READ_OUTPUT,
-    annotations: { readOnlyHint: true, openWorldHint: true },
+    annotations: { readOnlyHint: true, openWorldHint: true, destructiveHint: false },
     execute: async (env, input, ctx) => {
       const url = input.url;
       if (typeof url !== "string") throw rpcError(-32602, "Missing required parameter: url");
@@ -159,7 +159,7 @@ export const publicTools: ToolDefinition[] = [
       ["domain", "q"],
     ),
     outputSchema: READ_OUTPUT,
-    annotations: { readOnlyHint: true, openWorldHint: true },
+    annotations: { readOnlyHint: true, openWorldHint: true, destructiveHint: false },
     execute: async (env, input, ctx) => {
       const domain = normalizeDomain(String(input.domain ?? ""));
       if (!domain) throw rpcError(-32602, "Missing or invalid parameter: domain");
@@ -200,7 +200,9 @@ export const publicTools: ToolDefinition[] = [
       },
       total: { type: "integer" },
     }),
-    annotations: { readOnlyHint: true },
+    // Reads our own registry, not the open web — the one tool here where
+    // openWorldHint is correctly false, not just unset.
+    annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
     execute: async (env, input) => {
       const limit = typeof input.limit === "number" ? Math.min(Math.max(input.limit, 1), 200) : 50;
       const rows = await listActiveDomains(env, limit);
