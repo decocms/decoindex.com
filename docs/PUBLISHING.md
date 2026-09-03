@@ -25,33 +25,29 @@ The larger finding stands: the whole DO-plus-ingest-pipeline architecture that
 resolver. `README.md` and `CLAUDE.md` now describe that, and `git log` is the
 source of truth again.
 
-**Still true and still worth fixing: there is no CI/CD.** No GitHub Deployment,
-check-run or commit status exists on this repo. Every deploy has been a direct
-`wrangler deploy`. The `CLAUDE.md` loop ("implement → deploy → record a memory")
-never gated deploy on a commit, which is exactly how a local branch ended up
-being production. Wiring Workers Builds to `main` is the durable fix.
+**Fixed since: `main` now builds and deploys on push.** This section used to end
+by noting there was no CI/CD, and that the absence was how a local branch became
+production. That is closed — a merged commit is a deploy, and `main` is the only
+thing that ships.
 
-**Before running `npm run deploy`:** confirm `git log` matches what is live
-(`npx wrangler deployments list`), and deploy from `main`, not from a workspace
-branch.
+Do not run `wrangler deploy` by hand any more. A manual deploy from a dirty tree
+re-opens exactly the drift this document was written about.
 
-## 1. Deploy (once reconciled)
+## 1. Deploy — push to `main`
+
+That is the whole procedure. The build runs on push and ships it.
+
+Migrations are the one thing the build does not do, because applying schema to a
+live database is not something to trigger by merging:
 
 ```bash
-cp .dev.vars.example .dev.vars   # only if not already deployed once
 npm run db:remote                # idempotent — applies any new migrations
-npm run deploy
 ```
 
-Confirm the resource IDs in `wrangler.jsonc` are real, not `REPLACE_ME`
-(`d1_databases[0].database_id`, `kv_namespaces[0].id`) — `wrangler deploy`
-will fail loudly if not, so this isn't a silent-failure risk, just a
-first-deploy checklist item.
-
-Then smoke-test against the real domain (same script this PR added):
+Then verify against the real origin once the build lands:
 
 ```bash
-npm run smoke -- https://decoindex.com
+npm run smoke https://decoindex.com
 ```
 
 ## 2. ChatGPT — works immediately, no submission needed
@@ -61,9 +57,10 @@ Developer mode doesn't require any review. Once deployed:
 1. ChatGPT → Settings → Apps & Connectors → Advanced → enable **Developer
    mode**.
 2. Create app → MCP server URL `https://decoindex.com/mcp` → Create.
-3. Confirm the model calls `search_storefront` and gets a product back. No
-   widget yet — `render/widget.ts` exists but is not registered as a `ui://`
-   resource, so results render as text. Wiring it is a separate task.
+3. Confirm the model calls `search_storefront` and gets a product back. The
+   traffic screen is registered as a `ui://` resource in both dialects (see
+   "The MCP surface" in `CLAUDE.md`); product results still render as text,
+   since the read tools return Markdown rather than a structured product list.
 
 This alone satisfies "usable in ChatGPT" — everything past here is about
 **public discoverability** (showing up in ChatGPT's app picker for users who

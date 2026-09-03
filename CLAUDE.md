@@ -135,13 +135,38 @@ as "cannot be installed". It read that way for a while, and blocked the app.
 guess at `feedback_update` gets "unknown tool" rather than a 403 that would
 confirm the tool exists.
 
+Host UI is published in **two dialects, because two hosts disagree and neither
+reads the other's**. Get this wrong and the screen is invisible rather than
+broken, which is much harder to notice:
+
+| | deco Studio (MCP Apps) | OpenAI (Apps SDK) |
+|---|---|---|
+| resource mimeType | `text/html;profile=mcp-app` | `text/html+skybridge` |
+| tool pairing | `_meta.ui.resourceUri` | `_meta["openai/outputTemplate"]` |
+| data delivery | JSON-RPC over `postMessage` | `window.openai.toolOutput` |
+
+`render/dashboard.ts` is published under both URIs and detects its host at
+runtime, so the duplication stops at the manifest.
+
+**The MCP Apps handshake has three steps and the third is the one people miss:**
+request `ui/initialize` (protocol `2026-01-26`), *then send the
+`ui/notifications/initialized` notification*, and only then call tools. The host
+holds its loading spinner until that notification arrives — an app that
+initializes and goes straight to `tools/call` looks connected from its own side
+and renders "loading app…" forever. The host also sends requests (`ping` at
+minimum); answer every one, because an unanswered request strands the host.
+
+Opening a view does not deliver a tool result — the host only pushes one when a
+user invoked the tool — so an app fetches its own data with `tools/call` rather
+than waiting to be handed it.
+
+`GET /mcp/ui` serves the same HTML with data inlined, which is the only way to
+look at the screen outside a host.
+
 For the Apps SDK specifically: tool descriptors carry `title`, `outputSchema` and
 `annotations.readOnlyHint`; `initialize` echoes the client's `protocolVersion`
 rather than asserting ours, because a host that asked for an older revision and
-is answered with a newer one treats the mismatch as fatal. A widget, when one
-lands, is a `ui://` resource with mimeType `text/html+skybridge` referenced from
-a tool's `_meta["openai/outputTemplate"]` — `src/server/render/widget.ts` is the
-inline UI already built for that, still unwired.
+is answered with a newer one treats the mismatch as fatal.
 
 That widget renders a **third-party merchant's** catalog data inside a sandboxed
 iframe on someone else's platform — treat every field in it as
@@ -194,6 +219,27 @@ confirm your own bet: `reviewed_by` must differ from `author`.
 **The metric that matters is `ua_class`.** Pageviews from browsers are vanity.
 Reads from `openai`, `anthropic`, `perplexity` and `script` are the business.
 If that number is flat after a change, the change did nothing.
+
+## Shipping
+
+**`main` deploys itself. Never run `wrangler deploy` by hand.**
+
+A push to `main` triggers the build, so a merged commit is a deploy. The one
+thing that must stay true is that `main` is always what is live — the drift that
+cost a day earlier came from exactly the opposite habit, a local branch running
+in production while `git log` described something else. A manual deploy
+re-creates that gap the moment it succeeds from a dirty tree.
+
+So: land it on `main` and let the build ship it. Verify after, against the real
+origin:
+
+```
+npm run check                     # tsc, before pushing
+npm run smoke https://decoindex.com   # after the build lands
+```
+
+If something must go out without a commit, that is an incident, not a workflow —
+say so out loud rather than reaching for the CLI.
 
 ## Autonomy ends at consequence
 

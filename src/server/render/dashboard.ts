@@ -394,37 +394,51 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
   /**
    * Three hosts, three ways in, one render().
    *
-   * - window.__DATA__      GET /mcp/ui inlines the tool result server-side.
-   * - window.openai        OpenAI Apps SDK injects toolOutput on the global.
-   * - postMessage          deco Studio implements MCP Apps: the iframe is an MCP
-   *                        client that JSON-RPCs to window.parent. It handshakes
-   *                        with ui/initialize, then the host pushes results as
-   *                        ui/notifications/tool-result, and the app may also
-   *                        request tools/call itself.
+   * - window.__DATA__   GET /mcp/ui inlines the tool result server-side.
+   * - window.openai     OpenAI Apps SDK injects toolOutput on the global.
+   * - postMessage       deco Studio implements MCP Apps: the iframe is itself an
+   *                     MCP client speaking JSON-RPC to window.parent.
    *
-   * Written defensively on purpose. The MCP Apps envelope was read off a
-   * working app rather than a published spec, so anything unrecognised is
-   * ignored rather than thrown, and a host that never answers leaves the
-   * "waiting" state on screen instead of a blank frame.
+   * The Studio handshake is not "send ui/initialize and start working". Read off
+   * the ext-apps client a working app ships:
+   *
+   *   1. request  ui/initialize            -> host replies with hostInfo/caps
+   *   2. notify   ui/notifications/initialized
+   *   3. only then may the app call tools
+   *
+   * Step 2 is the one that matters and the one this was missing. The host holds
+   * its loading state until that notification arrives, so an app that sends the
+   * request and goes straight to tools/call renders "loading" forever while
+   * looking, from the app side, like it connected fine.
+   *
+   * The host also *sends* requests, "ping" at minimum. Leaving those unanswered
+   * strands the host waiting on a reply, so anything addressed to us gets a
+   * response: {} for ping, a proper JSON-RPC error for anything unrecognised.
+   * Silence is the one thing a request must never get.
    */
   var PROTOCOL = "2026-01-26";
   var nextId = 1;
   var pending = {};
+  var host = window.parent !== window ? window.parent : null;
 
-  function send(method, params, onResult) {
-    if (window.parent === window) return;
+  function post(msg) {
+    if (!host) return;
+    try { host.postMessage(msg, "*"); } catch (e) { /* frame gone */ }
+  }
+  function request(method, params, onResult) {
     var id = nextId++;
-    if (onResult) pending[id] = onResult;
-    try {
-      window.parent.postMessage({ jsonrpc: "2.0", id: id, method: method, params: params || {} }, "*");
-    } catch (e) { /* host gone; the inline and openai paths still apply */ }
+    pending[id] = onResult || function () {};
+    post({ jsonrpc: "2.0", id: id, method: method, params: params || {} });
+  }
+  function notify(method, params) {
+    post({ jsonrpc: "2.0", method: method, params: params || {} });
   }
 
-  function adopt(result) {
-    if (!result) return false;
-    // structuredContent is where traffic_stats' object actually lives; some
-    // hosts hand over the whole tool result instead.
-    var data = result.structuredContent || result.toolResult || result;
+  function adopt(payload) {
+    if (!payload) return false;
+    // structuredContent is where traffic_stats' object lives; hosts differ on
+    // whether they hand over the result or the whole envelope.
+    var data = payload.structuredContent || payload.toolResult || payload;
     if (data && data.structuredContent) data = data.structuredContent;
     if (!data || !data.byAgent) return false;
     window.__DATA__ = data;
@@ -433,16 +447,30 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
   }
 
   window.addEventListener("message", function (ev) {
+    // The transport on the other side filters by source; match it, so a message
+    // from some other frame on the page cannot drive this app.
+    if (host && ev.source !== host) return;
     var msg = ev.data;
     if (!msg || msg.jsonrpc !== "2.0") return;
 
-    if (msg.id !== undefined && pending[msg.id]) {
+    // A reply to something we asked.
+    if (msg.id !== undefined && msg.id !== null && pending[msg.id]) {
       var cb = pending[msg.id];
       delete pending[msg.id];
       cb(msg.result, msg.error);
       return;
     }
-    // Host-pushed tool results arrive as a notification, not a reply.
+    // A request *from* the host. Must be answered, always.
+    if (typeof msg.method === "string" && msg.id !== undefined && msg.id !== null) {
+      if (msg.method === "ping") post({ jsonrpc: "2.0", id: msg.id, result: {} });
+      else post({
+        jsonrpc: "2.0",
+        id: msg.id,
+        error: { code: -32601, message: "Method not found: " + msg.method },
+      });
+      return;
+    }
+    // A notification. Tool results may be pushed rather than returned.
     if (typeof msg.method === "string" && msg.method.indexOf("tool-result") !== -1) {
       adopt(msg.params);
     }
@@ -451,22 +479,28 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
   render();
   window.addEventListener("openai:set_globals", render);
 
-  // Announce the app, then ask for the data ourselves rather than waiting to be
-  // handed it — the host may have already delivered its tool result before this
-  // script ran, in which case the notification never comes.
-  send(
-    "ui/initialize",
-    {
-      appInfo: { name: "decoindex traffic", version: "1.0.0" },
-      appCapabilities: {},
-      protocolVersion: PROTOCOL,
-    },
-    function () {
-      send("tools/call", { name: "traffic_stats", arguments: { days: 14 } }, function (result) {
-        adopt(result);
-      });
-    },
-  );
+  if (host) {
+    request(
+      "ui/initialize",
+      {
+        appInfo: { name: "decoindex-traffic", version: "1.0.0" },
+        appCapabilities: {},
+        protocolVersion: PROTOCOL,
+      },
+      function (result, error) {
+        if (error) return;
+        // Completes the handshake. Until this lands the host stays on its
+        // loading state no matter what else the app does.
+        notify("ui/notifications/initialized");
+        // Fetch our own data rather than waiting to be handed it: the host only
+        // pushes a tool-result when the user invoked the tool, and opening the
+        // view from the sidebar does not.
+        request("tools/call", { name: "traffic_stats", arguments: { days: 14 } }, function (r) {
+          adopt(r);
+        });
+      },
+    );
+  }
 })();
 </script>
 </body>
