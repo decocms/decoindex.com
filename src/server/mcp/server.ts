@@ -192,6 +192,23 @@ async function route(
     });
   }
 
+  /**
+   * A Streamable HTTP client opens `GET /mcp` with `Accept: text/event-stream`
+   * to receive server-initiated messages. We have none, so the spec's answer is
+   * 405 — and 405 is also the only answer that makes the client stop. Answering
+   * 200 with a finite JSON body reads as a stream that dropped on connect: the
+   * client reconnects, gets another instant "drop", and loops with nothing to
+   * back off from. That cost 1.9M invocations over twelve hours on Sep 2, at a
+   * flat 44 req/s, the day the public tier stopped returning 401 to anonymous
+   * GETs and removed the brake.
+   */
+  if (request.method === "GET" && (request.headers.get("accept") ?? "").includes("text/event-stream")) {
+    return new Response("This endpoint does not offer a server-initiated stream. POST JSON-RPC to /mcp.", {
+      status: 405,
+      headers: { allow: "POST" },
+    });
+  }
+
   // A plain GET is what you curl to see which tier you are in.
   if (request.method === "GET") {
     return Response.json({
