@@ -4,6 +4,7 @@ import { resolve } from "../platform";
 import { vtexApiOrigin } from "../platform/vtex";
 import { getDomain } from "../lib/registry";
 import { normalizeDomain } from "../lib/url";
+import { robotsTxt } from "../lib/robots";
 import type { Storefront } from "../lib/types";
 import {
   KINDS,
@@ -184,7 +185,10 @@ export const tools: ToolDefinition[] = [
         .filter((r) => AGENTS.has(String((r as { ua_class: string }).ua_class)))
         .reduce((s, r) => s + Number((r as { n: number }).n), 0);
 
-      return { since, days, total, agentReads: agents, byAgent, bySurface, byDomain, byCache, byDay };
+      // What crawlers are told, next to what they did — so a class that looks wrong
+      // on the chart can be checked against the rule that should govern it.
+      const robots = robotsTxt(env.PUBLIC_ORIGIN);
+      return { since, days, total, agentReads: agents, byAgent, bySurface, byDomain, byCache, byDay, robots };
     },
   },
   {

@@ -102,6 +102,9 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
   table{border-collapse:collapse;width:100%;font-size:12px;margin-top:8px}
   th,td{border:1px solid var(--hairline);padding:4px 7px;text-align:left}
   th{background:var(--paper-3);font-weight:500}
+  pre.robots{font-family:var(--mono);font-size:11.5px;line-height:1.5;margin:8px 0 0;
+    padding:10px 12px;background:var(--paper-3);border:1px solid var(--hairline);
+    border-radius:8px;overflow-x:auto;white-space:pre}
   td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
 
   .tip{position:fixed;pointer-events:none;z-index:9;background:var(--ink);color:#fff;
@@ -383,6 +386,13 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
     root.appendChild(legend);
 
     root.appendChild(table("Table view — by agent", d.byAgent, "ua_class"));
+
+    if (d.robots) {
+      var rb = el("details");
+      rb.appendChild(el("summary", { text: "robots.txt — what crawlers are told" }));
+      rb.appendChild(el("pre", { class: "robots", text: String(d.robots) }));
+      root.appendChild(rb);
+    }
 
     root.appendChild(el("div", {
       class: "note",
