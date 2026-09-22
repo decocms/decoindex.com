@@ -15,6 +15,8 @@ export interface Env {
    * and unconfigured deploys degrade instead of crashing.
    */
   READ_THROUGH?: RateLimiter;
+  /** Cold reads per client IP, across all domains. Cached reads never count. */
+  CALLER_LIMIT?: RateLimiter;
   /** Guards the public feedback endpoint, which is unauthenticated by design. */
   FEEDBACK_LIMIT?: RateLimiter;
 

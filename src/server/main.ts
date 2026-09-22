@@ -6,7 +6,7 @@ import { readDoc, docKey } from "./lib/store";
 import { classifySurface, readThrough } from "./lib/read";
 import { BadReport, submitFeedback } from "./lib/feedback";
 import { handleMcp } from "./mcp/server";
-import { robotsTxt } from "./lib/robots";
+import { isBlockedCrawler, robotsTxt } from "./lib/robots";
 import { SAMPLE, landingHtml } from "./render/landing";
 import {
   benchmarkHtml,
@@ -26,6 +26,21 @@ import benchErrand from "../../bench/results/models-errand.json";
 type Ctx = { Bindings: Env };
 const app = new Hono<Ctx>();
 
+// Refused before any cache, KV or upstream work. /robots.txt stays readable so a
+// blocked crawler can still learn why. Logged as `blocked`, not `read`, so the
+// dashboard counts reads and this stays queryable.
+app.use("*", async (c, next) => {
+  const ua = c.req.header("user-agent");
+  if (c.req.path === "/robots.txt" || !isBlockedCrawler(ua)) return next();
+  track(c.env, c.executionCtx, {
+    name: "blocked",
+    ua,
+    country: (c.req.raw.cf?.country as string) ?? undefined,
+  });
+  return c.text("Crawling is disallowed; see /robots.txt.\n", 403, {
+    "x-robots-tag": "noindex",
+  });
+});
 
 app.get("/healthz", (c) => c.text("ok"));
 
@@ -347,7 +362,7 @@ app.get("*", async (c) => {
   const result = await readThrough(c.env, c.executionCtx, domain, path, ext, url.searchParams, {
     publicOrigin: c.env.PUBLIC_ORIGIN,
     attribution: { param: c.env.ATTRIBUTION_PARAM, value: c.env.ATTRIBUTION_VALUE },
-  });
+  }, c.req.header("cf-connecting-ip"));
 
   logRead(c.env, c.executionCtx, c.req.raw, {
     domain,

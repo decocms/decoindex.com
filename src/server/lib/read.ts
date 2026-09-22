@@ -95,6 +95,7 @@ export async function readThrough(
   ext: Ext,
   query: URLSearchParams,
   rctx: RenderCtx,
+  caller?: string,
 ): Promise<ReadResult> {
   const surface = classifySurface(path);
 
@@ -146,6 +147,14 @@ export async function readThrough(
   }
 
   // Layer 3: resolve it live, once.
+  //
+  // Per caller, on top of build()'s per-domain limit: one client resolving cold
+  // URLs at crawl speed is the amplifier, whichever stores it spreads across.
+  // Only cold reads count, and the 429 is never written to KV.
+  if (caller && env.CALLER_LIMIT && !(await env.CALLER_LIMIT.limit({ key: caller })).success) {
+    const doc = problemDoc(domain, path, "rate-limited", 429, rctx);
+    return { doc, cache: "miss", response: toResponse(doc, surface, env.PUBLIC_ORIGIN) };
+  }
   const fresh = await build(env, domain, path, ext, query, rctx);
   const response = toResponse(fresh, surface, env.PUBLIC_ORIGIN);
   ctx.waitUntil(writeDoc(env, kvKey, fresh));
@@ -183,6 +192,19 @@ export function toResponse(doc: StoredDoc, surface: string, origin: string): Res
   });
 }
 
+type ProblemKind = Parameters<typeof renderProblem>[2];
+
+function problemDoc(domain: string, path: string, kind: ProblemKind, status: number, rctx: RenderCtx): StoredDoc {
+  return {
+    body: renderProblem(domain, path, kind, rctx),
+    status,
+    contentType: MARKDOWN_TYPE,
+    canonical: `https://${domain}${path}`,
+    renderedAt: new Date().toISOString(),
+    renderVersion: RENDER_VERSION,
+  };
+}
+
 /**
  * Resolve one URL into a stored document. This is the only place in the read
  * path that touches a merchant, and it is bounded: one detection handshake per
@@ -196,14 +218,7 @@ export async function build(
   query: URLSearchParams,
   rctx: RenderCtx,
 ): Promise<StoredDoc> {
-  const problem = (kind: Parameters<typeof renderProblem>[2], status: number): StoredDoc => ({
-    body: renderProblem(domain, path, kind, rctx),
-    status,
-    contentType: MARKDOWN_TYPE,
-    canonical: `https://${domain}${path}`,
-    renderedAt: new Date().toISOString(),
-    renderVersion: RENDER_VERSION,
-  });
+  const problem = (kind: ProblemKind, status: number) => problemDoc(domain, path, kind, status, rctx);
 
   let row = await getDomain(env, domain);
 

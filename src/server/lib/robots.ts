@@ -1,4 +1,15 @@
 /**
+ * Bulk crawlers that read on no user's behalf. Disallowed in robots.txt AND
+ * refused with 403 — robots.txt is a request, this is the enforcement. Amazonbot
+ * crawled at a flat 30/min from 2026-09-07, ~91% cold misses, every one an
+ * upstream call on a merchant: invariant 1's amplifier, by volume. The others
+ * are training crawls of the same shape. Plain Applebot (Siri) is not here.
+ */
+export const BLOCKED_CRAWLERS = ["Amazonbot", "Bytespider", "CCBot", "meta-externalagent"];
+const BLOCKED_RE = new RegExp(BLOCKED_CRAWLERS.join("|"), "i");
+export const isBlockedCrawler = (ua?: string) => !!ua && BLOCKED_RE.test(ua);
+
+/**
  * One source for robots.txt: served at /robots.txt and shown on the traffic
  * dashboard, so what the dashboard claims we allow is what crawlers actually read.
  */
@@ -35,10 +46,7 @@ export function robotsTxt(origin: string): string {
       "User-agent: Google-Extended",
       "Allow: /",
       "",
-      // Bulk crawlers that read nothing on a user's behalf. Amazonbot crawled
-      // at a flat 30/min from 2026-09-07, ~91% cold misses — every one an
-      // upstream call on a merchant. That is invariant 1's amplifier, by volume.
-      "User-agent: Amazonbot",
+      ...BLOCKED_CRAWLERS.map((b) => `User-agent: ${b}`),
       "Disallow: /",
       "",
       "User-agent: *",

@@ -38,6 +38,13 @@
       "simple": { "limit": 60, "period": 60 }
     },
     {
+      // Cold reads per client IP, all domains together. A person or agent
+      // browsing a store stays far under it; a crawl does not.
+      "name": "CALLER_LIMIT",
+      "namespace_id": "1003",
+      "simple": { "limit": 20, "period": 60 }
+    },
+    {
       "name": "FEEDBACK_LIMIT",
       "namespace_id": "1002",
       "simple": { "limit": 20, "period": 60 }
