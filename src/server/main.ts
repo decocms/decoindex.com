@@ -129,6 +129,12 @@ app.get("/robots.txt", (c) =>
       "User-agent: Google-Extended",
       "Allow: /",
       "",
+      // Bulk crawlers that read nothing on a user's behalf. Amazonbot crawled
+      // at a flat 30/min from 2026-09-07, ~91% cold misses — every one an
+      // upstream call on a merchant. That is invariant 1's amplifier, by volume.
+      "User-agent: Amazonbot",
+      "Disallow: /",
+      "",
       "User-agent: *",
       "Allow: /",
       "",
