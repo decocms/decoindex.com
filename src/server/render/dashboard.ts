@@ -132,9 +132,9 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
   };
   /* Not agents. Grey on purpose: they are the vanity metric, present for context
      and never competing for attention with the classes that matter. */
-  var OTHER_COLOR = { browser: "#9a948f", "search-engine": "#bdb7b2", unknown: "#d8d3ce" };
+  var OTHER_COLOR = { amazonbot: "#7d7772", browser: "#9a948f", "search-engine": "#bdb7b2", unknown: "#d8d3ce" };
   var ORDER = ["openai","anthropic","perplexity","google-ai","other-crawler","script",
-               "browser","search-engine","unknown"];
+               "amazonbot","browser","search-engine","unknown"];
 
   function colorFor(k) { return AGENT_COLOR[k] || OTHER_COLOR[k] || "#d8d3ce"; }
   function isAgent(k) { return Object.prototype.hasOwnProperty.call(AGENT_COLOR, k); }

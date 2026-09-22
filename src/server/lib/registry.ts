@@ -153,7 +153,10 @@ export function classifyClient(ua?: string): string {
   if (/claude-user|claudebot|claude-searchbot|claude-web|anthropic/.test(u)) return "anthropic";
   if (/perplexity/.test(u)) return "perplexity";
   if (/google-extended|googleother|gemini/.test(u)) return "google-ai";
-  if (/bytespider|amazonbot|ccbot|applebot|meta-externalagent/.test(u)) return "other-crawler";
+  // Its own bucket, and not an agent: a bulk crawl that was ~99% of reads until
+  // robots.txt disallowed it, and would otherwise hide inside other-crawler.
+  if (/amazonbot/.test(u)) return "amazonbot";
+  if (/bytespider|ccbot|applebot|meta-externalagent/.test(u)) return "other-crawler";
   if (/googlebot|bingbot|duckduckbot|yandex|baiduspider/.test(u)) return "search-engine";
   if (/curl|wget|python|node-fetch|axios|go-http|undici|okhttp/.test(u)) return "script";
   if (/mozilla|chrome|safari|firefox/.test(u)) return "browser";
