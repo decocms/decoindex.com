@@ -21,6 +21,22 @@ import {
  * actually reading.
  */
 
+/**
+ * The dimensions traffic_stats can be narrowed by. Column expressions are ours,
+ * never the caller's; only the values are bound. ua/network/bot/path live in
+ * meta and exist only on events recorded from 2026-09-30.
+ */
+const TRAFFIC_FILTERS = {
+  ua_class: { column: "ua_class", description: "Client class, e.g. openai, browser, datacenter." },
+  domain: { column: "domain", description: "Storefront domain." },
+  surface: { column: "surface", description: "product | listing | home | llms | root-redirect" },
+  country: { column: "country", description: "ISO country code." },
+  network: { column: "json_extract(meta,'$.aso')", description: "Network (ASN organisation) name." },
+  bot: { column: "json_extract(meta,'$.bot')", description: "Cloudflare verified-bot category." },
+  ua: { column: "json_extract(meta,'$.ua')", description: "Exact user-agent string." },
+  path: { column: "json_extract(meta,'$.path')", description: "Exact decoindex path, with query." },
+} as const;
+
 export interface ToolDefinition {
   name: string;
   /** Human-readable label. Apps SDK hosts show this instead of the name. */
@@ -144,9 +160,14 @@ export const tools: ToolDefinition[] = [
     name: "traffic_stats",
     title: "Traffic",
     description:
-      "Reads of the service grouped by agent class, surface, storefront and day. ua_class is the number that matters — reads from openai, anthropic, perplexity and script are the business; browser pageviews are vanity. Returns agentReads and total so the split does not have to be recomputed.",
+      "Reads of the service grouped by agent class, surface, storefront, time, country, network, verified-bot category, user agent and path — every breakdown narrowed by the same optional filters and date range. ua_class is the number that matters — reads from openai, anthropic, perplexity and script are the business; browser pageviews are vanity. Returns agentReads and total so the split does not have to be recomputed.",
     inputSchema: object({
-      days: { type: "integer", minimum: 1, maximum: 90, default: 7 },
+      days: { type: "integer", minimum: 1, maximum: 90, default: 7, description: "Window ending now. Ignored when `from` is given." },
+      from: { type: "string", description: "Start date, YYYY-MM-DD (UTC, inclusive)." },
+      to: { type: "string", description: "End date, YYYY-MM-DD (UTC, inclusive). Defaults to today." },
+      ...Object.fromEntries(
+        Object.entries(TRAFFIC_FILTERS).map(([k, f]) => [k, { type: "string", description: f.description }]),
+      ),
     }),
     annotations: { readOnlyHint: true },
     // Both spellings, because the two hosts read different keys and ignore the
@@ -159,21 +180,57 @@ export const tools: ToolDefinition[] = [
       "openai/toolInvocation/invoked": "Traffic loaded",
     },
     execute: async (env, input) => {
-      const days = num(input, "days") ?? 7;
-      const since = new Date(Date.now() - days * 86_400_000).toISOString();
-      const q = async (sql: string) => (await env.DB.prepare(sql).bind(since).all()).results ?? [];
-      const [byAgent, bySurface, byDomain, byCache, byDay] = await Promise.all([
-        q("SELECT ua_class, COUNT(*) n FROM events WHERE ts >= ? AND name='read' GROUP BY 1 ORDER BY n DESC"),
-        q("SELECT surface, COUNT(*) n FROM events WHERE ts >= ? AND name='read' GROUP BY 1 ORDER BY n DESC"),
-        q("SELECT domain, COUNT(*) n FROM events WHERE ts >= ? AND name='read' AND domain IS NOT NULL GROUP BY 1 ORDER BY n DESC LIMIT 20"),
-        q("SELECT json_extract(meta,'$.cache') cache, COUNT(*) n FROM events WHERE ts >= ? AND name='read' GROUP BY 1 ORDER BY n DESC"),
-        // Day *and* class in one pass: a total per day cannot answer "is agent
-        // traffic growing", which is the only question this panel exists for.
-        // substr over date() because ts is stored as a full ISO string.
-        q(`SELECT substr(ts,1,10) day, ua_class, COUNT(*) n
-             FROM events WHERE ts >= ? AND name='read'
-            GROUP BY 1,2 ORDER BY 1 ASC`),
-      ]);
+      const DAY = 86_400_000;
+      const date = (k: string) => {
+        const v = str(input, k);
+        return v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined;
+      };
+      const from = date("from");
+      const to = date("to");
+      const until = to ? new Date(Date.parse(to) + DAY).toISOString() : new Date().toISOString();
+      const days = from ? undefined : Math.min(Math.max(num(input, "days") ?? 7, 1), 90);
+      const since = from ? new Date(from).toISOString() : new Date(Date.parse(until) - days! * DAY).toISOString();
+
+      // Every panel answers under the same filters, so clicking a bar narrows
+      // the whole screen rather than one list. Values are bound, never spliced.
+      const filters: Record<string, string> = {};
+      const where = ["name='read'", "ts >= ?", "ts < ?"];
+      const binds: unknown[] = [since, until];
+      for (const [k, f] of Object.entries(TRAFFIC_FILTERS)) {
+        const v = str(input, k);
+        if (!v) continue;
+        filters[k] = v;
+        where.push(`${f.column} = ?`);
+        binds.push(v);
+      }
+      const W = where.join(" AND ");
+      const q = async (select: string, group: string, tail = "ORDER BY n DESC") =>
+        (await env.DB.prepare(`SELECT ${select}, COUNT(*) n FROM events WHERE ${W} GROUP BY ${group} ${tail}`)
+          .bind(...binds)
+          .all()).results ?? [];
+
+      // Two days or less reads better by the hour: a 1d window drawn by day is
+      // one bar, which answers nothing.
+      const hourly = Date.parse(until) - Date.parse(since) <= 2 * DAY;
+      const bucket = hourly ? "hour" : "day";
+      const col = (k: keyof typeof TRAFFIC_FILTERS) => TRAFFIC_FILTERS[k].column;
+
+      const [byAgent, bySurface, byDomain, byCache, byTime, byCountry, byNetwork, byBot, byUa, byPath] =
+        await Promise.all([
+          q("ua_class", "1"),
+          q("surface", "1"),
+          q("domain", "1", "ORDER BY n DESC LIMIT 20"),
+          q("json_extract(meta,'$.cache') cache", "1"),
+          // Time *and* class in one pass: a total per bucket cannot answer "is
+          // agent traffic growing", which is the question this panel exists for.
+          // substr over date() because ts is stored as a full ISO string.
+          q(`substr(ts,1,${hourly ? 13 : 10}) t, ua_class`, "1,2", "ORDER BY 1 ASC"),
+          q(`${col("country")} country`, "1", "ORDER BY n DESC LIMIT 15"),
+          q(`${col("network")} network, json_extract(meta,'$.asn') asn`, "1,2", "ORDER BY n DESC LIMIT 15"),
+          q(`${col("bot")} bot`, "1", "ORDER BY n DESC LIMIT 10"),
+          q(`${col("ua")} ua`, "1", "ORDER BY n DESC LIMIT 15"),
+          q(`${col("path")} path`, "1", "ORDER BY n DESC LIMIT 15"),
+        ]);
 
       // The headline. CLAUDE.md is explicit that browser pageviews are vanity
       // and reads from the model vendors plus scripted clients are the business,
@@ -188,7 +245,26 @@ export const tools: ToolDefinition[] = [
       // What crawlers are told, next to what they did — so a class that looks wrong
       // on the chart can be checked against the rule that should govern it.
       const robots = robotsTxt(env.PUBLIC_ORIGIN);
-      return { since, days, total, agentReads: agents, byAgent, bySurface, byDomain, byCache, byDay, robots };
+      return {
+        since,
+        until,
+        days,
+        bucket,
+        query: { days, from, to, ...filters },
+        total,
+        agentReads: agents,
+        byAgent,
+        bySurface,
+        byDomain,
+        byCache,
+        byTime,
+        byCountry,
+        byNetwork,
+        byBot,
+        byUa,
+        byPath,
+        robots,
+      };
     },
   },
   {

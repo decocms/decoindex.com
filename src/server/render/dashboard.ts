@@ -107,6 +107,30 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
     border-radius:8px;overflow-x:auto;white-space:pre}
   td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
 
+  /* ---- controls ---- */
+  .bar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:12px}
+  .segs{display:inline-flex;border:1px solid var(--hairline);border-radius:9px;overflow:hidden;background:var(--paper-2)}
+  .segs button{font:inherit;font-size:12px;border:0;background:none;color:var(--muted);padding:6px 11px;
+    cursor:pointer;font-family:var(--mono)}
+  .segs button+button{border-left:1px solid var(--hairline)}
+  .segs button:hover{background:var(--paper-3);color:var(--ink)}
+  .segs button.on{background:var(--ink);color:#fff}
+  .dates{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--faint)}
+  .dates input{font:inherit;font-size:12px;color:var(--ink);border:1px solid var(--hairline);
+    border-radius:8px;padding:5px 7px;background:var(--paper)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .chip{font:inherit;font-size:12px;display:inline-flex;gap:6px;align-items:center;max-width:100%;
+    border:1px solid var(--hairline);background:var(--paper-3);border-radius:999px;padding:4px 10px;cursor:pointer;color:var(--ink)}
+  .chip .ck{color:var(--muted)}
+  .chip .cv{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px}
+  .chip:hover{border-color:var(--ink)}
+  .chip.clear{background:none;color:var(--muted)}
+  button:focus-visible,input:focus-visible,.click:focus-visible{outline:2px solid var(--soft);outline-offset:2px}
+  .r.click,.col.click{cursor:pointer}
+  .r.click:hover .name{text-decoration:underline}
+  .r.wide{grid-template-columns:minmax(0,3fr) minmax(60px,1fr) auto}
+  body.loading #root{opacity:.5;pointer-events:none;transition:opacity .15s ease}
+
   .tip{position:fixed;pointer-events:none;z-index:9;background:var(--ink);color:#fff;
     border-radius:8px;padding:8px 10px;font-size:11.5px;line-height:1.5;opacity:0;
     transition:opacity .12s ease;max-width:220px}
@@ -135,9 +159,12 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
   };
   /* Not agents. Grey on purpose: they are the vanity metric, present for context
      and never competing for attention with the classes that matter. */
-  var OTHER_COLOR = { amazonbot: "#7d7772", browser: "#9a948f", "search-engine": "#bdb7b2", unknown: "#d8d3ce" };
+  var OTHER_COLOR = {
+    amazonbot: "#6e6863", "amazon-search": "#857f7a", datacenter: "#5b5654",
+    "verified-bot": "#a8a29d", browser: "#b9b3ae", "search-engine": "#cbc6c1", unknown: "#dcd8d4"
+  };
   var ORDER = ["openai","anthropic","perplexity","google-ai","other-crawler","script",
-               "amazonbot","browser","search-engine","unknown"];
+               "amazonbot","amazon-search","datacenter","verified-bot","browser","search-engine","unknown"];
 
   function colorFor(k) { return AGENT_COLOR[k] || OTHER_COLOR[k] || "#d8d3ce"; }
   function isAgent(k) { return Object.prototype.hasOwnProperty.call(AGENT_COLOR, k); }
@@ -169,82 +196,145 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
   }
   function hideTip() { tip.style.opacity = "0"; }
 
-  // ---- daily stacked series ------------------------------------------------
-  function series(root, byDay, windowDays) {
-    if (!byDay || !byDay.length) return;
+  // ---- state: the last result's own query is the source of truth ------------
+  //
+  // Every control builds its arguments from d.query plus one change and calls
+  // the tool again, so the screen can never show filters the data was not
+  // computed under.
+  var FILTER_KEYS = ["ua_class", "domain", "surface", "country", "network", "bot", "ua", "path"];
+  function data() { return window.__DATA__ || (window.openai && window.openai.toolOutput) || {}; }
+  function query() { return data().query || { days: data().days || 14 }; }
+  function currentFilters() {
+    var q = query(), out = {};
+    FILTER_KEYS.forEach(function (k) { if (q[k]) out[k] = q[k]; });
+    return out;
+  }
+  function currentRange() {
+    var q = query();
+    return q.from ? { from: q.from, to: q.to } : { days: q.days || 14 };
+  }
+  function go(range, filters) {
+    var a = {};
+    var f = filters || currentFilters();
+    for (var k in f) a[k] = f[k];
+    if (range.from) { a.from = range.from; if (range.to) a.to = range.to; }
+    else a.days = range.days;
+    load(a);
+  }
+  function setFilter(k, v) {
+    var f = currentFilters();
+    if (v == null) delete f[k]; else f[k] = String(v);
+    go(currentRange(), f);
+  }
+
+  /**
+   * One call, three transports. Apps SDK first (window.openai.callTool), then
+   * the MCP Apps host over postMessage, and outside any host the query string
+   * is the state: /mcp/ui reads it server-side, so a reload re-runs the tool.
+   */
+  function load(args) {
+    document.body.classList.add("loading");
+    function done(r) {
+      document.body.classList.remove("loading");
+      if (!adopt(r)) render();
+    }
+    if (window.openai && typeof window.openai.callTool === "function") {
+      window.openai.callTool("traffic_stats", args).then(done, done);
+    } else if (host) {
+      request("tools/call", { name: "traffic_stats", arguments: args }, done);
+    } else {
+      var p = new URLSearchParams(location.search), keep = new URLSearchParams();
+      if (p.get("token")) keep.set("token", p.get("token"));
+      for (var k in args) if (args[k] != null) keep.set(k, String(args[k]));
+      location.search = keep.toString();
+    }
+  }
+
+  // ---- stacked time series ---------------------------------------------------
+  function series(root, d) {
+    var rows = d.byTime || d.byDay || [];
+    if (!rows.length) return;
+    var hourly = d.bucket === "hour";
+    var step = hourly ? 3600000 : 86400000;
+    var len = hourly ? 13 : 10;
+    function key(ms) { return new Date(ms).toISOString().slice(0, len); }
     var index = {};
-    byDay.forEach(function (r) {
-      var d = r.day;
-      if (!index[d]) index[d] = { day: d, classes: {}, total: 0 };
-      index[d].classes[r.ua_class || "unknown"] = Number(r.n || 0);
-      index[d].total += Number(r.n || 0);
+    rows.forEach(function (r) {
+      var t = r.t || r.day;
+      if (!index[t]) index[t] = { t: t, classes: {}, total: 0 };
+      index[t].classes[r.ua_class || "unknown"] = Number(r.n || 0);
+      index[t].total += Number(r.n || 0);
     });
 
     /**
-     * Fill the whole window, including days with no events.
+     * Fill the whole window, including empty buckets.
      *
-     * A day with zero reads is a real observation, not a missing category. Drop
-     * it and the bars close ranks, so a fortnight with three active days draws
-     * three adjacent bars and reads as continuous activity — the axis lies about
-     * exactly the thing this panel exists to show.
+     * A bucket with zero reads is a real observation, not a missing category.
+     * Drop it and the bars close ranks, so a fortnight with three active days
+     * draws three adjacent bars and reads as continuous activity — the axis
+     * lies about exactly the thing this panel exists to show.
      */
-    var days = [];
-    var last = byDay[byDay.length - 1].day;
-    var cursor = new Date(last + "T00:00:00Z");
-    var span = Math.max(Number(windowDays) || byDay.length, 1);
-    for (var i = span - 1; i >= 0; i--) {
-      var t = new Date(cursor.getTime() - i * 86400000).toISOString().slice(0, 10);
-      days.push(index[t] || { day: t, classes: {}, total: 0 });
+    var start = Date.parse(key(Date.parse(d.since)) + (hourly ? ":00:00Z" : "T00:00:00Z"));
+    var end = Date.parse(d.until || new Date().toISOString());
+    var buckets = [];
+    for (var t = start; t < end && buckets.length < 200; t += step) {
+      buckets.push(index[key(t)] || { t: key(t), classes: {}, total: 0 });
     }
-    var peak = days.reduce(function (m, d) { return Math.max(m, d.total); }, 0) || 1;
+    var peak = buckets.reduce(function (m, b) { return Math.max(m, b.total); }, 0) || 1;
+    var dense = buckets.length > 40;
 
-    var panel = el("div", { class: "panel" }, [el("h2", { text: "Reads per day" })]);
-    var chart = el("div", { class: "chart" });
+    var panel = el("div", { class: "panel" }, [
+      el("h2", { text: hourly ? "Reads per hour (UTC)" : "Reads per day — click a day for its hours" })
+    ]);
+    var chart = el("div", { class: "chart", style: dense ? "gap:2px" : "" });
 
-    days.forEach(function (d) {
-      var col = el("div", { class: "col" });
-      // Tallest-first down the stack so the rounded cap sits on the top segment
-      // and agent classes stay adjacent to each other rather than to the greys.
-      ORDER.forEach(function (k) {
-        var v = d.classes[k];
-        if (!v) return;
-        var h = (v / peak) * 100;
-        col.appendChild(el("div", {
-          class: "seg",
-          style: "background:" + colorFor(k) + ";height:" + h + "%;min-height:2px"
-        }));
-      });
-      col.addEventListener("mousemove", function (ev) {
-        var rows = [el("b", { text: d.day })];
-        ORDER.forEach(function (k) {
-          if (!d.classes[k]) return;
-          rows.push(el("div", { class: "tr" }, [
-            el("span", { text: k }), el("span", { text: num(d.classes[k]) })
-          ]));
+    buckets.forEach(function (b) {
+      var col = el("div", { class: "col" + (hourly ? "" : " click") });
+      // Agent classes first down the stack so the rounded cap sits on the top
+      // segment and they stay adjacent to each other rather than to the greys.
+      ORDER.concat(Object.keys(b.classes).filter(function (k) { return ORDER.indexOf(k) < 0; }))
+        .forEach(function (k) {
+          var v = b.classes[k];
+          if (!v) return;
+          col.appendChild(el("div", {
+            class: "seg",
+            style: "background:" + colorFor(k) + ";height:" + (v / peak) * 100 + "%;min-height:2px"
+          }));
         });
-        rows.push(el("div", { class: "tr", style: "margin-top:4px;opacity:.7" }, [
-          el("span", { text: "total" }), el("span", { text: num(d.total) })
+      col.addEventListener("mousemove", function (ev) {
+        var tips = [el("b", { text: hourly ? b.t.replace("T", " ") + ":00" : b.t })];
+        Object.keys(b.classes).sort(function (x, y) { return b.classes[y] - b.classes[x]; })
+          .forEach(function (k) {
+            tips.push(el("div", { class: "tr" }, [el("span", { text: k }), el("span", { text: num(b.classes[k]) })]));
+          });
+        tips.push(el("div", { class: "tr", style: "margin-top:4px;opacity:.7" }, [
+          el("span", { text: "total" }), el("span", { text: num(b.total) })
         ]));
-        showTip(rows, ev);
+        showTip(tips, ev);
       });
       col.addEventListener("mouseleave", hideTip);
+      if (!hourly) col.addEventListener("click", function () { hideTip(); go({ from: b.t, to: b.t }); });
       chart.appendChild(col);
     });
 
     panel.appendChild(chart);
     // Label every column while they fit, then thin out to roughly six ticks.
-    // Labelling only the ends reads as broken when there are three bars.
-    var labels = el("div", { class: "xlab" });
-    var step = Math.ceil(days.length / 6);
-    days.forEach(function (d, i) {
-      var show = days.length <= 8 || i % step === 0 || i === days.length - 1;
-      labels.appendChild(el("span", { text: show ? d.day.slice(5) : "" }));
+    var labels = el("div", { class: "xlab", style: dense ? "gap:2px" : "" });
+    var every = Math.ceil(buckets.length / 6);
+    buckets.forEach(function (b, i) {
+      var show = buckets.length <= 8 || i % every === 0 || i === buckets.length - 1;
+      var text = hourly ? b.t.slice(11) + "h" : b.t.slice(5);
+      labels.appendChild(el("span", { text: show ? text : "" }));
     });
     panel.appendChild(labels);
     root.appendChild(panel);
   }
 
-  // ---- horizontal rankings -------------------------------------------------
+  // ---- horizontal rankings ---------------------------------------------------
+  //
+  // opts.filter names the traffic_stats filter a row sets when clicked. Rows
+  // whose value was never recorded are shown but not clickable: there is no
+  // value to filter by, and "(not recorded)" as a filter would match nothing.
   function ranking(title, rows, key, opts) {
     opts = opts || {};
     var panel = el("div", { class: "panel" }, [el("h2", { text: title })]);
@@ -255,24 +345,27 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
     var peak = rows.reduce(function (m, r) { return Math.max(m, Number(r.n || 0)); }, 0) || 1;
     var list = el("div", { class: "rank" });
     rows.slice(0, opts.limit || 8).forEach(function (r) {
-      var name = String(r[key] == null ? "(none)" : r[key]);
+      var raw = r[key];
+      var name = raw == null ? "(not recorded)" : opts.label ? opts.label(r) : String(raw);
       var v = Number(r.n || 0);
+      var clickable = opts.filter && raw != null && query()[opts.filter] !== String(raw);
       var fill = el("div", {
         class: "fill",
         style: "width:" + Math.max((v / peak) * 100, 1.5) + "%;background:" +
-               (opts.color ? opts.color(name) : "#2a78d6")
+               (opts.color ? opts.color(String(raw)) : "#2a78d6")
       });
-      var row = el("div", { class: "r" }, [
+      var row = el("div", { class: "r" + (opts.wide ? " wide" : "") + (clickable ? " click" : "") }, [
         el("div", { class: "name", title: name, text: name }),
         el("div", { class: "track" }, [fill]),
         el("div", { class: "val", text: num(v) })
       ]);
       row.addEventListener("mousemove", function (ev) {
         showTip([el("b", { text: name }), el("div", { class: "tr" }, [
-          el("span", { text: "reads" }), el("span", { text: num(v) })
-        ])], ev);
+          el("span", { text: "reads" }), el("span", { text: num(v) + " · " + pct(v, data().total) + "%" })
+        ]), clickable ? el("div", { style: "opacity:.7;margin-top:4px", text: "click to filter" }) : null], ev);
       });
       row.addEventListener("mouseleave", hideTip);
+      if (clickable) row.addEventListener("click", function () { hideTip(); setFilter(opts.filter, raw); });
       list.appendChild(row);
     });
     panel.appendChild(list);
@@ -298,10 +391,55 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
     return d;
   }
 
+  // ---- range + filter controls -----------------------------------------------
+  function controls(d) {
+    var q = query();
+    var today = new Date().toISOString().slice(0, 10);
+    var bar = el("div", { class: "bar" });
+
+    var segs = el("div", { class: "segs", role: "group", "aria-label": "Date range" });
+    [1, 7, 14, 30, 90].forEach(function (n) {
+      var on = !q.from && Number(q.days) === n;
+      var b = el("button", { type: "button", class: on ? "on" : "", "aria-pressed": String(on), text: n + "d" });
+      b.addEventListener("click", function () { go({ days: n }); });
+      segs.appendChild(b);
+    });
+    bar.appendChild(segs);
+
+    var from = el("input", { type: "date", "aria-label": "From", max: today,
+      value: q.from || String(d.since || "").slice(0, 10) });
+    var to = el("input", { type: "date", "aria-label": "To", max: today, value: q.to || today });
+    function apply() { if (from.value && to.value && from.value <= to.value) go({ from: from.value, to: to.value }); }
+    from.addEventListener("change", apply);
+    to.addEventListener("change", apply);
+    bar.appendChild(el("div", { class: "dates" }, [from, el("span", { text: "→" }), to]));
+    return bar;
+  }
+
+  function chips() {
+    var f = currentFilters();
+    var keys = Object.keys(f);
+    if (!keys.length) return null;
+    var row = el("div", { class: "chips" });
+    keys.forEach(function (k) {
+      var b = el("button", { type: "button", class: "chip", title: "Remove filter" }, [
+        el("span", { class: "ck", text: k }), el("span", { class: "cv", text: f[k] }), el("span", { text: "×" })
+      ]);
+      b.addEventListener("click", function () { setFilter(k, null); });
+      row.appendChild(b);
+    });
+    if (keys.length > 1) {
+      var clear = el("button", { type: "button", class: "chip clear", text: "Clear all" });
+      clear.addEventListener("click", function () { go(currentRange(), {}); });
+      row.appendChild(clear);
+    }
+    return row;
+  }
+
   function render() {
     var root = document.getElementById("root");
     root.textContent = "";
-    var d = (window.openai && window.openai.toolOutput) || window.__DATA__ || {};
+    var d = data();
 
     if (!d.byAgent) {
       // Inside a host frame, "no data" almost always means the handshake has not
@@ -318,13 +456,18 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
 
     var total = Number(d.total || 0);
     var agents = Number(d.agentReads || 0);
+    var q = query();
+    var win = q.from ? q.from + (q.to && q.to !== q.from ? " → " + q.to : "") : "last " + (q.days || 14) + "d";
 
     root.appendChild(el("div", { class: "head" }, [
       el("h1", { text: "decoindex traffic" }),
-      el("span", { class: "win", text: "last " + (d.days || 7) + "d" })
+      el("span", { class: "win", text: win })
     ]));
+    root.appendChild(controls(d));
+    var c = chips();
+    if (c) root.appendChild(c);
 
-    var hero = el("div", { class: "hero" }, [
+    root.appendChild(el("div", { class: "hero" }, [
       el("div", { class: "label", text: "Agent reads" }),
       el("div", { class: "n", text: num(agents) }),
       el("div", {
@@ -334,8 +477,7 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
           : pct(agents, total) + "% of " + num(total) + " reads. " +
             "Browser pageviews are vanity — this is the number that moves the business."
       })
-    ]);
-    root.appendChild(hero);
+    ]));
 
     var cacheRows = d.byCache || [];
     var served = cacheRows.reduce(function (s, r) { return s + Number(r.n || 0); }, 0);
@@ -357,32 +499,42 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
       ])
     ]));
 
-    series(root, d.byDay, d.days);
+    series(root, d);
 
-    var cols = el("div", { class: "cols" });
-    cols.appendChild(ranking("By agent", d.byAgent, "ua_class", {
-      color: colorFor, limit: 9
-    }));
-    cols.appendChild(ranking("By surface", d.bySurface, "surface", {
-      color: function () { return "#4a3aa7"; }
-    }));
-    root.appendChild(cols);
+    var blue = function () { return "#2a78d6"; };
+    var violet = function () { return "#4a3aa7"; };
+    var grey = function () { return "#9a948f"; };
 
-    root.appendChild(ranking("Top storefronts", d.byDomain, "domain", {
-      color: function () { return "#2a78d6"; }, limit: 10
-    }));
+    root.appendChild(el("div", { class: "cols" }, [
+      ranking("By agent", d.byAgent, "ua_class", { color: colorFor, limit: 12, filter: "ua_class" }),
+      ranking("By surface", d.bySurface, "surface", { color: violet, filter: "surface" })
+    ]));
+    root.appendChild(ranking("Top storefronts", d.byDomain, "domain", { color: blue, limit: 10, filter: "domain" }));
+    root.appendChild(el("div", { class: "cols" }, [
+      ranking("Networks", d.byNetwork, "network", {
+        color: grey, limit: 10, filter: "network",
+        label: function (r) { return r.network + (r.asn ? " · AS" + r.asn : ""); }
+      }),
+      ranking("Countries", d.byCountry, "country", { color: grey, limit: 10, filter: "country" })
+    ]));
+    root.appendChild(el("div", { class: "cols" }, [
+      ranking("Cloudflare verified bot", d.byBot, "bot", { color: grey, filter: "bot" }),
+      ranking("Served from", d.byCache, "cache", { color: grey })
+    ]));
+    root.appendChild(ranking("User agents", d.byUa, "ua", { color: grey, limit: 15, filter: "ua", wide: true }));
+    root.appendChild(ranking("Paths", d.byPath, "path", { color: blue, limit: 15, filter: "path", wide: true }));
 
     // Identity is never colour-alone: the legend is always present, and the
     // table view underneath covers the two ramp steps that sit under 3:1.
     var legend = el("div", { class: "legend" });
-    ORDER.forEach(function (k) {
-      var present = (d.byAgent || []).some(function (r) { return r.ua_class === k; });
-      if (!present) return;
-      legend.appendChild(el("div", { class: "lg" }, [
-        el("span", { class: "sw", style: "background:" + colorFor(k) }),
-        el("span", { text: k + (isAgent(k) ? "" : " (not an agent)") })
-      ]));
-    });
+    (d.byAgent || []).map(function (r) { return r.ua_class || "unknown"; })
+      .sort(function (a, b) { return (ORDER.indexOf(a) + 99) % 99 - (ORDER.indexOf(b) + 99) % 99; })
+      .forEach(function (k) {
+        legend.appendChild(el("div", { class: "lg" }, [
+          el("span", { class: "sw", style: "background:" + colorFor(k) }),
+          el("span", { text: k + (isAgent(k) ? "" : " (not an agent)") })
+        ]));
+      });
     root.appendChild(legend);
 
     root.appendChild(table("Table view — by agent", d.byAgent, "ua_class"));
@@ -396,8 +548,10 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
 
     root.appendChild(el("div", {
       class: "note",
-      text: "Reads of decoindex documents since " + String(d.since || "").slice(0, 10) +
-            ". A read is one document served, from the edge, from KV, or resolved live."
+      text: "Reads of decoindex documents from " + String(d.since || "").slice(0, 16).replace("T", " ") +
+            " UTC. A read is one document served, from the edge, from KV, or resolved live. " +
+            "Network, user agent, verified bot and path are recorded from 2026-09-30; " +
+            "earlier reads show as (not recorded)."
     }));
   }
 
@@ -505,9 +659,7 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
         // Fetch our own data rather than waiting to be handed it: the host only
         // pushes a tool-result when the user invoked the tool, and opening the
         // view from the sidebar does not.
-        request("tools/call", { name: "traffic_stats", arguments: { days: 14 } }, function (r) {
-          adopt(r);
-        });
+        load({ days: 14 });
       },
     );
   }

@@ -180,9 +180,13 @@ async function route(
     if (tier !== "operator") {
       return new Response("Not found", { status: 404 });
     }
-    const days = Number(new URL(request.url).searchParams.get("days")) || 7;
+    // The query string is the widget's state here: filters and range arrive as
+    // params, so a drilled-down view is a URL that can be reloaded or shared.
+    const args: Record<string, unknown> = {};
+    for (const [k, v] of new URL(request.url).searchParams) if (k !== "token") args[k] = v;
+    args.days = Number(args.days) || 14;
     const tool = operatorTools.find((t) => t.name === "traffic_stats")!;
-    const data = await tool.execute(env, { days }, ctx);
+    const data = await tool.execute(env, args, ctx);
     return new Response(inlineData(TRAFFIC_WIDGET_HTML, data), {
       headers: {
         "content-type": "text/html; charset=utf-8",

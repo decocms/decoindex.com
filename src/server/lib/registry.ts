@@ -123,8 +123,11 @@ export function track(
     country?: string;
     ms?: number;
     meta?: Record<string, unknown>;
+    /** `request.cf` — network and verified-bot facts Cloudflare attaches. */
+    cf?: Cf;
   },
 ): void {
+  const cf = event.cf;
   const stmt = env.DB.prepare(
     `INSERT INTO events (ts, name, domain, surface, ua_class, country, ms, meta)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -133,20 +136,68 @@ export function track(
     event.name,
     event.domain ?? null,
     event.surface ?? null,
-    classifyClient(event.ua),
-    event.country ?? null,
+    classifyClient(event.ua, cf),
+    event.country ?? (cf?.country as string | undefined) ?? null,
     event.ms ?? null,
-    event.meta ? JSON.stringify(event.meta) : null,
+    JSON.stringify({ ...event.meta, ...clientFacts(event.ua, cf) }),
   );
   ctx.waitUntil(stmt.run().catch(() => {}));
 }
 
+type Cf = Request["cf"];
+
 /**
- * Bucket rather than store the raw UA. Order matters: `Claude-User` must be
- * tested before the broader `claude` alternatives, and bare `Applebot` (which
- * powers Siri web results) is a crawler, not an agent.
+ * What the bucket alone could not answer. Twice a crawler hid inside a class
+ * (Amazonbot in other-crawler, then Amzn-SearchBot in browser) and the only way
+ * to name it was tailing live traffic, because the raw UA was never kept. The
+ * UA, the network it came from and Cloudflare's verified-bot verdict make the
+ * next one a query instead. No IP: the network is what identifies a crawler.
  */
-export function classifyClient(ua?: string): string {
+function clientFacts(ua: string | undefined, cf: Cf): Record<string, unknown> {
+  const facts: Record<string, unknown> = {};
+  if (ua) facts.ua = ua.slice(0, 200);
+  if (cf?.asn) facts.asn = cf.asn;
+  if (cf?.asOrganization) facts.aso = cf.asOrganization;
+  if (cf?.verifiedBotCategory) facts.bot = cf.verifiedBotCategory;
+  return facts;
+}
+
+/**
+ * Cloud and hosting networks. A browser UA from one of these is a headless
+ * browser or a scraper wearing Chrome's clothes, not a person. Cloudflare's own
+ * ASN is deliberately absent: WARP carries real people.
+ */
+const DATACENTER_ASNS = new Set([
+  14618, 16509, // AWS
+  8075, // Microsoft / Azure
+  15169, 396982, // Google / GCP
+  31898, // Oracle
+  14061, // DigitalOcean
+  24940, // Hetzner
+  16276, // OVH
+  63949, // Akamai / Linode
+  20473, // Vultr
+  45102, // Alibaba
+  132203, // Tencent
+]);
+
+/**
+ * Bucket, then store the raw UA beside it in meta. Order matters: `Claude-User`
+ * must be tested before the broader `claude` alternatives, and bare `Applebot`
+ * (which powers Siri web results) is a crawler, not an agent.
+ *
+ * `cf` only ever demotes a "browser": a crawler Cloudflare has verified is not a
+ * person whatever its UA claims, and neither is Chrome running in a datacenter.
+ */
+export function classifyClient(ua?: string, cf?: Cf): string {
+  const cls = classifyUa(ua);
+  if (cls !== "browser" && cls !== "unknown") return cls;
+  if (cf?.verifiedBotCategory) return "verified-bot";
+  if (cls === "browser" && DATACENTER_ASNS.has(Number(cf?.asn))) return "datacenter";
+  return cls;
+}
+
+function classifyUa(ua?: string): string {
   if (!ua) return "unknown";
   const u = ua.toLowerCase();
   if (/gptbot|oai-searchbot|chatgpt-user|chatgpt/.test(u)) return "openai";
@@ -156,6 +207,9 @@ export function classifyClient(ua?: string): string {
   // Its own bucket, and not an agent: a bulk crawl that was ~99% of reads until
   // robots.txt disallowed it, and would otherwise hide inside other-crawler.
   if (/amazonbot/.test(u)) return "amazonbot";
+  // Amazon's AI-search indexer. Arrived under this name days after Amazonbot
+  // was refused, and classified as "browser" until it had a bucket of its own.
+  if (/amzn-searchbot/.test(u)) return "amazon-search";
   if (/bytespider|ccbot|applebot|meta-externalagent/.test(u)) return "other-crawler";
   if (/googlebot|bingbot|duckduckbot|yandex|baiduspider/.test(u)) return "search-engine";
   if (/curl|wget|python|node-fetch|axios|go-http|undici|okhttp/.test(u)) return "script";

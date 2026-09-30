@@ -35,7 +35,7 @@ app.use("*", async (c, next) => {
   track(c.env, c.executionCtx, {
     name: "blocked",
     ua,
-    country: (c.req.raw.cf?.country as string) ?? undefined,
+    cf: c.req.raw.cf,
   });
   return c.text("Crawling is disallowed; see /robots.txt.\n", 403, {
     "x-robots-tag": "noindex",
@@ -60,14 +60,14 @@ app.get("/healthz", (c) => c.text("ok"));
  * be replayed to the wrong audience.
  */
 app.get("/", async (c, next) => {
-  const cls = classifyClient(c.req.header("user-agent"));
+  const cls = classifyClient(c.req.header("user-agent"), c.req.raw.cf);
   const wantsMachine = !["browser", "search-engine", "unknown"].includes(cls);
   if (wantsMachine && !c.req.query("html")) {
     track(c.env, c.executionCtx, {
       name: "read",
       surface: "root-redirect",
       ua: c.req.header("user-agent"),
-      country: (c.req.raw.cf?.country as string) ?? undefined,
+      cf: c.req.raw.cf,
     });
     return c.redirect(`${c.env.PUBLIC_ORIGIN}/llms.txt`, 302);
   }
@@ -320,7 +320,7 @@ app.post("/feedback", async (c) => {
       domain: typeof body.domain === "string" ? body.domain : undefined,
       surface: "feedback",
       ua: c.req.header("user-agent"),
-      country: (c.req.raw.cf?.country as string) ?? undefined,
+      cf: c.req.raw.cf,
       meta: { kind: body.kind, id: result.id },
     });
     return c.json(result, 201);
@@ -344,7 +344,7 @@ app.post("/e", async (c) => {
       name: body.name,
       surface: "landing",
       ua: c.req.header("user-agent"),
-      country: (c.req.raw.cf?.country as string) ?? undefined,
+      cf: c.req.raw.cf,
       meta: body.meta,
     });
   }
@@ -397,6 +397,11 @@ function forClient(res: Response): Response {
   return out;
 }
 
+function pathOf(req: Request): string {
+  const u = new URL(req.url);
+  return (u.pathname + u.search).slice(0, 300);
+}
+
 function logRead(
   env: Env,
   ctx: { waitUntil(p: Promise<unknown>): void },
@@ -408,9 +413,10 @@ function logRead(
     domain: o.domain,
     surface: o.surface,
     ua: req.headers.get("user-agent") ?? undefined,
-    country: (req.cf?.country as string) ?? undefined,
+    cf: req.cf,
     ms: Date.now() - o.started,
-    meta: { cache: o.cache, ext: o.ext, status: o.status },
+    // The query rides along with the path: ?page=/?sort= walks were the crawl.
+    meta: { cache: o.cache, ext: o.ext, status: o.status, path: pathOf(req) },
   });
 }
 
