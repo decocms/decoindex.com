@@ -213,6 +213,9 @@ function classifyUa(ua?: string): string {
   if (/bytespider|ccbot|applebot|meta-externalagent/.test(u)) return "other-crawler";
   if (/googlebot|bingbot|duckduckbot|yandex|baiduspider/.test(u)) return "search-engine";
   if (/curl|wget|python|node-fetch|axios|go-http|undici|okhttp/.test(u)) return "script";
+  // "Mozilla/5.0 (compatible; GrokBot/1.0; +https://x.ai/)" is a bot announcing
+  // itself inside a browser-shaped string; without this it reads as a person.
+  if (/compatible;[^)]*(bot|crawler|spider|-user)\b/.test(u)) return "other-crawler";
   if (/mozilla|chrome|safari|firefox/.test(u)) return "browser";
   return "unknown";
 }
