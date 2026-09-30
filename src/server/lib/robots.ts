@@ -3,9 +3,12 @@
  * refused with 403 — robots.txt is a request, this is the enforcement. Amazonbot
  * crawled at a flat 30/min from 2026-09-07, ~91% cold misses, every one an
  * upstream call on a merchant: invariant 1's amplifier, by volume. The others
- * are training crawls of the same shape. Plain Applebot (Siri) is not here.
+ * are training crawls of the same shape. Amzn-SearchBot replaced Amazonbot the
+ * day it was refused: a flat 8.6k reads/day, ~75% cold, where every other AI
+ * search indexer sends a handful — welcome in category, not at that volume.
+ * Plain Applebot (Siri) is not here.
  */
-export const BLOCKED_CRAWLERS = ["Amazonbot", "Bytespider", "CCBot", "meta-externalagent"];
+export const BLOCKED_CRAWLERS = ["Amazonbot", "Amzn-SearchBot", "Bytespider", "CCBot", "meta-externalagent"];
 const BLOCKED_RE = new RegExp(BLOCKED_CRAWLERS.join("|"), "i");
 export const isBlockedCrawler = (ua?: string) => !!ua && BLOCKED_RE.test(ua);
 
