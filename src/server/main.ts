@@ -7,6 +7,7 @@ import { classifySurface, readThrough } from "./lib/read";
 import { BadReport, submitFeedback } from "./lib/feedback";
 import { handleMcp } from "./mcp/server";
 import { isBlockedCrawler, robotsTxt } from "./lib/robots";
+import { blockRuleFor, sweepScrapers } from "./lib/scrapers";
 import { SAMPLE, landingHtml } from "./render/landing";
 import {
   benchmarkHtml,
@@ -26,18 +27,22 @@ import benchErrand from "../../bench/results/models-errand.json";
 type Ctx = { Bindings: Env };
 const app = new Hono<Ctx>();
 
-// Refused before any cache, KV or upstream work. /robots.txt stays readable so a
-// blocked crawler can still learn why. Logged as `blocked`, not `read`, so the
-// dashboard counts reads and this stays queryable.
+// Refused before any cache, KV or upstream work: the named crawlers, then the
+// blocklist the hourly sweep maintains. /robots.txt stays readable so a blocked
+// client can still learn why. Logged as `blocked`, not `read`, so the dashboard
+// counts reads and this stays queryable.
 app.use("*", async (c, next) => {
   const ua = c.req.header("user-agent");
-  if (c.req.path === "/robots.txt" || !isBlockedCrawler(ua)) return next();
+  if (c.req.path === "/robots.txt") return next();
+  const rule = isBlockedCrawler(ua) ? "named" : await blockRuleFor(c.env, ua, c.req.raw.cf);
+  if (rule === undefined) return next();
   track(c.env, c.executionCtx, {
     name: "blocked",
     ua,
     cf: c.req.raw.cf,
+    meta: { rule, path: c.req.path.slice(0, 300) },
   });
-  return c.text("Crawling is disallowed; see /robots.txt.\n", 403, {
+  return c.text("Scraping and crawling are refused; see /robots.txt.\n", 403, {
     "x-robots-tag": "noindex",
   });
 });
@@ -420,6 +425,12 @@ function logRead(
   });
 }
 
-export default { fetch: app.fetch };
+export default {
+  fetch: app.fetch,
+  // Hourly (wrangler.jsonc triggers): find scraper-like traffic, block it.
+  scheduled(_e: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(sweepScrapers(env).then(() => {}, (err) => console.error("sweep failed", err)));
+  },
+};
 
 export { normalizeDomain } from "./lib/url";

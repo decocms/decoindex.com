@@ -496,6 +496,10 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
       el("div", { class: "tile" }, [
         el("div", { class: "k", text: "Served warm" }),
         el("div", { class: "v", text: served ? pct(fromCache, served) + "%" : "—" })
+      ]),
+      el("div", { class: "tile" }, [
+        el("div", { class: "k", text: "Refused (403)" }),
+        el("div", { class: "v", text: num(d.blocked) })
       ])
     ]));
 
@@ -538,6 +542,34 @@ export const TRAFFIC_WIDGET_HTML = `<!doctype html>
     root.appendChild(legend);
 
     root.appendChild(table("Table view — by agent", d.byAgent, "ua_class"));
+
+    // The blocklist: what the hourly sweep (and we, by hand) refuse, with the
+    // evidence it was refused on. Open by default when a rule is new, because an
+    // automated block is exactly the thing an operator should see happen.
+    var rules = d.blocklist || [];
+    var bl = el("details");
+    if (rules.some(function (r) { return Date.now() - Date.parse(r.created_at) < 86400000; })) bl.open = true;
+    bl.appendChild(el("summary", { text: "Blocklist — " + rules.length + " active rule" + (rules.length === 1 ? "" : "s") +
+      ", " + num(d.blockedNamed) + " refused by name in this window" }));
+    if (rules.length) {
+      var bt = el("table");
+      bt.appendChild(el("thead", null, [el("tr", null, ["source", "network", "user agent", "why", "until", "refused"]
+        .map(function (h) { return el("th", { text: h }); }))]));
+      var bb = el("tbody");
+      rules.forEach(function (r) {
+        bb.appendChild(el("tr", null, [
+          el("td", { text: r.source }),
+          el("td", { text: (r.aso || "any") + (r.asn ? " · AS" + r.asn : "") }),
+          el("td", { text: r.ua, style: "word-break:break-all" }),
+          el("td", { text: r.reason }),
+          el("td", { text: r.expires_at ? String(r.expires_at).slice(0, 10) : "permanent" }),
+          el("td", { class: "n", text: num(r.blocked) })
+        ]));
+      });
+      bt.appendChild(bb);
+      bl.appendChild(el("div", { style: "overflow-x:auto" }, [bt]));
+    }
+    root.appendChild(bl);
 
     if (d.robots) {
       var rb = el("details");

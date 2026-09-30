@@ -31,6 +31,9 @@
 
   // Guards invariant 1: bounds first-time reads per merchant domain. Cached
   // reads never reach this.
+  // The scraper sweep (lib/scrapers.ts). Minute 7, off the top of the hour.
+  "triggers": { "crons": ["7 * * * *"] },
+
   "ratelimits": [
     {
       "name": "READ_THROUGH",

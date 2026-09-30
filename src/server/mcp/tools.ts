@@ -242,6 +242,22 @@ export const tools: ToolDefinition[] = [
         .filter((r) => AGENTS.has(String((r as { ua_class: string }).ua_class)))
         .reduce((s, r) => s + Number((r as { n: number }).n), 0);
 
+      // What we refused, under the date range only: a blocked request has no
+      // surface or storefront worth filtering by, and the blocklist is global.
+      const [blockedRows, blocklist] = await Promise.all([
+        env.DB.prepare(
+          `SELECT json_extract(meta,'$.rule') rule, COUNT(*) n FROM events
+            WHERE name='blocked' AND ts >= ? AND ts < ? GROUP BY 1`,
+        ).bind(since, until).all().then((r) => r.results ?? [], () => []),
+        env.DB.prepare(
+          `SELECT id, asn, aso, ua, source, reason, reads, paths, created_at, expires_at FROM blocklist
+            WHERE expires_at IS NULL OR expires_at > ? ORDER BY created_at DESC`,
+        ).bind(new Date().toISOString()).all().then((r) => r.results ?? [], () => []),
+      ]);
+      const hits = new Map(blockedRows.map((r) => [String((r as { rule: unknown }).rule), Number((r as { n: number }).n)]));
+      const blocked = [...hits.values()].reduce((a, b) => a + b, 0);
+      const rules = blocklist.map((r) => ({ ...r, blocked: hits.get(String((r as { id: number }).id)) ?? 0 }));
+
       // What crawlers are told, next to what they did — so a class that looks wrong
       // on the chart can be checked against the rule that should govern it.
       const robots = robotsTxt(env.PUBLIC_ORIGIN);
@@ -263,6 +279,9 @@ export const tools: ToolDefinition[] = [
         byBot,
         byUa,
         byPath,
+        blocked,
+        blockedNamed: (hits.get("named") ?? 0) + (hits.get("null") ?? 0),
+        blocklist: rules,
         robots,
       };
     },

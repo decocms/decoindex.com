@@ -19,6 +19,11 @@ export const isBlockedCrawler = (ua?: string) => !!ua && BLOCKED_RE.test(ua);
 export function robotsTxt(origin: string): string {
   return (
     [
+      "# decoindex serves AI agents acting for a person: a model reading a product",
+      "# page because someone asked it to. It is not a corpus and not a crawl target.",
+      "# Scrapers and bulk crawlers are detected automatically and refused with 403,",
+      "# whatever user agent they claim. The rules below apply on top of that.",
+      "",
       // Invariant 3: we are a channel, not a competitor. Search engines get our
       // own pages and nothing else — the day a decoindex mirror outranks a
       // merchant's own PDP is the day the commercial conversation ends.
