@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@source "../**/*.{ts,tsx}";
+
+/*
+ * Design language from deco-sites/demo-storefront ("Deco Flagship Template"):
+ * Switzer, monochrome ink on white, frosted glass surfaces, soft ease-out motion.
+ */
+@theme {
+  --font-sans: "Switzer", ui-sans-serif, system-ui, sans-serif;
+
+  --color-paper: #ffffff;
+  --color-card: #ffffff;
+  --color-ink: #0a0a0a;
+  --color-ink-soft: #737373;
+  --color-line: #e5e5e5;
+  --color-forest: #0a0a0a;
+  --color-lime: #d9f99d;
+  --color-sale: #c0362c;
+  --color-glass: rgb(240 240 240 / 60%);
+  --color-glass-white: rgb(255 255 255 / 40%);
+
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --text-2xs: 0.625rem;
+  --text-display: 1.625rem;
+  --text-display--line-height: 1.15;
+
+  --ease-out-soft: cubic-bezier(0.23, 1, 0.32, 1);
+  --duration-fast: 150ms;
+  --duration-base: 220ms;
+  --duration-reveal: 500ms;
+
+  --animate-rise: rise var(--duration-reveal) var(--ease-out-soft) both;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+}
+
+@keyframes rise {
+  from { opacity: 0; filter: blur(8px); transform: translateY(12px); }
+  to { opacity: 1; filter: blur(0); transform: none; }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+
+@utility frost {
+  background-color: var(--color-glass);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+}
+
+@utility glass-white {
+  background-color: var(--color-glass-white);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+@utility tap-scale {
+  transition: transform var(--duration-fast) ease;
+  &:active { transform: scale(0.97); }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #f7f7f7 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+@layer base {
+  body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  img, svg { display: block; max-width: 100%; }
+  body:has([aria-modal="true"]) { overflow: hidden; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}

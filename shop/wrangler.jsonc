@@ -1,0 +1,37 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "decoindex-shop",
+  "main": "./src/worker-entry.ts",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat", "no_handle_cross_request_promise_resolution"],
+  "observability": { "enabled": true },
+
+  // Same account as decoindex (CLOUDFLARE_ACCOUNT_ID from the environment).
+  "routes": [{ "pattern": "shop.decoindex.com", "custom_domain": true }],
+  "workers_dev": true,
+
+  // The catalog. Every search goes through decoindex over a service binding,
+  // so it inherits its cache, its per-domain bound and its blocklist — and so
+  // the shopper's IP (not ours) is what its per-caller limit sees.
+  "services": [{ "binding": "INDEX", "service": "decoindex", "remote": true }],
+
+  // decoindex's own D1: shop events land in its append-only `events` table
+  // (name = shop.*) so the improvement loop reads one place.
+  "d1_databases": [
+    { "binding": "DB", "database_name": "decoindex", "database_id": "82dbbe9a-f533-44ca-bd4f-03d2c6a6ee0c" }
+  ],
+
+  "vars": {
+    "DECO_SITE_NAME": "decoshop",
+    "DECO_ENV_NAME": "production",
+    // Comma-separated OpenRouter slugs. Each chat is pinned to one, picked by
+    // hashing its id, so we learn which one shoppers click through on.
+    "CHAT_MODELS": "anthropic/claude-haiku-5.5,anthropic/claude-sonnet-5.5",
+    "AI_GATEWAY_ACCOUNT_ID": "55dd6d847f366735ef6e0f860c7bdc51",
+    "AI_GATEWAY_NAME": "default",
+    "ATTRIBUTION_PARAM": "ref",
+    "ATTRIBUTION_VALUE": "decoshop"
+  }
+  // Secrets: wrangler secret put OPENROUTER_API_KEY   (optional with gateway BYOK)
+  //          wrangler secret put CF_AI_GATEWAY_TOKEN  (only if the gateway is authenticated)
+}

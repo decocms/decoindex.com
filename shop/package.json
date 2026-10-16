@@ -1,0 +1,46 @@
+{
+  "name": "decoindex-shop",
+  "private": true,
+  "type": "module",
+  "description": "deco shop — chat to browse Brazilian fashion catalogs, on top of decoindex",
+  "scripts": {
+    "dev": "npm run generate && vite dev",
+    "generate": "npm run generate:blocks && npm run generate:sections && npm run generate:schema && tsr generate",
+    "generate:blocks": "bun node_modules/@decocms/blocks-cli/scripts/generate-blocks.ts",
+    "generate:sections": "bun node_modules/@decocms/blocks-cli/scripts/generate-sections.ts",
+    "generate:schema": "bun node_modules/@decocms/blocks-cli/scripts/generate-schema.ts --site decoshop",
+    "build": "npm run generate && vite build",
+    "check": "tsc --noEmit",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "dependencies": {
+    "@decocms/blocks": "7.80.1",
+    "@decocms/blocks-admin": "7.80.1",
+    "@decocms/blocks-cli": "7.80.1",
+    "@decocms/tanstack": "7.80.1",
+    "@openrouter/ai-sdk-provider": "^3.1.0",
+    "@tanstack/react-query": "5.90.21",
+    "@tanstack/react-router": "1.166.7",
+    "@tanstack/react-start": "1.166.8",
+    "@tanstack/react-store": "0.9.2",
+    "@tanstack/store": "0.9.2",
+    "ai": "^7.0.143",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "zod": "^4.1.8"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.27.0",
+    "@tailwindcss/vite": "^4.2.1",
+    "@tanstack/router-cli": "1.166.7",
+    "@types/node": "22",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "wrangler": "^4.72.0"
+  }
+}
