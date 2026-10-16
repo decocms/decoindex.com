@@ -5,6 +5,7 @@ export interface Env {
   DB?: D1Database;
   /** Shared searches: `s:{id}` → Share JSON. */
   SHARES?: KVNamespace;
+  CHAT_LIMIT?: { limit(o: { key: string }): Promise<{ success: boolean }> };
 
   CHAT_MODELS: string;
   AI_GATEWAY_ACCOUNT_ID: string;

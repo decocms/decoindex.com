@@ -53,6 +53,10 @@ export function useShopChat() {
           body: JSON.stringify({ chatId: chatId.current, dept, store, model: forced, messages: [...history, { role: "user", content: q }] }),
           signal: ctrl.signal,
         });
+        if (res.status === 429) {
+          patchLast((t) => ({ ...t, error: "Muitas buscas seguidas. Espera um minutinho e tenta de novo?" }));
+          return;
+        }
         if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
         const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
         let buf = "";

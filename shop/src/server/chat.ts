@@ -54,6 +54,9 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
     .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
     .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
   const ip = req.headers.get("cf-connecting-ip") ?? "local";
+  if (env.CHAT_LIMIT && !(await env.CHAT_LIMIT.limit({ key: ip })).success) {
+    return Response.json({ error: "Muitas buscas seguidas. Espera um minutinho?" }, { status: 429 });
+  }
   const model = pickModel(env, body.chatId, body.model);
   const started = Date.now();
 
