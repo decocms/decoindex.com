@@ -17,6 +17,9 @@
 
   // decoindex's own D1: shop events land in its append-only `events` table
   // (name = shop.*) so the improvement loop reads one place.
+  // Shared searches (/s/{id}), written by the chat at the end of a turn.
+  "kv_namespaces": [{ "binding": "SHARES", "id": "56ff82663dd749efb3b4c653cbfa3fbf" }],
+
   "d1_databases": [
     { "binding": "DB", "database_name": "decoindex", "database_id": "82dbbe9a-f533-44ca-bd4f-03d2c6a6ee0c" }
   ],

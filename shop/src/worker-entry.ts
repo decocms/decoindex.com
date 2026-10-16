@@ -5,6 +5,7 @@
  *   POST /api/chat   NDJSON stream: the shopping agent (server/chat.ts)
  *   POST /api/event  feedback + small client events, into decoindex's events table
  *   GET  /go         outbound click to a merchant PDP: logged, then 302
+ *   GET  /embed.js   partner widget for empty-search pages (server/embed.ts)
  */
 import "./setup";
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
@@ -13,6 +14,7 @@ import { handleMeta, handleDecofileRead, handleDecofileReload, handleRender, cor
 import { handleChat } from "./server/chat";
 import { brandForUrl } from "./server/brands";
 import { logEvent } from "./server/events";
+import { EMBED_JS } from "./server/embed";
 import type { Env, ExecutionContext } from "./server/env";
 
 const decoWorker = createDecoWorkerEntry(createServerEntry({ fetch: handler.fetch }), {
@@ -31,7 +33,7 @@ const decoWorker = createDecoWorkerEntry(createServerEntry({ fetch: handler.fetc
   },
 });
 
-const EVENT_NAMES = new Set(["shop.feedback", "shop.dismiss", "shop.open"]);
+const EVENT_NAMES = new Set(["shop.feedback", "shop.dismiss", "shop.open", "shop.share", "shop.refine"]);
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -44,6 +46,12 @@ export default {
       if (!e?.name || !EVENT_NAMES.has(e.name)) return new Response(null, { status: 400 });
       ctx.waitUntil(logEvent(env, e.name, null, e.meta ?? {}));
       return new Response(null, { status: 204 });
+    }
+
+    if (url.pathname === "/embed.js") {
+      return new Response(EMBED_JS, {
+        headers: { "content-type": "text/javascript; charset=utf-8", "cache-control": "public, max-age=3600", "access-control-allow-origin": "*" },
+      });
     }
 
     if (url.pathname === "/go") {

@@ -23,7 +23,8 @@ export type ChatEvent =
   | { type: "meta"; chatId: string; model: string }
   | { type: "status"; text: string }
   | { type: "products"; items: Tile[] }
-  | { type: "curate"; ids: string[] }
+  | { type: "curate"; ids: string[]; refinements?: string[] }
+  | { type: "share"; id: string }
   | { type: "text"; text: string }
   | { type: "error"; message: string }
   | { type: "done"; ms: number };
@@ -37,6 +38,21 @@ export interface ChatRequest {
   chatId: string;
   messages: ChatTurn[];
   dept?: "feminino" | "masculino";
+  /** Partner store the shopper came from (`?store=`): searched first, shown first. */
+  store?: string;
   /** Force a model from CHAT_MODELS (`?model=` for comparing by hand). */
   model?: string;
+}
+
+/** A finished turn, frozen for `/s/{id}`. Prices are as observed at `createdAt`. */
+export interface Share {
+  id: string;
+  q: string;
+  answer: string;
+  dept?: "feminino" | "masculino";
+  store?: string;
+  model: string;
+  createdAt: string;
+  tiles: Tile[];
+  refinements: string[];
 }

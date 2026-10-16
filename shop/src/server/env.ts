@@ -3,6 +3,8 @@ export interface Env {
   /** decoindex itself. Absent in plain `vite dev` — catalog.ts falls back to the public origin. */
   INDEX?: Fetcher;
   DB?: D1Database;
+  /** Shared searches: `s:{id}` → Share JSON. */
+  SHARES?: KVNamespace;
 
   CHAT_MODELS: string;
   AI_GATEWAY_ACCOUNT_ID: string;
@@ -24,4 +26,8 @@ export interface D1Database {
 }
 export interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void;
+}
+export interface KVNamespace {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
 }

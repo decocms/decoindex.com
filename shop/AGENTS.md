@@ -27,6 +27,28 @@ sections/         ShopChat (the whole app), BrandStrip — props editable in dec
 Design language is lifted from `deco-sites/demo-storefront` (Switzer, monochrome,
 frost glass, tap-scale, 372/498 cards). Reuse its tokens before inventing new ones.
 
+## Sharing (`/s/{id}`)
+
+When a turn finishes with curated tiles, `chat.ts` freezes it into KV `SHARES`
+(`s:{id}`, 1 year) and emits `{type:"share"}`. The snapshot is built **server
+side from tiles the server fetched** — never accept tiles from the client, or
+anyone could publish fake products/links under our domain. `/s/$id` is SSR from
+KV (no LLM), `noindex`, with OG title/description/image (image = merchant CDN,
+resized by it). Prices on it are labeled with the date they were seen.
+
+## Partner widget (`/embed.js`)
+
+One tag on a store's empty-search page:
+
+```html
+<script src="https://shop.decoindex.com/embed.js" async></script>
+<!-- or explicit: data-q="vestido azul" data-target="#no-results" -->
+```
+
+Reads the term from `data-q`, `?q=`, `?ft=` or `/busca/{q}`, renders a card in
+Shadow DOM (textContent only), links to `/?q=…&store={host}`. `store=` makes the
+chat search that store first and show it on top (only roster domains honored).
+
 ## Rules
 
 - **Search goes through decoindex only** (service binding `INDEX`). Never call a

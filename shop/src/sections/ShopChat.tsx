@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Tile } from "~/types";
 import { ProductDrawer, ProductTile, TileSkeleton, outbound } from "~/components/Product";
+import { ShareButton, SiteHeader } from "~/components/Share";
 import { track, useShopChat, type Dept, type Turn } from "~/sdk/useShopChat";
 
 /** @titleBy label */
@@ -37,6 +38,8 @@ export default function ShopChat({
   const [dept, setDept] = useState<Dept>("feminino");
   const [open, setOpen] = useState<Tile | null>(null);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
+  /** Partner store the shopper came from (?store=, set by embed.js). */
+  const [store, setStore] = useState<string>();
   const started = turns.length > 0;
 
   // ?q= makes a search shareable and lets the home page deep-link a prompt.
@@ -47,8 +50,10 @@ export default function ShopChat({
     const p = new URLSearchParams(location.search);
     const d = p.get("dept");
     if (d === "masculino" || d === "feminino") setDept(d);
+    const s = p.get("store") ?? undefined;
+    setStore(s);
     const q = p.get("q");
-    if (q) send(q, (d as Dept) || "feminino");
+    if (q) send(q, (d as Dept) || "feminino", s);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -60,7 +65,7 @@ export default function ShopChat({
       history.replaceState(null, "", `?${p}`);
     }
     setOpen(null);
-    send(text, dept);
+    send(text, dept, store);
   };
   const more = (t: Tile) => ask(`Mais opções parecidas com "${t.title}" da ${t.brand}.`);
   const dismiss = (t: Tile) => {
@@ -72,13 +77,13 @@ export default function ShopChat({
 
   return (
     <section className="min-h-dvh">
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-line/70 frost px-4 py-3 md:px-8">
-        <button type="button" onClick={() => { reset(); history.replaceState(null, "", location.pathname); }} className="flex items-baseline gap-2">
-          <span className="text-xl font-semibold tracking-tight leading-none">deco shop</span>
-          <span className="rounded-full bg-lime px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-forest">beta</span>
-        </button>
-        <DeptToggle value={dept} onChange={setDept} />
-      </header>
+      <SiteHeader
+        onHome={() => {
+          reset();
+          history.replaceState(null, "", location.pathname);
+        }}
+        right={<DeptToggle value={dept} onChange={setDept} />}
+      />
 
       {!started ? (
         <div className="mx-auto flex max-w-3xl flex-col items-center px-5 pb-16 pt-[12vh] text-center md:pt-[16vh]">
@@ -108,7 +113,7 @@ export default function ShopChat({
       ) : (
         <div className="mx-auto grid max-w-[1600px] gap-6 px-4 pb-28 pt-5 md:px-8 lg:grid-cols-[340px_1fr] lg:gap-10">
           <aside className="lg:sticky lg:top-20 lg:h-[calc(100dvh-6rem)] lg:overflow-y-auto">
-            <Thread turns={turns} model={model} chatId={chatId()} />
+            <Thread turns={turns} model={model} chatId={chatId()} onAsk={(r) => { track("shop.refine", { chat: chatId(), model, text: r }); ask(r); }} />
             <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line/70 frost p-3 lg:static lg:mt-5 lg:border-0 lg:bg-transparent lg:p-0">
               <Composer placeholder="Refine: mais barato, outra cor, só tênis…" onSend={ask} />
             </div>
@@ -187,7 +192,7 @@ function Composer({ placeholder, onSend, autoFocus, large }: { placeholder: stri
   );
 }
 
-function Thread({ turns, model, chatId }: { turns: Turn[]; model?: string; chatId: string }) {
+function Thread({ turns, model, chatId, onAsk }: { turns: Turn[]; model?: string; chatId: string; onAsk: (text: string) => void }) {
   const [voted, setVoted] = useState<Record<number, boolean>>({});
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -197,7 +202,8 @@ function Thread({ turns, model, chatId }: { turns: Turn[]; model?: string; chatI
   return (
     <ol className="flex flex-col gap-5" aria-live="polite">
       {turns.map((t, i) => (
-        <li key={i} className="flex flex-col gap-2.5">
+        // Phones show only the latest turn, so the grid stays above the fold.
+        <li key={i} className={`flex-col gap-2.5 ${i === turns.length - 1 ? "flex" : "hidden lg:flex"}`}>
           <p className="self-end rounded-2xl rounded-br-md bg-ink px-4 py-2.5 text-sm text-paper">{t.user}</p>
           {t.status && !t.answer && (
             <p className="flex items-center gap-2 text-sm text-ink-soft">
@@ -205,10 +211,29 @@ function Thread({ turns, model, chatId }: { turns: Turn[]; model?: string; chatI
               {t.status}
             </p>
           )}
-          {t.answer && <p className="font-medium tracking-tight text-xl leading-snug">{t.answer}</p>}
+          {t.answer && <p className="text-[15px] font-medium leading-snug tracking-tight lg:text-lg">{t.answer}</p>}
+          {t.done && !!t.refinements?.length && (
+            <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0">
+              {t.refinements.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => onAsk(r)}
+                  className="tap-scale shrink-0 rounded-full bg-[#f2f2f2] px-3 py-1.5 text-xs font-medium transition hover:bg-[#e8e8e8]"
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          )}
           {t.error && <p className="text-sm text-sale">{t.error}</p>}
           {t.done && t.answer && (
-            <div className="flex items-center gap-1 text-xs text-ink-soft">
+            <div className="flex flex-wrap items-center gap-1 text-xs text-ink-soft">
+              {t.shareId && (
+                <span className="mr-2">
+                  <ShareButton id={t.shareId} q={t.user} />
+                </span>
+              )}
               {voted[i] === undefined ? (
                 <>
                   <span className="mr-1">Ajudou?</span>

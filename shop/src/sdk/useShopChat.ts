@@ -11,6 +11,10 @@ export interface Turn {
   products: Tile[];
   /** The model's pick, in its order. Undefined until show_products runs. */
   curated?: string[];
+  /** Next steps the model suggests, shown as chips. */
+  refinements?: string[];
+  /** Set once the server froze this turn at /s/{id}. */
+  shareId?: string;
   error?: string;
   done: boolean;
   ms?: number;
@@ -28,7 +32,7 @@ export function useShopChat() {
     setTurns((all) => (all.length ? [...all.slice(0, -1), fn(all[all.length - 1])] : all));
 
   const send = useCallback(
-    async (text: string, dept?: Dept) => {
+    async (text: string, dept?: Dept, store?: string) => {
       const q = text.trim();
       if (!q) return;
       abort.current?.abort();
@@ -46,7 +50,7 @@ export function useShopChat() {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ chatId: chatId.current, dept, model: forced, messages: [...history, { role: "user", content: q }] }),
+          body: JSON.stringify({ chatId: chatId.current, dept, store, model: forced, messages: [...history, { role: "user", content: q }] }),
           signal: ctrl.signal,
         });
         if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
@@ -78,7 +82,9 @@ export function useShopChat() {
           case "products":
             return patchLast((t) => ({ ...t, products: [...t.products, ...e.items], status: "Escolhendo os melhores…" }));
           case "curate":
-            return patchLast((t) => ({ ...t, curated: e.ids }));
+            return patchLast((t) => ({ ...t, curated: e.ids, refinements: e.refinements }));
+          case "share":
+            return patchLast((t) => ({ ...t, shareId: e.id }));
           case "text":
             return patchLast((t) => ({ ...t, answer: t.answer + e.text, status: undefined }));
           case "error":
@@ -101,6 +107,6 @@ export function useShopChat() {
 }
 
 /** Fire-and-forget event to /api/event. */
-export function track(name: "shop.feedback" | "shop.dismiss" | "shop.open", meta: Record<string, unknown>) {
+export function track(name: "shop.feedback" | "shop.dismiss" | "shop.open" | "shop.share" | "shop.refine", meta: Record<string, unknown>) {
   fetch("/api/event", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, meta }), keepalive: true }).catch(() => {});
 }

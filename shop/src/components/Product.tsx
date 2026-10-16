@@ -7,8 +7,9 @@ export function money(minor: number | undefined, currency = "BRL") {
 }
 
 /** Ask the merchant's own image CDN for a smaller file. Still their URL — we never rehost. */
-export function thumb(url: string, w = 480, h = 640) {
-  if (/vteximg\.com\.br|vtexassets\.com/.test(url)) return url.replace(/\/arquivos\/ids\/(\d+)(-\d+-\d+)?\//, `/arquivos/ids/$1-${w}-${h}/`);
+/** Width only: VTEX pads a fixed WxH box with white, `-W-auto` keeps the photo's own ratio. */
+export function thumb(url: string, w = 480) {
+  if (/vteximg\.com\.br|vtexassets\.com/.test(url)) return url.replace(/\/arquivos\/ids\/(\d+)(-\d+-(?:\d+|auto))?\//, `/arquivos/ids/$1-${w}-auto/`);
   if (/cdn\.shopify\.com|\/cdn\/shop\//.test(url)) {
     const u = new URL(url);
     u.searchParams.set("width", String(w));
@@ -130,7 +131,7 @@ export function ProductDrawer({
         </button>
         <div className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto">
           {t.images.map((src) => (
-            <img key={src} src={thumb(src, 800, 1066)} alt="" className="aspect-[3/4] w-full shrink-0 snap-center object-cover" />
+            <img key={src} src={thumb(src, 800)} alt="" className="aspect-[3/4] w-full shrink-0 snap-center object-cover" />
           ))}
         </div>
         <div className="flex flex-col gap-4 p-6">

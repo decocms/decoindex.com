@@ -1,7 +1,7 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { stepCountIs, streamText, tool } from "ai";
 import { z } from "zod";
-import type { ChatEvent, ChatRequest, Tile } from "../types";
+import type { ChatEvent, ChatRequest, Share, Tile } from "../types";
 import { BRANDS } from "./brands";
 import { searchBrand, tileLine } from "./catalog";
 import type { Env, ExecutionContext } from "./env";
@@ -9,6 +9,13 @@ import { logEvent } from "./events";
 
 const MAX_SEARCHES = 6;
 const MAX_TURNS = 12;
+const SHARE_TTL = 60 * 60 * 24 * 365;
+
+/** 8 chars of base62: short enough for a WhatsApp message, too many to guess. */
+function shareId(): string {
+  const abc = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  return Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => abc[b % 62]).join("");
+}
 
 /** Pinned per chat: the same id always lands on the same model, so a chat never switches mid-way. */
 export function pickModel(env: Env, chatId: string, forced?: string): string {
@@ -19,19 +26,20 @@ export function pickModel(env: Env, chatId: string, forced?: string): string {
   return models[Math.abs(h) % models.length];
 }
 
-function systemPrompt(dept?: string): string {
+function systemPrompt(dept?: string, store?: string): string {
+  const home = store ? BRANDS.find((b) => b.domain === store) : undefined;
   const roster = BRANDS.map((b) => `- ${b.domain} — ${b.name} [${b.segments.join(", ")}]: ${b.blurb}`).join("\n");
   return `Você é o deco shop: um personal shopper que busca nos catálogos de marcas brasileiras de moda a partir de um único chat.
 
 Marcas disponíveis (use o domínio exato em search_catalogs):
 ${roster}
-${dept ? `\nO cliente está navegando em: ${dept}. Prefira marcas e produtos desse departamento.\n` : ""}
+${dept ? `\nO cliente está navegando em: ${dept}. Prefira marcas e produtos desse departamento.\n` : ""}${home ? `\nO cliente chegou pela loja ${home.name} (${home.domain}). Busque nela primeiro e mostre os produtos dela no topo. Só traga outras marcas para completar quando ela não tiver o suficiente.\n` : ""}
 Como trabalhar:
 1. Sempre chame search_catalogs primeiro. Escolha de 3 a ${MAX_SEARCHES} marcas que realmente vendem o que foi pedido.
 2. A busca de cada loja é por palavra-chave, não semântica: use 1 a 3 palavras em português como aparecem num catálogo ("vestido linho", "tênis corrida", "camisa social"). Nada de frases, cores raras ou ocasiões na query. Você pode buscar a mesma marca com queries diferentes.
 3. Se vier pouco resultado, faça uma segunda rodada com termos mais amplos ou outras marcas.
-4. Depois chame show_products com os ids que melhor atendem ao pedido, do mais para o menos relevante (8 a 24). Respeite orçamento, tamanho e estilo pedidos. Misture marcas.
-5. Por fim, responda em 1 ou 2 frases curtas, no idioma do cliente, dizendo o que você escolheu e por quê. Pode sugerir um refinamento.
+4. Depois chame show_products com os ids que melhor atendem ao pedido, do mais para o menos relevante (8 a 24). Respeite orçamento, tamanho e estilo pedidos. Misture marcas. Junto, mande de 2 a 4 refinamentos: frases curtas (até 5 palavras) que o cliente clicaria a seguir, como "Só midi", "Até R$ 300", "Em tons de azul", "Ver sandálias para combinar".
+5. Por fim, responda em no máximo 2 frases curtas (até 220 caracteres), no idioma do cliente, com o critério da seleção. Não liste produtos nem preços: eles já aparecem na tela.
 
 Regras: preços são preços de catálogo observados, não o preço final. Nunca prometa estoque, frete, prazo ou desconto — isso é da loja. Não invente produtos nem ids.`;
 }
@@ -56,6 +64,8 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
 
   const seen = new Map<string, Tile>();
   const stats = { searches: 0, hits: 0, curated: 0, error: "" };
+  const final = { answer: "", ids: [] as string[], refinements: [] as string[] };
+  const store = BRANDS.some((b) => b.domain === body.store) ? body.store : undefined;
 
   const openrouter = createOpenRouter({
     // The gateway carries BYOK for OpenRouter: with no key of our own, send no
@@ -79,7 +89,7 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
     await send({ type: "meta", chatId: body.chatId, model });
     const result = streamText({
       model: openrouter(model),
-      system: systemPrompt(body.dept),
+      system: systemPrompt(body.dept, store),
       messages,
       stopWhen: stepCountIs(5),
       maxOutputTokens: 1200,
@@ -113,11 +123,16 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
         }),
         show_products: tool({
           description: "Mostra ao cliente os produtos escolhidos, em ordem de relevância. Use apenas ids retornados por search_catalogs.",
-          inputSchema: z.object({ ids: z.array(z.string()).min(1).max(24) }),
-          execute: async ({ ids }) => {
+          inputSchema: z.object({
+            ids: z.array(z.string()).min(1).max(24),
+            refinements: z.array(z.string().max(60)).max(4).optional().describe("2 a 4 próximos passos curtos que o cliente clicaria"),
+          }),
+          execute: async ({ ids, refinements = [] }) => {
             const valid = ids.filter((id) => seen.has(id));
             stats.curated = valid.length;
-            await send({ type: "curate", ids: valid });
+            final.ids = valid;
+            final.refinements = refinements.slice(0, 4);
+            await send({ type: "curate", ids: valid, refinements: final.refinements });
             return `Mostrando ${valid.length} produtos.`;
           },
         }),
@@ -125,8 +140,32 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
     });
 
     for await (const part of result.fullStream) {
-      if (part.type === "text-delta") await send({ type: "text", text: part.text });
+      if (part.type === "text-delta") {
+        final.answer += part.text;
+        await send({ type: "text", text: part.text });
+      }
       else if (part.type === "error") throw part.error;
+    }
+
+    // Snapshot the turn so it can be shared. Built here, from tiles the server
+    // itself fetched — never from client input, or anyone could publish fake
+    // products and links under our domain.
+    const tiles = final.ids.map((id) => seen.get(id)).filter((t): t is Tile => !!t);
+    if (tiles.length && env.SHARES) {
+      const q = messages.filter((m) => m.role === "user").at(-1)?.content ?? "";
+      const share: Share = {
+        id: shareId(),
+        q,
+        answer: final.answer.trim(),
+        dept: body.dept,
+        store,
+        model,
+        createdAt: new Date().toISOString(),
+        tiles,
+        refinements: final.refinements,
+      };
+      await env.SHARES.put(`s:${share.id}`, JSON.stringify(share), { expirationTtl: SHARE_TTL });
+      await send({ type: "share", id: share.id });
     }
   };
 
