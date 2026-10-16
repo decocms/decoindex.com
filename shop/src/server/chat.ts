@@ -96,7 +96,7 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
           }),
           execute: async ({ searches, maxPriceBRL }) => {
             const known = searches.filter((s) => BRANDS.some((b) => b.domain === s.domain)).slice(0, MAX_SEARCHES);
-            const names = known.map((s) => BRANDS.find((b) => b.domain === s.domain)?.name).join(", ");
+            const names = [...new Set(known.map((s) => BRANDS.find((b) => b.domain === s.domain)?.name))].join(", ");
             await send({ type: "status", text: `Buscando em ${names}…` });
             stats.searches += known.length;
             const lists = await Promise.all(known.map((s) => searchBrand(env, s.domain, s.query, ip)));
