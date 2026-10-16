@@ -8,7 +8,15 @@
  * search indexer sends a handful — welcome in category, not at that volume.
  * Plain Applebot (Siri) is not here.
  */
-export const BLOCKED_CRAWLERS = ["Amazonbot", "Amzn-SearchBot", "Bytespider", "CCBot", "meta-externalagent"];
+export const BLOCKED_CRAWLERS = [
+  "Amazonbot",
+  "Amzn-SearchBot",
+  "Bytespider",
+  "CCBot",
+  "meta-externalagent",
+  // ~1.4k reads in 3h, 2026-10-09, rotating 7+ browser UAs around this token.
+  "meta-webindexer",
+];
 const BLOCKED_RE = new RegExp(BLOCKED_CRAWLERS.join("|"), "i");
 export const isBlockedCrawler = (ua?: string) => !!ua && BLOCKED_RE.test(ua);
 

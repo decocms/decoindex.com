@@ -52,6 +52,14 @@ export async function blockRuleFor(env: Env, ua: string | undefined, cf: Cf): Pr
 export const SWEEP = { reads: 100, paths: 60, windowMs: 3_600_000, blockDays: 7 };
 
 /**
+ * Low and slow. A forged browser UA from a cloud network ("datacenter") that
+ * never bursts still walks the catalog: Tencent Cloud read 353 docs over 142
+ * paths in a week at ~2/h, invisible to the hourly test. An honest agent says
+ * who it is; this class is, by construction, one that does not.
+ */
+export const SLOW = { reads: 150, paths: 75, windowMs: 7 * 86_400_000 };
+
+/**
  * Model vendors fetching for a user share one UA across all of their users, so
  * their volume is many people, not one crawler. Exempt only when Cloudflare has
  * verified them — the UA alone is exactly what a scraper forges.
@@ -73,10 +81,39 @@ export async function sweepScrapers(env: Env): Promise<number> {
     .bind(since, SWEEP.reads, SWEEP.paths)
     .all<{ asn: number | null; aso: string | null; ua: string; ua_class: string; bot: string | null; n: number; paths: number }>();
 
-  const offenders = (results ?? []).filter((r) => !(r.bot && VERIFIED_EXEMPT.has(r.ua_class)));
-  if (!offenders.length) return 0;
+  const slow = await env.DB.prepare(
+    `SELECT json_extract(meta,'$.asn') asn, MAX(json_extract(meta,'$.aso')) aso,
+            json_extract(meta,'$.ua') ua, MAX(ua_class) ua_class, NULL bot,
+            COUNT(*) n, COUNT(DISTINCT json_extract(meta,'$.path')) paths
+       FROM events
+      WHERE ua_class = 'datacenter' AND name = 'read' AND ts >= ? AND json_extract(meta,'$.ua') IS NOT NULL
+      GROUP BY 1, 3
+     HAVING n >= ? AND paths >= ?`,
+  )
+    .bind(new Date(now - SLOW.windowMs).toISOString(), SLOW.reads, SLOW.paths)
+    .all<{ asn: number | null; aso: string | null; ua: string; ua_class: string; bot: null; n: number; paths: number }>();
 
   const expires = new Date(now + SWEEP.blockDays * 86_400_000).toISOString();
+
+  // A block that is still being hit is still needed. Amazon kept hammering
+  // rule 4 at ~1.8k/day; letting it lapse on day 7 just reopens the door and
+  // waits for the crawler to trip the threshold again.
+  await env.DB.prepare(
+    `UPDATE blocklist SET expires_at = ?
+      WHERE expires_at IS NOT NULL
+        AND id IN (SELECT DISTINCT json_extract(meta,'$.rule') FROM events
+                    WHERE name = 'blocked' AND ts >= ?)`,
+  )
+    .bind(expires, since)
+    .run();
+  memo = null;
+
+  const offenders = [
+    ...(results ?? []).filter((r) => !(r.bot && VERIFIED_EXEMPT.has(r.ua_class))),
+    ...(slow.results ?? []).map((r) => ({ ...r, window: "7d" })),
+  ];
+  if (!offenders.length) return 0;
+
   await env.DB.batch(
     offenders.map((r) =>
       env.DB.prepare(
@@ -90,7 +127,7 @@ export async function sweepScrapers(env: Env): Promise<number> {
         Number(r.asn) || ANY,
         r.aso,
         r.ua,
-        `${r.n} reads over ${r.paths} paths in 1h (${r.ua_class})`,
+        `${r.n} reads over ${r.paths} paths in ${"window" in r ? r.window : "1h"} (${r.ua_class})`,
         r.n,
         r.paths,
         new Date(now).toISOString(),
