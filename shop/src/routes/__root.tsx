@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext } from "@tanstack/react-router";
-import { DecoRootLayout, StableOutlet } from "@decocms/tanstack";
+import { DecoRootLayout } from "@decocms/tanstack";
 // @ts-ignore Vite ?url import
 import appCss from "../styles/app.css?url";
 
@@ -28,8 +28,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
   }),
   component: () => (
-    <DecoRootLayout siteName="decoshop" lang="pt-BR" bodyClassName="bg-paper text-ink antialiased">
-      <StableOutlet />
-    </DecoRootLayout>
+    // DecoRootLayout renders the route outlet itself; children are extras after it.
+    <DecoRootLayout siteName="decoshop" lang="pt-BR" bodyClassName="bg-paper text-ink antialiased" />
   ),
 });

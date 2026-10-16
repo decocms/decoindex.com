@@ -40,7 +40,10 @@ export default function ShopChat({
   const started = turns.length > 0;
 
   // ?q= makes a search shareable and lets the home page deep-link a prompt.
+  const booted = useRef(false);
   useEffect(() => {
+    if (booted.current) return; // effects run twice in dev; a deep link must send once
+    booted.current = true;
     const p = new URLSearchParams(location.search);
     const d = p.get("dept");
     if (d === "masculino" || d === "feminino") setDept(d);
@@ -187,7 +190,9 @@ function Composer({ placeholder, onSend, autoFocus, large }: { placeholder: stri
 function Thread({ turns, model, chatId }: { turns: Turn[]; model?: string; chatId: string }) {
   const [voted, setVoted] = useState<Record<number, boolean>>({});
   const end = useRef<HTMLDivElement>(null);
-  useEffect(() => end.current?.scrollIntoView({ block: "end" }), [turns.length]);
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: "end" });
+  }, [turns.length]);
 
   return (
     <ol className="flex flex-col gap-5" aria-live="polite">
@@ -246,7 +251,9 @@ function Results({
   onDismiss: (t: Tile) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
-  useEffect(() => setShowAll(false), [turn.user]);
+  useEffect(() => {
+    setShowAll(false);
+  }, [turn.user]);
 
   const { picked, rest } = useMemo(() => {
     const visible = turn.products.filter((p) => !hidden.has(p.id));

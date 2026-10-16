@@ -58,8 +58,17 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
   const stats = { searches: 0, hits: 0, curated: 0, error: "" };
 
   const openrouter = createOpenRouter({
-    apiKey: env.OPENROUTER_API_KEY,
-    baseURL: `https://gateway.ai.cloudflare.com/v1/${env.AI_GATEWAY_ACCOUNT_ID}/${env.AI_GATEWAY_NAME}/openrouter`,
+    // The gateway carries BYOK for OpenRouter: with no key of our own, send no
+    // Authorization header at all and let it inject the stored one.
+    apiKey: env.OPENROUTER_API_KEY || "byok",
+    fetch: env.OPENROUTER_API_KEY
+      ? undefined
+      : (input, init) => {
+          const headers = new Headers(init?.headers);
+          headers.delete("authorization");
+          return fetch(input, { ...init, headers });
+        },
+    baseURL: `https://gateway.ai.cloudflare.com/v1/${env.AI_GATEWAY_ACCOUNT_ID}/${env.AI_GATEWAY_NAME}/openrouter/v1`,
     headers: {
       "cf-aig-metadata": JSON.stringify({ app: "decoshop", chat: body.chatId, model }),
       ...(env.CF_AI_GATEWAY_TOKEN ? { "cf-aig-authorization": `Bearer ${env.CF_AI_GATEWAY_TOKEN}` } : {}),
