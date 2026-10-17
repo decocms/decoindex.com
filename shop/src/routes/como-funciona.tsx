@@ -10,7 +10,7 @@ import { SiteHeader } from "~/components/Share";
 export const Route = createFileRoute("/como-funciona")({
   head: () => ({
     meta: [
-      { title: "Como funciona — deco shop" },
+      { title: "Como funciona · deco shop" },
       {
         name: "description",
         content:
@@ -50,38 +50,37 @@ function HowItWorks() {
       <Hero />
       <Diagram />
 
-      <Section n="01" kicker="A pergunta" title="Tudo começa como numa loja: alguém pedindo ajuda.">
+      <Section n="01" kicker="A pergunta" title="Tudo começa com alguém pedindo ajuda, como numa loja.">
         <Lead>
-          “Vestido longo para madrinha de casamento de dia.” Não é uma busca por palavra-chave, é um pedido com contexto: ocasião,
-          horário, comprimento, o que <B>não</B> pode (preto, brilho de noite). Um vendedor bom entenderia na hora. Uma caixa de busca
-          de e-commerce devolve “vestido”. O deco shop trata a frase inteira como o briefing de um personal shopper — e vai buscar
-          em 57 marcas brasileiras ao mesmo tempo.
+          “Vestido longo para madrinha de casamento de dia.” A frase traz ocasião, horário, comprimento e até o que fica de fora
+          (preto, brilho de noite). Um bom vendedor entenderia na hora, enquanto a busca de um e-commerce devolve qualquer “vestido”.
+          O deco shop lê a frase inteira como o pedido feito a um personal shopper e procura nas 57 marcas ao mesmo tempo.
         </Lead>
       </Section>
 
-      <Section n="02" kicker="decoindex" title="As lojas, lidas como um agente lê: em markdown, não em HTML.">
+      <Section n="02" kicker="decoindex" title="O decoindex entrega cada loja em markdown, do jeito que um agente lê.">
         <Lead>
-          Um agente que abre a página de uma loja recebe centenas de milhares de tokens de HTML, scripts e menus para achar meia dúzia
-          de fatos. O <B>decoindex</B> é um proxy sobre as APIs públicas de catálogo da VTEX e da Shopify: troque o domínio da URL e a
-          mesma página volta como markdown normalizado — título, preço de catálogo, tamanhos, categorias, link para a loja.
+          Quando um agente abre a página de uma loja, recebe centenas de milhares de tokens de HTML, scripts e menus para achar meia
+          dúzia de informações. O <B>decoindex</B> é um proxy sobre as APIs públicas de catálogo da VTEX e da Shopify. Basta trocar o
+          domínio da URL e a mesma página volta em markdown, com título, preço de catálogo, tamanhos, categorias e o link para a loja.
         </Lead>
         <div className="mt-10 grid gap-4 md:grid-cols-3">
           <Stat value="127×" label="menos tokens por página (mediana, 12 lojas)" />
           <Stat value="1.356×" label="na loja mais pesada do benchmark" />
-          <Stat value="≤ 2" label="chamadas à loja por leitura, com cache" />
+          <Stat value="até 2" label="chamadas à loja por leitura, com cache" />
         </div>
         <Note>
-          Menos tokens por página é o que torna barato navegar <i>mais</i>: o modelo pode abrir a árvore de categorias de seis lojas,
-          comparar, voltar e abrir de novo, pelo custo que antes pagaria por uma única página. E o decoindex é canal, não concorrente:
-          nunca hospeda imagem, sempre aponta para a loja, todo link de produto leva a atribuição.
+          Com páginas tão menores, o modelo pode navegar <i>mais</i>. Ele abre a árvore de categorias de seis lojas, compara, volta e
+          abre de novo pelo custo que antes pagaria por uma única página. O decoindex também trabalha a favor das marcas: as imagens
+          continuam no servidor da loja e todo link de produto leva para ela, com atribuição.
         </Note>
       </Section>
 
       <Section n="03" kicker="Curadoria" title="57 marcas, cada uma com contexto.">
         <Lead>
-          A lista não é “tudo que roda VTEX”. Escolhemos marcas pelo que elas significam — começando pelas lojas dos shoppings que
-          definem moda no Brasil (Leblon, Iguatemi, JK) — e para cada uma escrevemos o que um vendedor saberia: o que vende, para quem,
-          de onde vem, desde quando, em que faixa de preço.
+          Escolhemos as marcas a dedo, começando pelas lojas dos shoppings que ditam a moda no Brasil, como Leblon, Iguatemi e JK.
+          Para cada uma, registramos o que um vendedor saberia de cabeça: o que vende, para quem, de onde vem, desde quando e em que
+          faixa de preço.
         </Lead>
         <div className="mt-10 overflow-hidden rounded-2xl border border-neutral-800">
           {[
@@ -100,37 +99,37 @@ function HowItWorks() {
           ))}
         </div>
         <Note>
-          É isso que faz “linho, das marcas cariocas” ou “biquíni de luxo” funcionarem. Cada fato foi pesquisado com fonte; onde as
-          fontes discordam, o campo fica vazio — o modelo nunca recebe um palpite como se fosse fato.
+          É esse contexto que faz pedidos como “linho, das marcas cariocas” ou “biquíni de luxo” darem certo. Cada informação tem
+          fonte, e quando as fontes discordam o campo fica em branco, para o modelo nunca tratar um palpite como fato.
         </Note>
       </Section>
 
-      <Section n="04" kicker="Jev" title="Um modelo que não escreve: decide.">
+      <Section n="04" kicker="Jev" title="O Jev é um modelo feito para decidir.">
         <Lead>
-          O <B>Jev</B>, da TypeSafe, é um modelo de decisão. Ele não gera texto: recebe um estado e perguntas tipadas, e devolve
-          respostas com probabilidades. Para o deco shop, a pergunta é a mesma 57 vezes — <i>“quão provável é esta marca ter o que o
-          cliente pede?”</i> — numa escala de três níveis, todas respondidas em paralelo numa única chamada.
+          O <B>Jev</B>, da TypeSafe, recebe um contexto e uma lista de perguntas com respostas fechadas, e devolve a probabilidade de
+          cada resposta, sem gerar texto. No deco shop fazemos a mesma pergunta para cada uma das 57 marcas (<i>“qual a chance de esta
+          marca ter o que o cliente pediu?”</i>), numa escala de três níveis, e o Jev responde todas em paralelo numa única chamada.
         </Lead>
         <JevScores />
         <div className="mt-10 grid gap-4 md:grid-cols-3">
-          <Stat value="~0,8 s" label="para pontuar as 57 marcas" />
-          <Stat value="US$ 0,0003" label="por chamada — só a entrada é cobrada" />
-          <Stat value="57 → 10" label="marcas que seguem para o próximo passo" />
+          <Stat value="0,8 s" label="para pontuar as 57 marcas" />
+          <Stat value="US$ 0,0003" label="por chamada, só a entrada é cobrada" />
+          <Stat value="10 de 57" label="marcas seguem para o próximo passo" />
         </div>
         <Note>
-          O Jev aparece duas vezes. Antes: escolhe as 10 marcas que o modelo de raciocínio vai considerar, então o prompt carrega 10
-          fichas e não 57. Entre os passos: cada rodada de busca devolve até 90 produtos, e o Jev pontua cada um contra a conversa —
-          só os 30 melhores voltam para o modelo ler (no máximo 8 por marca, para a seleção continuar misturada). A tela do cliente
-          continua recebendo tudo.
+          O Jev trabalha em dois momentos. Primeiro, escolhe as 10 marcas que o modelo de raciocínio vai considerar, o que deixa o
+          prompt com 10 fichas em vez de 57. Depois, a cada rodada de busca, que traz até 90 produtos, ele dá uma nota para cada peça
+          e só as 30 melhores seguem para o modelo, com no máximo 8 por marca para a seleção continuar variada. A tela do cliente
+          recebe todos os produtos. Num teste com as mesmas buscas, isso cortou 59% dos tokens e 40% do custo.
         </Note>
       </Section>
 
-      <Section n="05" kicker="Raciocínio, em teste contínuo" title="Sete modelos competindo, em produção, todo dia.">
+      <Section n="05" kicker="Raciocínio, em teste contínuo" title="Sete modelos competem em produção, todos os dias.">
         <Lead>
-          Quem conduz a busca é um modelo de raciocínio com duas ferramentas. <B>find_products</B> consulta até seis lojas em paralelo
-          pelo decoindex: com o tipo de peça, navega a árvore de categorias da loja e ordena pelos atributos (“linho”, “midi”,
-          “corrida”); sem tipo, usa a busca da própria loja. <B>show_products</B> entrega a seleção final. Entre uma e outra, o modelo
-          pode refazer a rodada com outras marcas ou outros termos — até cinco passos.
+          Um modelo de raciocínio conduz a busca com duas ferramentas. A <B>find_products</B> consulta até seis lojas em paralelo pelo
+          decoindex. Quando sabe o tipo de peça, navega pela árvore de categorias da loja e ordena pelos atributos (“linho”, “midi”,
+          “corrida”); quando não sabe, usa a busca da própria loja. A <B>show_products</B> entrega a seleção final. No meio do caminho
+          o modelo pode refazer a rodada com outras marcas ou outros termos, em até cinco passos.
         </Lead>
         <div className="mt-10 flex flex-wrap gap-2">
           {["claude-haiku-5.5", "claude-sonnet-5.5", "deepseek-v4.1-flash", "glm-5.3-flash", "qwen3.8-flash", "muse-glimmer-30b", "gemini-3.8-flash"].map(
@@ -142,34 +141,34 @@ function HowItWorks() {
           )}
         </div>
         <Note>
-          Cada conversa é atendida por um dos sete, sorteado e fixo naquela conversa. Um painel compara os modelos pelo que importa:
-          quantas conversas viram clique para a loja, latência, quantos resultados bons, 👍/👎, e quanto custou cada busca. Quatro dos
-          sete são de pesos abertos. O melhor modelo de hoje não precisa ser o de amanhã — a troca é uma linha de configuração.
+          Cada conversa é atendida por um dos sete, sorteado no início e mantido até o fim. Um painel compara os modelos pela taxa de
+          conversas que terminam em clique para a loja, pela latência, pelo número de resultados, pelo 👍/👎 e pelo custo de cada
+          busca. Quatro dos sete têm pesos abertos, e trocar de modelo é mudar uma linha de configuração.
         </Note>
       </Section>
 
-      <Section n="06" kicker="Coleta e julgamento" title="Buscar é fácil. Escolher é o trabalho.">
+      <Section n="06" kicker="Coleta e julgamento" title="Escolher dá mais trabalho do que buscar.">
         <Lead>
-          Com até 90 produtos coletados por rodada, o modelo julga: respeita orçamento, tamanho, ocasião e o que o cliente excluiu,
-          mistura marcas e escolhe de 8 a 24 peças, em ordem. Antes de chegar ao modelo, regras simples já tiraram o óbvio: peças do
-          outro departamento, linhas infantis, a categoria errada que algumas lojas usam (“Kit Calcinhas” cadastrado como biquíni).
+          Com os produtos coletados, o modelo respeita orçamento, tamanho, ocasião e o que o cliente excluiu, mistura marcas e escolhe
+          de 8 a 24 peças, em ordem de relevância. Antes disso, regras simples já tiraram peças do outro departamento, linhas infantis e
+          cadastros errados das lojas, como um “Kit Calcinhas” na categoria de biquínis.
         </Lead>
         <Numbered
           items={[
-            ["Filtra", "departamento, idade, tipo de peça — regras determinísticas, de graça"],
+            ["Filtra", "departamento, idade e tipo de peça, com regras fixas que não custam nada"],
             ["Pontua", "o Jev ordena por relevância ao pedido e corta para 30"],
             ["Escolhe", "o modelo seleciona 8 a 24 e sugere 2 a 4 próximos passos"],
-            ["Explica", "duas frases com o critério — sem listar preço, que já está na tela"],
+            ["Explica", "duas frases com o critério da seleção, sem repetir preços que já estão na tela"],
           ]}
         />
       </Section>
 
-      <Section n="07" kicker="A vitrine" title="E aí, a parte que o cliente vê.">
+      <Section n="07" kicker="A vitrine" title="A vitrine que o cliente vê.">
         <Lead>
-          A grade aparece enquanto a busca acontece, e assenta quando a seleção chega. Cada peça abre com fotos, tamanhos e o link para
-          comprar na própria loja — preço e estoque finais são sempre os da loja. “Mais como este” busca parecidos sem chamar modelo
-          nenhum. Toda busca vira um link compartilhável, com a foto da peça no preview do WhatsApp. E a mesma pergunta, no mesmo dia,
-          volta do cache em 0,2 s.
+          A grade vai aparecendo durante a busca e se organiza quando a seleção chega. Cada peça abre com fotos, tamanhos e o link
+          para comprar na própria loja, que dá a palavra final sobre preço e estoque. “Mais como este” encontra peças parecidas sem
+          chamar nenhum modelo. Toda busca vira um link para compartilhar, com a foto da peça no preview do WhatsApp, e a mesma
+          pergunta feita no mesmo dia sai do cache em 0,2 s.
         </Lead>
       </Section>
 
@@ -210,8 +209,8 @@ function Hero() {
           </span>
         </h1>
         <p className="hw-up mt-8 max-w-[720px] text-2xl font-medium leading-snug text-neutral-100 md:text-3xl" style={{ animationDelay: ".45s" }}>
-          Uma frase vira uma seleção de peças de 57 marcas em cerca de dez segundos.{" "}
-          <span style={{ color: LIME }}>Aqui está o caminho que ela percorre.</span>
+          Em cerca de dez segundos, uma frase vira uma seleção de peças de 57 marcas.{" "}
+          <span style={{ color: LIME }}>Este é o caminho que ela faz.</span>
         </p>
       </div>
     </section>
@@ -222,11 +221,11 @@ function Hero() {
 function Diagram() {
   const stages: { k: string; title: string; body: string; metric?: string; hot?: boolean }[] = [
     { k: "Pergunta", title: "“vestido longo para madrinha, de dia”", body: "o pedido inteiro, com ocasião e restrições" },
-    { k: "Jev · marcas", title: "57 → 10 marcas", body: "uma pergunta de score por marca, numa chamada", metric: "0,8 s" },
-    { k: "Modelo de raciocínio", title: "1 de 7, em teste contínuo", body: "planeja, chama ferramentas, refaz se vier pouco", metric: "≤ 5 passos", hot: true },
-    { k: "Jev · produtos", title: "até 90 → 30 produtos", body: "cada peça pontuada contra a conversa", metric: "−59% tokens" },
+    { k: "Jev · marcas", title: "10 de 57 marcas", body: "uma nota por marca, todas numa chamada", metric: "0,8 s" },
+    { k: "Modelo de raciocínio", title: "1 de 7, em teste contínuo", body: "planeja, consulta as lojas e repete se vier pouco", metric: "até 5 passos", hot: true },
+    { k: "Jev · produtos", title: "30 de até 90 produtos", body: "uma nota por peça, de acordo com a conversa", metric: "−59% tokens" },
     { k: "Julgamento", title: "8 a 24 escolhidos", body: "orçamento, ocasião, mistura de marcas, próximos passos" },
-    { k: "Vitrine", title: "grade, fotos, link para a loja", body: "compartilhável; mesma pergunta no dia volta do cache" },
+    { k: "Vitrine", title: "grade, fotos, link para a loja", body: "link para compartilhar e cache de um dia" },
   ];
   return (
     <section className="border-t border-neutral-800">
@@ -273,21 +272,23 @@ function Diagram() {
               <Box tone="lime">modelo de raciocínio</Box>
               <Wire label="find_products · até 6 lojas" />
               <Box>decoindex</Box>
-              <Wire label="≤ 2 chamadas, cache" />
+              <Wire label="até 2 chamadas por loja, com cache" />
               <div className="grid grid-cols-2 gap-2">
                 <Box small>VTEX</Box>
                 <Box small>Shopify</Box>
               </div>
-              <Wire label="markdown · 127× menos tokens" up />
-              <Box tone="lime">volta para o modelo, via Jev</Box>
+              <Wire label="até 90 produtos em markdown" />
+              <Box>Jev escolhe os 30 melhores</Box>
+              <Wire label="o modelo lê só esses 30" />
+              <Box tone="lime">busca de novo ou entrega a seleção</Box>
             </div>
             <p className="mt-4 text-xs leading-relaxed text-neutral-500">
-              O laço roda até o modelo ter o suficiente — normalmente uma ou duas rodadas.
+              O loop roda até o modelo ter peças suficientes, quase sempre em uma ou duas rodadas.
             </p>
           </aside>
         </div>
         <figcaption className="mt-8 text-center text-sm italic text-neutral-500">
-          Dois modelos baratos e rápidos nas bordas, um modelo caro só onde é preciso pensar.
+          Os modelos baratos e rápidos fazem a triagem, e o modelo caro só entra onde precisa pensar.
         </figcaption>
       </figure>
     </section>
@@ -331,7 +332,7 @@ function JevScores() {
   ];
   return (
     <figure className="m-0 mt-10 rounded-2xl border border-neutral-800 bg-neutral-900 p-6 md:p-8">
-      <p className="text-xs uppercase tracking-[0.16em] text-neutral-500">“tênis de corrida até 600 reais” · score do Jev por marca</p>
+      <p className="text-xs uppercase tracking-[0.16em] text-neutral-500">“tênis de corrida até 600 reais” · nota do Jev por marca</p>
       <div className="mt-5 grid gap-2.5">
         {rows.map(([name, s], i) => (
           <div key={name} className="grid grid-cols-[110px_1fr_40px] items-center gap-3 text-sm">
@@ -344,8 +345,8 @@ function JevScores() {
         ))}
       </div>
       <figcaption className="mt-5 border-t border-neutral-800 pt-4 text-sm text-neutral-500">
-        0 = “não vende isso”, 1 = “talvez tenha algo”, 2 = “vende exatamente isso”. O score é a média ponderada pelas
-        probabilidades — as cinco marcas de corrida se separam sozinhas.
+        0 significa “não vende isso”, 1 “talvez tenha algo” e 2 “vende exatamente isso”. A nota é a média ponderada pelas
+        probabilidades, e as cinco marcas de corrida aparecem na frente sem nenhuma regra extra.
       </figcaption>
     </figure>
   );
@@ -365,9 +366,9 @@ function Research() {
             .
           </p>
           <p className="mt-4 max-w-[720px] text-lg leading-relaxed text-neutral-400">
-            Na decocms construímos agentes de IA que otimizam experiências digitais — sites, lojas, catálogos — medindo em produção o
-            que funciona. Aqui testamos, com tráfego real, como agentes navegam catálogos de verdade: quanto custa ler uma loja, que
-            modelo escolhe melhor, onde um modelo de decisão barato substitui um de raciocínio caro.
+            Na decocms construímos agentes de IA que otimizam experiências digitais, como sites, lojas e catálogos, e medimos em
+            produção o que funciona. Aqui testamos com tráfego real como agentes navegam catálogos de verdade, quanto custa ler uma
+            loja, qual modelo escolhe melhor e em que pontos um modelo de decisão barato substitui um de raciocínio caro.
           </p>
           <a
             href="/"

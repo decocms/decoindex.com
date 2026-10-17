@@ -135,5 +135,5 @@ function SharedBoard() {
 }
 
 function Gone() {
-  return <Lost title="Essa seleção não existe mais." body="Mas dá pra fazer uma nova em segundos. O que você procura?" />;
+  return <Lost title="Essa seleção não existe mais." body="Você pode fazer uma nova busca em segundos." />;
 }
