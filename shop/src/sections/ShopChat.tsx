@@ -304,7 +304,19 @@ function Thread({ turns, model, chatId, onAsk }: { turns: Turn[]; model?: string
       {turns.map((t, i) => (
         // Phones show only the latest turn, so the grid stays above the fold.
         <li key={t.key} className={`flex-col gap-2.5 ${i === turns.length - 1 ? "flex" : "hidden lg:flex"}`}>
-          <p className="self-end rounded-2xl rounded-br-md bg-ink px-4 py-2.5 text-sm text-paper">{t.user}</p>
+          {t.seed ? (
+            <div className="flex max-w-[85%] items-center gap-3 self-end rounded-2xl rounded-br-md bg-ink p-2 pr-4 text-paper">
+              {t.seed.images[0] && <img src={thumb(t.seed.images[0], 160)} alt="" className="h-16 w-12 shrink-0 rounded-lg object-cover" />}
+              <div className="min-w-0 text-sm">
+                <p className="text-[11px] uppercase tracking-[0.08em] text-paper/60">Mais como este</p>
+                <p className="line-clamp-2 leading-snug">
+                  {t.seed.brand} · {t.seed.title}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="self-end rounded-2xl rounded-br-md bg-ink px-4 py-2.5 text-sm text-paper">{t.user}</p>
+          )}
           {t.status && !t.answer && (
             <p className="flex items-center gap-2 text-sm text-ink-soft">
               <span className="size-2 animate-pulse rounded-full bg-forest" />

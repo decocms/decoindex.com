@@ -68,4 +68,6 @@ export interface Share {
   createdAt: string;
   tiles: Tile[];
   refinements: string[];
+  /** "Mais como este" snapshots: the piece it started from. */
+  seed?: Pick<Tile, "brand" | "title" | "images">;
 }
