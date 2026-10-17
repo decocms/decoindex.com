@@ -63,7 +63,7 @@ Como trabalhar:
 2. Para cada marca informe "type" (o tipo de peça, da lista fixa) e, em "terms", só os atributos que importam: material, cor, estampa, comprimento, uso ("linho", "azul", "estampado", "midi", "corrida"). Com type, a loja é navegada pela categoria daquele tipo e os terms ordenam o resultado — mais preciso que busca. Sem type (algo fora da lista, nome de coleção, personagem), mande só "terms" e vira busca por palavra-chave (1 a 3 palavras, como num catálogo).
 3. "sort": price_asc quando há orçamento ou pedem barato, discount para promoção, new para novidades; senão omita. Se vier pouco, faça outra rodada com outro type, menos terms ou outras marcas.
 4. Depois chame show_products com os ids que melhor atendem ao pedido, do mais para o menos relevante (8 a 24). Respeite orçamento, tamanho e estilo pedidos. Misture marcas. Junto, mande de 2 a 4 refinamentos: frases curtas (até 5 palavras) que o cliente clicaria a seguir, como "Só midi", "Até R$ 300", "Em tons de azul", "Ver sandálias para combinar".
-5. Por fim, responda em no máximo 2 frases curtas (até 220 caracteres), no idioma do cliente, com o critério da seleção. Não liste produtos nem preços: eles já aparecem na tela.
+5. Por fim, responda em no máximo 2 frases curtas (até 220 caracteres), no idioma do cliente, com o critério da seleção. Não liste produtos nem preços: eles já aparecem na tela. Não escreva nada antes disso: nada de "vou buscar", "boa base", "vou ampliar" entre as chamadas — todo texto que você escreve aparece para o cliente.
 
 Se find_products disser que a LEITURA FALHOU, as lojas não responderam: nunca diga que não existem produtos; diga que as lojas não responderam agora e peça para tentar de novo em instantes.
 
@@ -137,7 +137,7 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
   const model = pickModel(env, body.chatId, body.model);
 
   const seen = new Map<string, Tile>();
-  const stats = { searches: 0, viaCategory: 0, hits: 0, curated: 0, brands: [] as string[], share: "", fallback: false, tokensIn: 0, tokensOut: 0, cost: 0 };
+  const stats = { searches: 0, viaCategory: 0, hits: 0, curated: 0, brands: [] as string[], share: "", fallback: false, tokensIn: 0, tokensOut: 0, cost: 0, lateError: "" };
   const final = { answer: "", ids: [] as string[], refinements: [] as string[] };
   const health = newHealth();
   const UNREACHABLE = "As lojas não responderam agora — não é falta de produto. Tente de novo em instantes.";
@@ -170,7 +170,7 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
         system: systemPrompt(body.dept, store),
         messages,
         stopWhen: stepCountIs(5),
-        maxOutputTokens: 1200,
+        maxOutputTokens: 3000, // per step; DeepSeek ran out at 1200 mid show_products ("Tool calls cutoff by max_tokens")
         abortSignal: req.signal,
         tools: {
           find_products: tool({
@@ -239,20 +239,31 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
       });
 
       let warned = false;
-      for await (const part of result.fullStream) {
-        // Nothing could be read at all: say so plainly instead of letting the model guess.
-        if (!warned && health.failed && !health.ok && !seen.size && part.type === "text-delta") {
-          warned = true;
-          await send({ type: "error", message: UNREACHABLE });
+      let failed: unknown;
+      try {
+        for await (const part of result.fullStream) {
+          // Nothing could be read at all: say so plainly instead of letting the model guess.
+          if (!warned && health.failed && !health.ok && !seen.size && part.type === "text-delta") {
+            warned = true;
+            await send({ type: "error", message: UNREACHABLE });
+          }
+          if (part.type === "text-delta") {
+            final.answer += part.text;
+            await send({ type: "text", text: part.text });
+          } else if (part.type === "error") throw part.error ?? new Error("stream error");
         }
-        if (part.type === "text-delta") {
-          final.answer += part.text;
-          await send({ type: "text", text: part.text });
-        } else if (part.type === "error") throw part.error;
+      } catch (err) {
+        // The shopper left: nothing to finish, and not a model failure.
+        if (req.signal.aborted) return;
+        // Products already on screen: a late model error (cut-off tool call, upstream 400) must not
+        // turn a usable answer into "não consegui". Log it, then curate with the fallback below.
+        if (!seen.size) throw err;
+        failed = err;
+        stats.lateError = String((err as Error)?.message ?? err).slice(0, 300);
       }
 
       // ponytail: cost is only summed for turns that finish; an aborted or failed stream's spend is not logged.
-      for (const step of await result.steps) {
+      for (const step of failed ? [] : await result.steps) {
         const usage = (step.providerMetadata?.openrouter as { usage?: { cost?: number } } | undefined)?.usage;
         stats.tokensIn += step.usage.inputTokens ?? 0;
         stats.tokensOut += step.usage.outputTokens ?? 0;
@@ -287,7 +298,7 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
         await send({ type: "share", id });
       }
       // Cache only a clean, complete answer: never a failed read or an empty grid.
-      if (key && !fallback && !health.failed) {
+      if (key && !fallback && !failed && !health.failed) {
         const cached: CachedAnswer = {
           model,
           tiles: final.ids.map((i) => seen.get(i)).filter((t): t is Tile => !!t),
