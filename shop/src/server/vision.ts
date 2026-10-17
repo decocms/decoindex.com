@@ -4,7 +4,7 @@ import type { Env } from "./env";
 /** Photos we pass to a vision model: merchant CDNs only (the same ones `thumb()` resizes). */
 export const MERCHANT_IMAGE = /^https:\/\/[^/]+(\.vteximg\.com\.br|\.vtexassets\.com|cdn\.shopify\.com)\/|^https:\/\/[^/]+\/cdn\/shop\//;
 
-const TIMEOUT = 5_000;
+const TIMEOUT = 7_000; // luna sometimes passes 5s; the Jev store pick runs alongside, so this hides
 
 /**
  * "Mais como este", by eye, on a budget: ONE image, the seed's, small. A cheap vision model turns

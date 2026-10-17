@@ -97,6 +97,8 @@ export async function similar(
   ctx: Ctx,
   seed: Pick<Tile, "id" | "domain" | "title" | "category" | "priceMinor">,
   look: string[] = [],
+  /** Stores Jev ranked for this seed; without them, fall back to segment overlap. */
+  preferred?: string[],
 ): Promise<Found & { type?: ProductType; attrs: string[] }> {
   const type = detectType(`${seed.title} ${seed.category ?? ""}`);
   // What the photo shows comes first: the title rarely names the color or the print.
@@ -111,7 +113,8 @@ export async function similar(
     .map((b) => ({ b, shared: home ? b.segments.filter((s) => home.segments.includes(s)).length : 0 }))
     .sort((x, y) => y.shared - x.shared)
     .map((x) => x.b.domain);
-  const stores = [home?.domain ?? seed.domain, ...peers].slice(0, 8);
+  const ranked = preferred?.filter((d) => d !== home?.domain) ?? [];
+  const stores = [...new Set([home?.domain ?? seed.domain, ...ranked, ...peers])].slice(0, 8);
 
   // Trees are memoized, so this is cheap after the first shopper; keep the first 5 that carry the type.
   const withType: { domain: string; path: string }[] = [];

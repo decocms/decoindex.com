@@ -423,19 +423,24 @@ export async function handleSimilar(req: Request, env: Env, ctx: ExecutionContex
       // One look at the seed's photo (only that one image) gives the words its title lacks: color,
       // print, length. They steer which products get fetched and how Jev ranks them.
       let look: string[] = [];
-      if (clean.image) {
-        await send({ type: "status", text: "Olhando a peça…" });
-        const seen = await describe(env, clean.image, clean.title, { chat: body.chatId, model: "similar" });
-        if ("error" in seen) rank.vision = `error: ${seen.error}`;
-        else {
-          look = seen.look;
-          Object.assign(rank, { look, visionMs: seen.ms, vision: seen.model });
-          rank.cost += seen.cost;
-        }
+      if (clean.image) await send({ type: "status", text: "Olhando a peça…" });
+      // In parallel: the photo's words (vision, one image) and which stores to look in (Jev over the
+      // roster). Segment overlap alone sent a C&A skirt to FILA, Insider and New Balance.
+      const seedLine = `${brandByDomain(clean.domain)?.name} | ${clean.title} | ${clean.category ?? ""}${clean.priceMinor ? ` | R$ ${Math.round(clean.priceMinor / 100)}` : ""}`;
+      const [seen, stores] = await Promise.all([
+        clean.image ? describe(env, clean.image, clean.title, { chat: body.chatId, model: "similar" }) : null,
+        preselect(env, { asks: [`Peças parecidas com: ${seedLine}`], dept: body.dept }),
+      ]);
+      if (seen && "error" in seen) rank.vision = `error: ${seen.error}`;
+      else if (seen) {
+        look = seen.look;
+        Object.assign(rank, { look, visionMs: seen.ms, vision: seen.model });
+        rank.cost += seen.cost;
       }
+      if (stores) rank.cost += stores.cost;
       await send({ type: "status", text: look.length ? `Procurando parecidos: ${look.slice(0, 3).join(", ")}…` : "Procurando parecidos…" });
       const health = newHealth();
-      const found = await similar({ env, ip, dept: body.dept, health }, clean, look);
+      const found = await similar({ env, ip, dept: body.dept, health }, clean, look, stores?.domains);
       hits = found.tiles.length;
       if (!hits && health.failed && !health.ok) {
         await send({ type: "error", message: "As lojas não responderam agora — tente de novo em instantes." });
@@ -447,8 +452,8 @@ export async function handleSimilar(req: Request, env: Env, ctx: ExecutionContex
       }
       // Heuristics found up to 60 candidates; Jev scores each against the seed and its look.
       let tiles = found.tiles;
-      const seedLine = `${brandByDomain(clean.domain)?.name} | ${clean.title} | ${clean.category ?? ""}${clean.priceMinor ? ` | R$ ${Math.round(clean.priceMinor / 100)}` : ""}${look.length ? ` | aparência: ${look.join(", ")}` : ""}`;
-      const byJev = await rankTiles(env, { asks: [`Peças parecidas com: ${seedLine}`], dept: body.dept }, tiles, tileLine, 24, 8);
+      const lookLine = look.length ? ` | aparência: ${look.join(", ")}` : "";
+      const byJev = await rankTiles(env, { asks: [`Peças parecidas com: ${seedLine}${lookLine}`], dept: body.dept }, tiles, tileLine, 24, 8);
       if (byJev) {
         tiles = byJev.tiles;
         rank.jevMs = byJev.ms;
@@ -466,6 +471,7 @@ export async function handleSimilar(req: Request, env: Env, ctx: ExecutionContex
         answer,
         dept: body.dept,
         model: "similar",
+        seed: { brand: brandByDomain(clean.domain)?.name ?? "", title: clean.title, images: clean.image ? [clean.image] : [] },
         tiles: found.tiles,
         refinements: [],
       });

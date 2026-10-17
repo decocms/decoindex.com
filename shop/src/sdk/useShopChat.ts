@@ -17,6 +17,8 @@ export interface Turn {
   refinements?: string[];
   /** Set once the server froze this turn at /s/{id}. */
   shareId?: string;
+  /** "Mais como este": the piece it started from, shown as a card in the thread. */
+  seed?: Pick<Tile, "brand" | "title" | "images">;
   error?: string;
   done: boolean;
   ms?: number;
@@ -63,13 +65,13 @@ export function useShopChat() {
    * Patching "the last turn" instead let an aborted stream finish the new one
    * and leave itself spinning forever.
    */
-  const stream = useCallback(async (label: string, keep: number, endpoint: string, payload: (id: string) => object) => {
+  const stream = useCallback(async (label: string, keep: number, endpoint: string, payload: (id: string) => object, seed?: Turn["seed"]) => {
     abort.current?.abort();
     const ctrl = (abort.current = new AbortController());
     if (keep === 0 || !chatId.current) chatId.current = newId();
     const key = newId();
     const patchLast = (fn: (t: Turn) => Turn) => setTurns((all) => all.map((t) => (t.key === key ? fn(t) : t)));
-    setTurns((all) => [...all.slice(0, keep), { key, user: label, answer: "", products: [], done: false, status: "Pensando…" }]);
+    setTurns((all) => [...all.slice(0, keep), { key, user: label, seed, answer: "", products: [], done: false, status: "Pensando…" }]);
     try {
         const res = await fetch(endpoint, {
           method: "POST",
@@ -150,7 +152,7 @@ export function useShopChat() {
     setModel(s.model);
     setTurns((all) => [
       ...all.slice(0, keep),
-      { key: newId(), user: s.q, answer: s.answer, products: s.tiles, curated: s.tiles.map((t) => t.id), refinements: s.refinements, shareId: s.id, done: true },
+      { key: newId(), user: s.q, seed: s.seed, answer: s.answer, products: s.tiles, curated: s.tiles.map((t) => t.id), refinements: s.refinements, shareId: s.id, done: true },
     ]);
     return s;
   }, []);
@@ -162,7 +164,7 @@ export function useShopChat() {
         chatId: id,
         dept,
         tile: { id: t.id, domain: t.domain, title: t.title, category: t.category, priceMinor: t.priceMinor, image: t.images[0] },
-      })),
+      }), { brand: t.brand, title: t.title, images: t.images.slice(0, 1) }),
     [stream],
   );
 
