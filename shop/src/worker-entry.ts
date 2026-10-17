@@ -63,6 +63,14 @@ export default {
       return new Response(null, { status: 204 });
     }
 
+    // One frozen turn, for a chat URL (?s=id) to reopen exactly what was on screen without a new search.
+    if (url.pathname === "/api/share" && request.method === "GET") {
+      const id = url.searchParams.get("id") ?? "";
+      const raw = /^[0-9a-zA-Z]{8}$/.test(id) ? await env.SHARES?.get(`s:${id}`) : null;
+      if (!raw) return Response.json({ error: "not found" }, { status: 404 });
+      return new Response(raw, { headers: { "content-type": "application/json", "cache-control": "public, max-age=300" } });
+    }
+
     // Admin as an MCP app (token-guarded): add https://shop.decoindex.com/mcp?token=… in deco Studio.
     if (url.pathname === "/mcp" || url.pathname.startsWith("/mcp/")) return handleMcp(request, env);
 
