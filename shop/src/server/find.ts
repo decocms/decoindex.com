@@ -70,7 +70,12 @@ const text = (t: Tile) => `${t.title} ${t.description ?? ""} ${t.category ?? ""}
  */
 function fit(ts: Tile[], o: { type?: ProductType; want: string[]; dept?: "feminino" | "masculino"; keepOrder?: boolean }): Tile[] {
   const wantsKids = o.want.some((w) => isKids(w));
-  const kept = ts.filter((t) => !otherDept(`${t.title} ${t.category ?? ""}`, o.dept) && (wantsKids || !isKids(`${t.title} ${t.category ?? ""}`)));
+  const kept = ts.filter(
+    (t) =>
+      !otherDept(`${t.title} ${t.category ?? ""}`, o.dept) &&
+      !(o.dept && t.dept && t.dept !== o.dept) && // the store's own breadcrumb says it's the other side
+      (wantsKids || !isKids(`${t.title} ${t.category ?? ""}`)),
+  );
   const scored = kept.map((t, i) => {
     const seen = detectType(`${t.title} ${t.category ?? ""}`);
     const typeScore = !o.type || !seen ? 0 : seen === o.type ? 2 : -10;

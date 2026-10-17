@@ -3,7 +3,7 @@ import type { Tile } from "../types";
 import { BRANDS, type Segment } from "./brands";
 import { findProducts, type Sort } from "./find";
 import { categories, newHealth } from "./catalog";
-import { TYPES, TYPE_NAMES, overlap, pickCategory, words, type ProductType } from "./taxonomy";
+import { TYPES, TYPE_NAMES, detectType, overlap, pickCategory, words, type ProductType } from "./taxonomy";
 
 /**
  * Real product photos for the home's cards, ideas and shelves — a daily index,
@@ -40,7 +40,7 @@ interface Snapshot {
 }
 
 const DAY = 86_400_000;
-const SNAPSHOT = (h: string) => `showcase:v8:${h}`;
+const SNAPSHOT = (h: string) => `showcase:v9:${h}`;
 const SPEC = (h: string) => `showcase-spec:${h}`;
 const LOCK = (h: string) => `showcase-lock:${h}`;
 // One shared caller key: showcase reads are few and must not eat a shopper's per-IP budget.
@@ -85,7 +85,14 @@ function deptBrands(dept: ShowcaseSpec["dept"], type: ProductType, day: number, 
  *   1 — it is that type and has the terms
  *   0 — anything else
  */
+/** Types that are the same thing for a photo: a "calcinha de biquíni" in a swimwear category is fine. */
+const FAMILY: ProductType[][] = [["biquini", "maio", "praia"], ["camisa", "camiseta", "polo"], ["short", "bermuda"], ["casaco", "moletom"]];
+const sameFamily = (a: ProductType, b: ProductType) => a === b || FAMILY.some((f) => f.includes(a) && f.includes(b));
+
 function heroScore(t: Tile, type: ProductType, want: string[]): number {
+  // The store's category is the stronger signal: "Calcinha Biquíni" filed under lingerie is not swimwear.
+  const catType = t.category ? detectType(t.category) : undefined;
+  if (catType && !sameFamily(catType, type)) return 0;
   const first = words(t.title)[0] ?? "";
   const hasTerms = !want.length || overlap(want, `${t.title} ${t.description ?? ""}`) > 0;
   if (!hasTerms) return 0;
