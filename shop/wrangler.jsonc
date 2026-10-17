@@ -26,6 +26,9 @@
     { "binding": "DB", "database_name": "decoindex", "database_id": "82dbbe9a-f533-44ca-bd4f-03d2c6a6ee0c" }
   ],
 
+  // Daily showcase rebuild (server/showcase.ts): 09:00 UTC = 06:00 in São Paulo.
+  "triggers": { "crons": ["0 9 * * *"] },
+
   // Chat turns per shopper IP. Each turn is a paid LLM call; a shared link must not be a blank cheque.
   "ratelimits": [{ "name": "CHAT_LIMIT", "namespace_id": "2001", "simple": { "limit": 12, "period": 60 } }],
 
