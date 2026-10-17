@@ -74,6 +74,17 @@ export const BRANDS: Brand[] = [
   { domain: "www.recco.com.br", name: "Recco", segments: ["lingerie", "feminino"], blurb: "lingerie e moda noite" },
   { domain: "www.lupo.com.br", name: "Lupo", segments: ["lingerie", "esporte", "feminino", "masculino"], blurb: "meias, underwear e roupas esportivas" },
   { domain: "www.pituchinhus.com.br", name: "Pituchinhus", segments: ["infantil"], blurb: "moda infantil festiva e delicada" },
+  // Added Oct 2026: jewelry, sneakers and authorial labels, each checked readable on decoindex (BRL).
+  { domain: "www.montecarlo.com.br", name: "Monte Carlo", segments: ["joias"], blurb: "joias em prata 925 e ouro, anéis, brincos e colares" },
+  { domain: "www.vivara.com.br", name: "Vivara", segments: ["joias"], blurb: "joias em ouro e prata, alianças, relógios e a linha life" },
+  { domain: "www.hstern.com.br", name: "H.Stern", segments: ["joias"], blurb: "alta joalheria em ouro 18k, diamantes e gemas brasileiras" },
+  { domain: "www.jackvartanian.com", name: "Jack Vartanian", segments: ["joias"], blurb: "joias autorais em ouro 18k com diamantes e pedras coloridas" },
+  { domain: "www.hectoralbertazzi.com.br", name: "Hector Albertazzi", segments: ["joias"], blurb: "bijuterias de luxo: colares, brincos, anéis e pulseiras banhados" },
+  { domain: "www.cariuma.com.br", name: "Cariuma", segments: ["calcados", "feminino", "masculino"], blurb: "tênis casuais e de skate em lona e couro" },
+  { domain: "www.carnan.com.br", name: "Carnan", segments: ["masculino", "feminino"], blurb: "moda autoral contemporânea, vestidos, camisas e alfaiataria" },
+  { domain: "www.nannacay.com.br", name: "Nannacay", segments: ["bolsas", "feminino"], blurb: "bolsas artesanais feitas à mão por artesãs" },
+  { domain: "www.neriage.com.br", name: "Neriage", segments: ["feminino"], blurb: "moda feminina autoral, vestidos e plissados" },
+  { domain: "www.pacecompany.com.br", name: "PACE", segments: ["masculino", "calcados"], blurb: "streetwear: camisetas, moletons, tênis e acessórios" },
 ];
 
 const byHost = new Map(BRANDS.map((b) => [b.domain.replace(/^www\./, ""), b]));
