@@ -93,9 +93,14 @@ function fit(ts: Tile[], o: { type?: ProductType; want: string[]; dept?: "femini
  * shared attributes and price distance, across the seed's store and up to four
  * stores that sell the same kind of thing. Every read is a category page.
  */
-export async function similar(ctx: Ctx, seed: Pick<Tile, "id" | "domain" | "title" | "category" | "priceMinor">): Promise<Found & { type?: ProductType; attrs: string[] }> {
+export async function similar(
+  ctx: Ctx,
+  seed: Pick<Tile, "id" | "domain" | "title" | "category" | "priceMinor">,
+  look: string[] = [],
+): Promise<Found & { type?: ProductType; attrs: string[] }> {
   const type = detectType(`${seed.title} ${seed.category ?? ""}`);
-  const attrs = attributes(seed.title, type).slice(0, 5);
+  // What the photo shows comes first: the title rarely names the color or the print.
+  const attrs = [...new Set([...look, ...attributes(seed.title, type)])].slice(0, 6);
   if (!type) {
     const tiles = await searchBrand(ctx.env, seed.domain, attrs.slice(0, 3).join(" "), ctx.ip, ctx.health);
     return { tiles: tiles.filter((t) => t.id !== seed.id), via: "busca", attrs };
@@ -122,9 +127,15 @@ export async function similar(ctx: Ctx, seed: Pick<Tile, "id" | "domain" | "titl
     return { tiles: (await searchBrand(ctx.env, seed.domain, [TYPES[type][0], ...attrs.slice(0, 2)].join(" "), ctx.ip, ctx.health)).filter((t) => t.id !== seed.id), via: "busca", type, attrs };
   }
 
-  const pages = await Promise.all(withType.map((s) => browseCategory(ctx.env, s.domain, s.path, ctx.ip, undefined, ctx.health)));
+  // Category pages hold the store's default order, which rarely puts "verde, tropical" first. With a
+  // look from the photo, also search the seed's store and the first peer for it: 2 more reads, bounded.
+  const lookQuery = look.length ? [TYPES[type][0], ...look.slice(0, 2)].join(" ") : "";
+  const pages = await Promise.all([
+    ...withType.map((s) => browseCategory(ctx.env, s.domain, s.path, ctx.ip, undefined, ctx.health)),
+    ...(lookQuery ? withType.slice(0, 2).map((s) => searchBrand(ctx.env, s.domain, lookQuery, ctx.ip, ctx.health)) : []),
+  ]);
   const p0 = seed.priceMinor;
-  const scored = fit(pages.flat(), { type, want: [], dept: ctx.dept })
+  const scored = fit(dedupe(pages.flat()), { type, want: [], dept: ctx.dept })
     .filter((t) => t.id !== seed.id)
     .map((t) => {
       const shared = overlap(attrs, text(t));
@@ -134,7 +145,7 @@ export async function similar(ctx: Ctx, seed: Pick<Tile, "id" | "domain" | "titl
       return { t, score: sameType + shared * 3 + price * 2 + (t.domain === seed.domain ? 0.5 : 0) };
     })
     .sort((a, b) => b.score - a.score)
-    .slice(0, 24)
+    .slice(0, 60) // candidates: Jev narrows these to 24
     .map((x) => x.t);
   const names = withType.map((s) => brandByDomain(s.domain)?.name ?? s.domain);
   if (scored.length >= 6) return { tiles: scored, via: names.join(", "), type, attrs };

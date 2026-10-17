@@ -167,8 +167,9 @@ function HowItWorks() {
       <Section n="07" kicker="A vitrine" title="A vitrine que o cliente vê.">
         <Lead>
           A grade vai aparecendo durante a busca e se organiza quando a seleção chega. Cada peça abre com fotos, tamanhos e o link
-          para comprar na própria loja, que dá a palavra final sobre preço e estoque. “Mais como este” encontra peças parecidas sem
-          chamar nenhum modelo. Toda busca vira um link para compartilhar, com a foto da peça no preview do WhatsApp, e a mesma
+          para comprar na própria loja, que dá a palavra final sobre preço e estoque. Em “Mais como este”, um modelo de visão barato olha
+          uma única foto, a da peça escolhida, e descreve cor, estampa e comprimento, e o Jev usa essa descrição para buscar e ordenar
+          as parecidas. Toda busca vira um link para compartilhar, com a foto da peça no preview do WhatsApp, e a mesma
           pergunta feita no mesmo dia sai do cache em 0,2 s.
         </Lead>
       </Section>

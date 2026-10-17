@@ -161,7 +161,7 @@ export function useShopChat() {
       stream(`Mais como “${t.title}”`, keep, "/api/similar", (id) => ({
         chatId: id,
         dept,
-        tile: { id: t.id, domain: t.domain, title: t.title, category: t.category, priceMinor: t.priceMinor },
+        tile: { id: t.id, domain: t.domain, title: t.title, category: t.category, priceMinor: t.priceMinor, image: t.images[0] },
       })),
     [stream],
   );

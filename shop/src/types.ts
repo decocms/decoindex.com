@@ -54,7 +54,7 @@ export interface ChatRequest {
 export interface SimilarRequest {
   chatId: string;
   dept?: "feminino" | "masculino";
-  tile: Pick<Tile, "id" | "domain" | "title" | "category" | "priceMinor">;
+  tile: Pick<Tile, "id" | "domain" | "title" | "category" | "priceMinor"> & { image?: string };
 }
 
 /** A finished turn, frozen for `/s/{id}`. Prices are as observed at `createdAt`. */
