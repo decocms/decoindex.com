@@ -78,6 +78,8 @@
   body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
   img, svg { display: block; max-width: 100%; }
   body:has([aria-modal="true"]) { overflow: hidden; }
+  /* Tailwind v4 preflight resets buttons to cursor: default; every card and chip here is a <button>. */
+  button:not(:disabled), [role="button"], [role="radio"], summary { cursor: pointer; }
 }
 
 @media (prefers-reduced-motion: reduce) {
