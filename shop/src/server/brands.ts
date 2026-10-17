@@ -3,7 +3,7 @@
  * (VTEX/Shopify, verified with `/{domain}/search.json?q=`). The blurb is what
  * the model reads to decide where to look, so it says what the brand *sells*.
  *
- * ponytail: hardcoded roster (56 brands); move to a CMS block once brands get added weekly.
+ * ponytail: hardcoded roster; move to a CMS block once brands get added weekly.
  */
 export type Segment = "feminino" | "masculino" | "infantil" | "esporte" | "calcados" | "bolsas" | "praia" | "lingerie";
 
@@ -37,6 +37,7 @@ export const BRANDS: Brand[] = [
   { domain: "www.patbo.com.br", name: "PatBO", segments: ["feminino", "praia"], blurb: "vestidos bordados e beachwear de festa" },
   { domain: "www.iodice.com.br", name: "Iódice", segments: ["feminino"], blurb: "moda feminina sofisticada, alfaiataria e vestidos" },
   { domain: "www.lelis.com.br", name: "Le Lis", segments: ["feminino"], blurb: "moda feminina elegante, alfaiataria e vestidos" },
+  { domain: "www.nv.com.br", name: "NV", segments: ["feminino"], blurb: "moda feminina high end, alfaiataria, couro e vestidos" },
   { domain: "www.gloriacoelho.com.br", name: "Gloria Coelho", segments: ["feminino"], blurb: "moda autoral de vanguarda, cortes arquitetônicos" },
   { domain: "www.aviator.com.br", name: "Aviator", segments: ["masculino", "calcados"], blurb: "camisaria masculina desde 1987, alfaiataria, polos e calçados" },
   { domain: "www.ricardoalmeida.com.br", name: "Ricardo Almeida", segments: ["masculino"], blurb: "alfaiataria masculina premium, ternos e camisas" },
