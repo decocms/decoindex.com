@@ -107,8 +107,9 @@ function HowItWorks() {
       <Section n="04" kicker="Jev" title="O Jev é um modelo feito para decidir.">
         <Lead>
           O <B>Jev</B>, da TypeSafe, recebe um contexto e uma lista de perguntas com respostas fechadas, e devolve a probabilidade de
-          cada resposta, sem gerar texto. No deco shop fazemos a mesma pergunta para cada uma das 57 marcas (<i>“qual a chance de esta
-          marca ter o que o cliente pediu?”</i>), numa escala de três níveis, e o Jev responde todas em paralelo numa única chamada.
+          cada resposta, sem gerar texto. No deco shop fazemos a mesma pergunta para cada uma das 57 marcas (<i>“esta marca tem o que o
+          cliente pediu?”</i>), com três respostas possíveis: não vende isso, talvez tenha algo, vende exatamente isso. O Jev responde
+          as 57 em paralelo, numa única chamada.
         </Lead>
         <JevScores />
         <div className="mt-10 grid gap-4 md:grid-cols-3">
@@ -318,35 +319,53 @@ function Wire({ label, up }: { label: string; up?: boolean }) {
   );
 }
 
-/** A real Jev answer shape for one query, drawn as bars: score 0–2 per brand. */
+/**
+ * One real Jev answer (Oct 17 2026, "tênis de corrida até 600 reais"): per brand, the probability of
+ * each of the three levels, and the score Jev derives from them (0·p0 + 1·p1 + 2·p2).
+ */
 function JevScores() {
-  const rows: [string, number][] = [
-    ["Olympikus", 1.9],
-    ["FILA", 1.57],
-    ["ASICS", 1.47],
-    ["New Balance", 1.44],
-    ["Mizuno", 1.39],
-    ["C&A", 1.21],
-    ["Track & Field", 0.92],
-    ["Mr. Cat", 0.67],
+  const rows: [string, number, [number, number, number]][] = [
+    ["Olympikus", 1.86, [0, 0.13, 0.87]],
+    ["ASICS", 1.33, [0.01, 0.65, 0.34]],
+    ["FILA", 1.3, [0.01, 0.69, 0.3]],
+    ["Mizuno", 1.27, [0.01, 0.71, 0.28]],
+    ["New Balance", 1.26, [0.01, 0.72, 0.27]],
+    ["C&A", 1.16, [0.14, 0.56, 0.3]],
+    ["Constance", 1.14, [0.03, 0.8, 0.17]],
+    ["Track & Field", 0.88, [0.2, 0.72, 0.08]],
   ];
+  const tones = ["#3f3f46", "#8caa25", LIME];
+  const levels = ["não vende isso", "talvez tenha algo", "vende exatamente isso"];
+  const pct = (x: number) => `${Math.round(x * 100)}%`;
   return (
     <figure className="m-0 mt-10 rounded-2xl border border-neutral-800 bg-neutral-900 p-6 md:p-8">
-      <p className="text-xs uppercase tracking-[0.16em] text-neutral-500">“tênis de corrida até 600 reais” · nota do Jev por marca</p>
+      <p className="text-xs uppercase tracking-[0.16em] text-neutral-500">“tênis de corrida até 600 reais” · resposta do Jev por marca</p>
+      <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-neutral-400">
+        {levels.map((l, i) => (
+          <span key={l} className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-sm" style={{ background: tones[i] }} />
+            nível {i} · {l}
+          </span>
+        ))}
+      </div>
       <div className="mt-5 grid gap-2.5">
-        {rows.map(([name, s], i) => (
-          <div key={name} className="grid grid-cols-[110px_1fr_40px] items-center gap-3 text-sm">
+        {rows.map(([name, score, p]) => (
+          <div key={name} className="grid grid-cols-[96px_1fr_44px] items-center gap-3 text-sm md:grid-cols-[120px_1fr_52px]">
             <span className="truncate text-neutral-300">{name}</span>
-            <div className="h-2 rounded-full bg-neutral-800">
-              <div className="h-2 rounded-full" style={{ width: `${(s / 2) * 100}%`, background: i < 5 ? LIME : "#525252" }} />
+            <div className="flex h-3 overflow-hidden rounded-full bg-neutral-800" title={p.map((x, i) => `nível ${i}: ${pct(x)}`).join(" · ")}>
+              {p.map((x, i) => (
+                <div key={i} style={{ width: pct(x), background: tones[i] }} />
+              ))}
             </div>
-            <span className="text-right tabular-nums text-neutral-400">{s.toFixed(2)}</span>
+            <span className="text-right tabular-nums text-neutral-200">{score.toFixed(2).replace(".", ",")}</span>
           </div>
         ))}
       </div>
-      <figcaption className="mt-5 border-t border-neutral-800 pt-4 text-sm text-neutral-500">
-        0 significa “não vende isso”, 1 “talvez tenha algo” e 2 “vende exatamente isso”. A nota é a média ponderada pelas
-        probabilidades, e as cinco marcas de corrida aparecem na frente sem nenhuma regra extra.
+      <figcaption className="mt-5 border-t border-neutral-800 pt-4 text-sm leading-relaxed text-neutral-500">
+        O Jev não devolve um número solto. Para cada marca, ele diz a probabilidade de cada um dos três níveis (as cores da barra), e a
+        nota à direita é a média ponderada: 0 × p₀ + 1 × p₁ + 2 × p₂. A Olympikus tem 87% de chance de “vende exatamente isso” e 13% de
+        “talvez”, o que dá 0,13 + 2 × 0,87 = 1,86. As marcas de corrida ficam na frente sem nenhuma regra extra. Ordenamos por essa nota
+        e as 10 primeiras seguem.
       </figcaption>
     </figure>
   );
