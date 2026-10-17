@@ -201,6 +201,14 @@ attacker-controlled. No `innerHTML` with catalog data, ever; build DOM with
    offset. (Inherited from the ingestion prototype; still true of the API.)
 8. **Shopify `/products.json` pages are 1-indexed; VTEX cursors are 0-indexed
    offsets.** Easy to conflate when touching pagination in either resolver.
+9. **The scraper sweep will block our own products.** The deco shop
+   (`shop/`, shop.decoindex.com) reads through a service binding, and real
+   shopper volume looks exactly like a scraper to `sweepScrapers` (531 reads/h
+   over 314 paths). It got blocklisted for a week and every shop search came
+   back empty. First-party Workers bind the `FirstParty` entrypoint
+   (`main.ts`): exempt from the blocklist, logged as `ua_class='first-party'`,
+   excluded from the sweep. The marker header is stripped from internet
+   traffic, so binding the entrypoint is the only way to get it.
 
 ## The improvement loop
 
