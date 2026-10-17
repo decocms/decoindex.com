@@ -33,6 +33,7 @@ export interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void;
 }
 export interface KVNamespace {
+  list?(options: { prefix: string }): Promise<{ keys: { name: string }[] }>;
   get(key: string): Promise<string | null>;
   put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
 }

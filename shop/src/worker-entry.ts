@@ -19,6 +19,7 @@ import { logEvent } from "./server/events";
 import { EMBED_JS } from "./server/embed";
 import { handleMcp } from "./server/admin/mcp";
 import { fromOurPages, trackView } from "./server/traffic";
+import { refreshAllShowcases } from "./server/showcase.server";
 import type { Env, ExecutionContext } from "./server/env";
 
 const decoWorker = createDecoWorkerEntry(createServerEntry({ fetch: handler.fetch }), {
@@ -79,5 +80,10 @@ export default {
 
     trackView(request, env, ctx);
     return decoWorker.fetch(request, env as never, ctx as never);
+  },
+
+  // Cron (wrangler.jsonc): the home's showcase turns over once a day, before anyone wakes up.
+  scheduled(_e: unknown, _env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(refreshAllShowcases().then((n) => console.log("showcases rebuilt", n), (err) => console.error("showcase cron failed", err)));
   },
 };
