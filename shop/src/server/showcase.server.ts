@@ -40,7 +40,7 @@ interface Snapshot {
 }
 
 const DAY = 86_400_000;
-const SNAPSHOT = (h: string) => `showcase:v3:${h}`;
+const SNAPSHOT = (h: string) => `showcase:v4:${h}`;
 const SPEC = (h: string) => `showcase-spec:${h}`;
 const LOCK = (h: string) => `showcase-lock:${h}`;
 // One shared caller key: showcase reads are few and must not eat a shopper's per-IP budget.
@@ -62,15 +62,16 @@ const BAGS: ProductType[] = ["bolsa", "mochila", "mala"];
  * itself; shoe and bag brands also count for shoes and bags. ("Neutral"
  * segments like praia let FARM into masculino.)
  */
-function deptBrands(dept: ShowcaseSpec["dept"], type: ProductType, day: number) {
+function deptBrands(dept: ShowcaseSpec["dept"], type: ProductType, day: number, item: number) {
   const has = (b: (typeof BRANDS)[number], seg: Segment) => b.segments.includes(seg);
   const list = BRANDS.filter((b) => {
     if (SHOES.includes(type)) return has(b, "calcados") || (has(b, "esporte") && type === "tenis");
     if (BAGS.includes(type)) return has(b, "bolsas") || has(b, dept);
     return has(b, dept);
   });
-  // Rotate by day: a different first store per day, so the same card shows different brands.
-  const k = list.length ? day % list.length : 0;
+  // Rotate by day *and* by item: a different first store per day, and different
+  // cards start at different stores (one shared start made one brand own the page).
+  const k = list.length ? (day + item * 7) % list.length : 0;
   return [...list.slice(k), ...list.slice(0, k)];
 }
 
@@ -89,7 +90,15 @@ function heroScore(t: Tile, type: ProductType, want: string[]): number {
   return detectType(`${t.title} ${t.category ?? ""}`) === type ? 1 : 0;
 }
 
-async function sample(spec: ShowcaseSpec, type: ProductType, terms: string | undefined, n: number, _shared: Health, day: number) {
+async function sample(
+  spec: ShowcaseSpec,
+  type: ProductType,
+  terms: string | undefined,
+  n: number,
+  day: number,
+  item: number,
+  taken: Set<string>, // photos already used elsewhere on the page: each piece appears once
+) {
   const health = newHealth(); // own budget, see ITEM_BUDGET
   const want = terms ? words(terms) : [];
   // Prefer stores with a real category for the type; fall back to their search
@@ -98,7 +107,7 @@ async function sample(spec: ShowcaseSpec, type: ProductType, terms: string | und
   const out: Tile[][] = [];
   const searched: Tile[][] = [];
   let tries = 0;
-  for (const b of deptBrands(spec.dept, type, day)) {
+  for (const b of deptBrands(spec.dept, type, day, item)) {
     if (out.length >= 3 || out.length + searched.length >= 4) break;
     if (++tries > MAX_TRIES || health.ok + health.failed >= ITEM_BUDGET) break;
     const f = await findProducts({ env, ip: IP, dept: spec.dept, health }, { domain: b.domain, type, terms });
@@ -106,7 +115,7 @@ async function sample(spec: ShowcaseSpec, type: ProductType, terms: string | und
     const withImg = f.tiles
       .filter((t) => t.images[0])
       .map((t, i) => ({ t, i, s: heroScore(t, type, want) }))
-      .filter((x) => x.s > 0) // only good candidates, so the daily rotation never lands on a weak one
+      .filter((x) => x.s > 0 && !taken.has(x.t.id)) // good candidates not used elsewhere; rotation stays among them
       .sort((a, b) => b.s - a.s || a.i - b.i)
       .map((x) => x.t);
     if (!withImg.length) continue;
@@ -119,8 +128,9 @@ async function sample(spec: ShowcaseSpec, type: ProductType, terms: string | und
   for (let i = offset; mixed.length < n && i < 24 + offset; i++)
     for (const l of out) {
       const t = l[i % l.length];
-      if (t && mixed.length < n && !seen.has(t.id)) {
+      if (t && mixed.length < n && !seen.has(t.id) && !taken.has(t.id)) {
         seen.add(t.id);
+        taken.add(t.id);
         mixed.push(t);
       }
     }
@@ -130,9 +140,12 @@ async function sample(spec: ShowcaseSpec, type: ProductType, terms: string | und
 async function build(spec: ShowcaseSpec, now = Date.now()): Promise<Snapshot> {
   const day = Math.floor(now / DAY);
   const health = newHealth();
-  const [cards, ideas, shelves] = await Promise.all([
-    Promise.all(spec.cards.map((c) => sample(spec, c.type, undefined, 3, health, day))),
-    Promise.all(spec.ideas.map(async (i) => (i.type ? ((await sample(spec, i.type, i.terms, 1, health, day))[0] ?? null) : null))),
+  const taken = new Set<string>();
+  // Ideas first and sequential: they are the big photos and must be unique; then cards in parallel.
+  const ideas: (Tile | null)[] = [];
+  for (const [k, i] of spec.ideas.entries()) ideas.push(i.type ? ((await sample(spec, i.type, i.terms, 1, day, k, taken))[0] ?? null) : null);
+  const [cards, shelves] = await Promise.all([
+    Promise.all(spec.cards.map((c, k) => sample(spec, c.type, undefined, 3, day, k + 10, taken))),
     Promise.all(
       spec.shelves.map(async (s) =>
         (await findProducts({ env, ip: IP, dept: spec.dept, health }, { domain: s.domain, type: s.type, terms: s.terms, sort: s.sort })).tiles

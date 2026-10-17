@@ -86,3 +86,12 @@ describe("otherDept", () => {
     expect(otherDept("Camiseta Fila Comfort Soft Fem", "masculino")).toBe(true);
   });
 });
+
+describe("isKids", () => {
+  test("children's lines are recognized", async () => {
+    const { isKids } = await import("./taxonomy");
+    expect(isKids("biquíni infantil listrado")).toBe(true);
+    expect(isKids("Jardineira Infantil de Moletom")).toBe(true);
+    expect(isKids("Vestido Longo Estampado")).toBe(false);
+  });
+});

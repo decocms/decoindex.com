@@ -2,7 +2,7 @@ import type { Tile } from "../types";
 import { BRANDS, brandByDomain } from "./brands";
 import { browseCategory, categories, searchBrand, type Health } from "./catalog";
 import type { Env } from "./env";
-import { TYPES, attributes, detectType, otherDept, overlap, pickCategory, words, type ProductType } from "./taxonomy";
+import { TYPES, attributes, detectType, isKids, otherDept, overlap, pickCategory, words, type ProductType } from "./taxonomy";
 
 export type Sort = "relevance" | "price_asc" | "price_desc" | "new" | "discount";
 
@@ -69,7 +69,8 @@ const text = (t: Tile) => `${t.title} ${t.description ?? ""} ${t.category ?? ""}
  * Sort order from the store (price, new) is kept when there is nothing to rank by.
  */
 function fit(ts: Tile[], o: { type?: ProductType; want: string[]; dept?: "feminino" | "masculino"; keepOrder?: boolean }): Tile[] {
-  const kept = ts.filter((t) => !otherDept(`${t.title} ${t.category ?? ""}`, o.dept));
+  const wantsKids = o.want.some((w) => isKids(w));
+  const kept = ts.filter((t) => !otherDept(`${t.title} ${t.category ?? ""}`, o.dept) && (wantsKids || !isKids(`${t.title} ${t.category ?? ""}`)));
   const scored = kept.map((t, i) => {
     const seen = detectType(`${t.title} ${t.category ?? ""}`);
     const typeScore = !o.type || !seen ? 0 : seen === o.type ? 2 : -10;
