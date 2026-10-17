@@ -135,6 +135,11 @@ export function attributes(title: string, type?: ProductType): string[] {
   return words(title).filter((w) => !STOP.has(w) && !typeWords.has(w) && !/^\d+$/.test(w));
 }
 
+/** Children's lines ("biquíni infantil", "jardineira infantil"): never shown to adults unless asked. */
+export function isKids(text: string): boolean {
+  return KIDS.test(words(text).join(" "));
+}
+
 /** True when the text says it is for the *other* department ("Camisa Feminina" while browsing masculino). */
 export function otherDept(text: string, dept?: "feminino" | "masculino"): boolean {
   if (!dept) return false;
