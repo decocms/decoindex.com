@@ -87,6 +87,35 @@ wrangler d1 execute decoindex --remote --command "
 Click-through per chat (`shop.click` / `shop.chat`) is the number that decides
 the model, not 👍.
 
+## Gotchas already paid for (TanStack Start + deco blocks + Workers)
+
+1. **`cloudflare:workers` never at module level of a file the client imports.**
+   Only inside a `createServerFn` handler (the compiler strips it from the client
+   bundle) or in a `*.server.ts` file loaded via dynamic `import()` from the
+   handler. Module-level use made Vite try to resolve it in the browser build.
+2. **`DecoRootLayout` already renders the route outlet.** Passing
+   `<StableOutlet/>` as its child rendered every page twice.
+3. **Async UI state is patched by identity, never "the last item".** A stream
+   that patched "the last turn" let an aborted request finish the *new* turn and
+   leave itself spinning forever. Give each turn a key; write only into it.
+4. **Every user-initiated step is a `history.pushState`.** `replaceState` made
+   Back leave the site. Back must step through state already in memory (no new
+   model call), and asking from an earlier step branches, like browser history.
+5. **Don't show raw results and then swap in curated ones.** It reads as a
+   glitch. Show progress (found N in K stores) until the curated set arrives,
+   and accept only one curation per turn.
+6. **Tailwind v4 preflight sets `cursor: default` on buttons** — fixed globally
+   in `app.css`. Arbitrary `calc()` needs `_` for spaces
+   (`calc((100vw_-_1280px)/2_+_2rem)`) or it is silently dropped.
+7. **VTEX image resize: `-{w}-auto`, never `-{w}-{h}`.** A fixed box is
+   letterboxed in white.
+8. **`og:url` never in the root route** — child routes (e.g. `/s/{id}`) inherit
+   it and link unfurlers canonicalize every share to the home card.
+9. **`.deco/sections.gen.ts` reorders itself on every build.** Same imports,
+   different order: discard the diff, don't commit it.
+10. **Edge-cached HTML survives a deploy for ~15 min.** Check a fresh deploy with
+    a different segment (mobile UA) or wait; the cache key carries the build hash.
+
 ## Dev
 
 ```
