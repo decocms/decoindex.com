@@ -28,7 +28,10 @@ export const Route = createFileRoute("/como-funciona")({
 
 const LIME = "#D0EC1A";
 
+// iOS Safari paints its top/bottom bars and the overscroll bounce from html/body, not from this
+// page's wrapper; theme-color alone left white bands. Only this page renders this <style>.
 const CSS = `
+html, body { background:#0a0a0a; color-scheme: dark; }
 .hw { background:#0a0a0a; color:#e7e5e4; }
 .hw ::selection { background:${LIME}; color:#07401A; }
 @keyframes hw-up { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:none } }
