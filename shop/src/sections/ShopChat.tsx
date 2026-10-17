@@ -169,7 +169,12 @@ export default function ShopChat({
               ))}
             </div>
           )}
-          <p className="mt-6 text-xs text-ink-soft/80">{disclaimer}</p>
+          <p className="mt-6 text-xs text-ink-soft/80">
+            {disclaimer}{" "}
+            <a href="/como-funciona" className="underline decoration-ink/20 underline-offset-2 hover:text-ink">
+              Como funciona →
+            </a>
+          </p>
         </div>
       ) : (
         <div className="mx-auto grid max-w-[1600px] gap-6 px-4 pb-28 pt-5 md:px-8 lg:grid-cols-[340px_1fr] lg:gap-10">
