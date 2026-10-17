@@ -1,4 +1,5 @@
 import { SiteHeader } from "~/components/Share";
+import { BRANDS } from "~/server/brands";
 
 const IDEAS = ["Vestido de linho para o verão", "Tênis de corrida até R$ 600", "Biquíni de luxo", "Camisa social masculina"];
 
@@ -6,7 +7,7 @@ const IDEAS = ["Vestido de linho para o verão", "Tênis de corrida até R$ 600"
  * Any dead end (unknown URL, expired share) turns into a search: the form is a plain GET to
  * `/?q=`, which the home already treats as a deep link, so it works before hydration too.
  */
-export function Lost({ title = "Essa página não existe.", body = "A peça que você procura pode estar em alguma das 57 marcas." }: { title?: string; body?: string }) {
+export function Lost({ title = "Essa página não existe.", body = `A peça que você procura pode estar em alguma das ${BRANDS.length} marcas.` }: { title?: string; body?: string }) {
   return (
     <section className="relative min-h-dvh overflow-x-clip">
       <SiteHeader />

@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteHeader } from "~/components/Share";
+import { BRANDS } from "~/server/brands";
+
+const N = BRANDS.length;
 
 /**
  * /como-funciona — how a question becomes a grid of products, told like the decocms.com
@@ -54,7 +57,7 @@ function HowItWorks() {
         <Lead>
           “Vestido longo para madrinha de casamento de dia.” A frase traz ocasião, horário, comprimento e até o que fica de fora
           (preto, brilho de noite). Um bom vendedor entenderia na hora, enquanto a busca de um e-commerce devolve qualquer “vestido”.
-          O deco shop lê a frase inteira como o pedido feito a um personal shopper e procura nas 57 marcas ao mesmo tempo.
+          O deco shop lê a frase inteira como o pedido feito a um personal shopper e procura nas {N} marcas ao mesmo tempo.
         </Lead>
       </Section>
 
@@ -76,7 +79,7 @@ function HowItWorks() {
         </Note>
       </Section>
 
-      <Section n="03" kicker="Curadoria" title="57 marcas, cada uma com contexto.">
+      <Section n="03" kicker="Curadoria" title={`${N} marcas, cada uma com contexto.`}>
         <Lead>
           Escolhemos as marcas a dedo, começando pelas lojas dos shoppings que ditam a moda no Brasil, como Leblon, Iguatemi e JK.
           Para cada uma, registramos o que um vendedor saberia de cabeça: o que vende, para quem, de onde vem, desde quando e em que
@@ -107,19 +110,19 @@ function HowItWorks() {
       <Section n="04" kicker="Jev" title="O Jev é um modelo feito para decidir.">
         <Lead>
           O <B>Jev</B>, da TypeSafe, recebe um contexto e uma lista de perguntas com respostas fechadas, e devolve a probabilidade de
-          cada resposta, sem gerar texto. No deco shop fazemos a mesma pergunta para cada uma das 57 marcas (<i>“esta marca tem o que o
+          cada resposta, sem gerar texto. No deco shop fazemos a mesma pergunta para cada uma das {N} marcas (<i>“esta marca tem o que o
           cliente pediu?”</i>), com três respostas possíveis: não vende isso, talvez tenha algo, vende exatamente isso. O Jev responde
-          as 57 em paralelo, numa única chamada.
+          as {N} em paralelo, numa única chamada.
         </Lead>
         <JevScores />
         <div className="mt-10 grid gap-4 md:grid-cols-3">
-          <Stat value="0,8 s" label="para pontuar as 57 marcas" />
+          <Stat value="0,8 s" label={`para pontuar as ${N} marcas`} />
           <Stat value="US$ 0,0003" label="por chamada, só a entrada é cobrada" />
-          <Stat value="10 de 57" label="marcas seguem para o próximo passo" />
+          <Stat value={`10 de ${N}`} label="marcas seguem para o próximo passo" />
         </div>
         <Note>
           O Jev trabalha em dois momentos. Primeiro, escolhe as 10 marcas que o modelo de raciocínio vai considerar, o que deixa o
-          prompt com 10 fichas em vez de 57. Depois, a cada rodada de busca, que traz até 90 produtos, ele dá uma nota para cada peça
+          prompt com 10 fichas em vez de {N}. Depois, a cada rodada de busca, que traz até 90 produtos, ele dá uma nota para cada peça
           e só as 30 melhores seguem para o modelo, com no máximo 8 por marca para a seleção continuar variada. A tela do cliente
           recebe todos os produtos. Num teste com as mesmas buscas, isso cortou 59% dos tokens e 40% do custo.
         </Note>
@@ -211,7 +214,7 @@ function Hero() {
           </span>
         </h1>
         <p className="hw-up mt-8 max-w-[720px] text-2xl font-medium leading-snug text-neutral-100 md:text-3xl" style={{ animationDelay: ".45s" }}>
-          Em cerca de dez segundos, uma frase vira uma seleção de peças de 57 marcas.{" "}
+          Em cerca de dez segundos, uma frase vira uma seleção de peças de {N} marcas.{" "}
           <span style={{ color: LIME }}>Este é o caminho que ela faz.</span>
         </p>
       </div>
@@ -223,7 +226,7 @@ function Hero() {
 function Diagram() {
   const stages: { k: string; title: string; body: string; metric?: string; hot?: boolean }[] = [
     { k: "Pergunta", title: "“vestido longo para madrinha, de dia”", body: "o pedido inteiro, com ocasião e restrições" },
-    { k: "Jev · marcas", title: "10 de 57 marcas", body: "uma nota por marca, todas numa chamada", metric: "0,8 s" },
+    { k: "Jev · marcas", title: `10 de ${N} marcas`, body: "uma nota por marca, todas numa chamada", metric: "0,8 s" },
     { k: "Modelo de raciocínio", title: "1 de 7, em teste contínuo", body: "planeja, consulta as lojas e repete se vier pouco", metric: "até 5 passos", hot: true },
     { k: "Jev · produtos", title: "30 de até 90 produtos", body: "uma nota por peça, de acordo com a conversa", metric: "−59% tokens" },
     { k: "Julgamento", title: "8 a 24 escolhidos", body: "orçamento, ocasião, mistura de marcas, próximos passos" },

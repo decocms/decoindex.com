@@ -64,7 +64,7 @@ const stateOf = (a: Ask) => ({
   ...(a.profile ? { sobre_o_cliente: a.profile } : {}),
 });
 
-/** Before the chat model runs: the ten brands most likely to have it, so its prompt carries 10 lines, not 57. */
+/** Before the chat model runs: the ten brands most likely to have it, so its prompt carries 10 lines, not the whole roster. */
 export async function preselect(env: Env, input: Ask & { store?: string }): Promise<{ domains: string[]; ms: number; cost: number } | null> {
   const started = Date.now();
   const res = await score(
