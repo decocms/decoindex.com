@@ -89,7 +89,8 @@ export default function Showcase({ categoriesTitle = "O que você procura?", car
         <section className="mx-auto max-w-[1280px] px-4 pt-10 md:px-8">
           <Heading kicker="Categorias" title={categoriesTitle} />
           <div className="no-scrollbar -mx-4 mt-5 flex snap-x gap-2.5 overflow-x-auto px-4 pb-2 md:-mx-8 md:px-8">
-            {c.map((card, k) => (
+            {/* A card whose photos came back empty is skipped, never shown as blank placeholders. */}
+            {c.map((card, k) => (data && !data.cards[k]?.length ? null : (
               <button
                 key={card.label}
                 type="button"
@@ -101,7 +102,7 @@ export default function Showcase({ categoriesTitle = "O que você procura?", car
                 <p className="mt-1.5 text-[22px] font-medium tracking-tight">{card.label}</p>
                 <Fan tiles={data?.cards[c.indexOf(card)]} />
               </button>
-            ))}
+            )))}
           </div>
         </section>
       )}

@@ -2,8 +2,8 @@ import { env, waitUntil } from "cloudflare:workers";
 import type { Tile } from "../types";
 import { BRANDS, type Segment } from "./brands";
 import { findProducts, type Sort } from "./find";
-import { newHealth, type Health } from "./catalog";
-import { TYPES, TYPE_NAMES, detectType, overlap, words, type ProductType } from "./taxonomy";
+import { categories, newHealth } from "./catalog";
+import { TYPES, TYPE_NAMES, detectType, overlap, pickCategory, words, type ProductType } from "./taxonomy";
 
 /**
  * Real product photos for the home's cards, ideas and shelves — a daily index,
@@ -40,7 +40,7 @@ interface Snapshot {
 }
 
 const DAY = 86_400_000;
-const SNAPSHOT = (h: string) => `showcase:v4:${h}`;
+const SNAPSHOT = (h: string) => `showcase:v5:${h}`;
 const SPEC = (h: string) => `showcase-spec:${h}`;
 const LOCK = (h: string) => `showcase-lock:${h}`;
 // One shared caller key: showcase reads are few and must not eat a shopper's per-IP budget.
@@ -53,6 +53,8 @@ const IP = "decoshop-showcase";
  */
 const MAX_TRIES = 6;
 const ITEM_BUDGET = 12;
+/** Stores whose category tree we consult per item. Trees are memoized per isolate, so mostly free after the first item. */
+const TREE_PROBES = 24;
 
 const SHOES: ProductType[] = ["tenis", "sandalia", "chinelo", "sapato"];
 const BAGS: ProductType[] = ["bolsa", "mochila", "mala"];
@@ -101,13 +103,23 @@ async function sample(
 ) {
   const health = newHealth(); // own budget, see ITEM_BUDGET
   const want = terms ? words(terms) : [];
+  // Stores that actually have a category for this type go first: rotating
+  // blindly made "saia" try six stores that sell no skirts and come out empty.
+  // Tree reads don't count against the item budget (memoized, cached upstream).
+  const rotated = deptBrands(spec.dept, type, day, item);
+  const trees = newHealth();
+  const carry: typeof rotated = [];
+  for (const b of rotated.slice(0, TREE_PROBES)) {
+    if (pickCategory(await categories(env, b.domain, IP, trees), type, { dept: spec.dept })) carry.push(b);
+  }
+  const ordered = [...carry, ...rotated.filter((b) => !carry.includes(b))];
   // Prefer stores with a real category for the type; fall back to their search
   // (no store has a "biquíni" category, but several sell biquínis). Bounded:
   // with failing reads this once walked all ~57 brands per card (~1,000 reads/visit).
   const out: Tile[][] = [];
   const searched: Tile[][] = [];
   let tries = 0;
-  for (const b of deptBrands(spec.dept, type, day, item)) {
+  for (const b of ordered) {
     if (out.length >= 3 || out.length + searched.length >= 4) break;
     if (++tries > MAX_TRIES || health.ok + health.failed >= ITEM_BUDGET) break;
     const f = await findProducts({ env, ip: IP, dept: spec.dept, health }, { domain: b.domain, type, terms });
@@ -193,7 +205,9 @@ export async function serveShowcase(input: ShowcaseSpec): Promise<ShowcaseData> 
     if (raw) {
       const snap = JSON.parse(raw) as Snapshot;
       if (Date.now() - snap.builtAt > DAY && !(await env.SHARES?.get(LOCK(h)))) {
-        // Stale: serve it now, rebuild behind the response. KV locks are best-effort; worst case two rebuilds.
+        // Stale: serve it now, rebuild behind the response. Best effort: waitUntil gets ~30s after the
+        // response and a cold build can take longer — then the stale copy stays and the daily cron
+        // (15-min limit) is what actually turns it over. KV locks are best-effort; worst case two rebuilds.
         await env.SHARES?.put(LOCK(h), "1", { expirationTtl: 120 });
         waitUntil(refresh(spec, h, snap).catch((err) => console.error("showcase refresh failed", err)));
       }
