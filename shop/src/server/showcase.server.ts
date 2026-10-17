@@ -3,7 +3,7 @@ import type { Tile } from "../types";
 import { BRANDS, type Segment } from "./brands";
 import { findProducts, type Sort } from "./find";
 import { categories, newHealth } from "./catalog";
-import { TYPES, TYPE_NAMES, detectType, overlap, pickCategory, words, type ProductType } from "./taxonomy";
+import { TYPES, TYPE_NAMES, overlap, pickCategory, words, type ProductType } from "./taxonomy";
 
 /**
  * Real product photos for the home's cards, ideas and shelves — a daily index,
@@ -40,7 +40,7 @@ interface Snapshot {
 }
 
 const DAY = 86_400_000;
-const SNAPSHOT = (h: string) => `showcase:v6:${h}`;
+const SNAPSHOT = (h: string) => `showcase:v7:${h}`;
 const SPEC = (h: string) => `showcase-spec:${h}`;
 const LOCK = (h: string) => `showcase-lock:${h}`;
 // One shared caller key: showcase reads are few and must not eat a shopper's per-IP budget.
@@ -89,8 +89,10 @@ function heroScore(t: Tile, type: ProductType, want: string[]): number {
   const first = words(t.title)[0] ?? "";
   const hasTerms = !want.length || overlap(want, `${t.title} ${t.description ?? ""}`) > 0;
   if (!hasTerms) return 0;
-  if ((TYPES[type] as readonly string[]).includes(first)) return 2;
-  return detectType(`${t.title} ${t.category ?? ""}`) === type ? 1 : 0;
+  const syn = TYPES[type] as readonly string[];
+  if (syn.includes(first)) return 2;
+  // Any word, not "first type word wins": "Top Biquíni Lenny" is a bikini.
+  return words(`${t.title} ${t.category ?? ""}`).some((w) => syn.includes(w)) ? 1 : 0;
 }
 
 async function sample(
@@ -113,7 +115,10 @@ async function sample(
   for (const b of rotated.slice(0, TREE_PROBES)) {
     if (pickCategory(await categories(env, b.domain, IP, trees), type, { dept: spec.dept })) carry.push(b);
   }
-  const ordered = [...carry, ...rotated.filter((b) => !carry.includes(b))];
+  // For fashion types, sports and shoe brands are a fallback, not the lead (ASICS and Havaianas fronting "Calças").
+  const sporty = (b: (typeof rotated)[number]) => !SHOES.includes(type) && (b.segments.includes("esporte") || b.segments.includes("calcados"));
+  const all = [...carry, ...rotated.filter((b) => !carry.includes(b))];
+  const ordered = [...all.filter((b) => !sporty(b)), ...all.filter(sporty)];
   // Prefer stores with a real category for the type; fall back to their search
   // (no store has a "biquíni" category, but several sell biquínis). Bounded:
   // with failing reads this once walked all ~57 brands per card (~1,000 reads/visit).
