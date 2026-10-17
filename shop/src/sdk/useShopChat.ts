@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import type { ChatEvent, ChatTurn, Tile } from "~/types";
+import type { ChatEvent, ChatTurn, Share, Tile } from "~/types";
 
 export type Dept = "feminino" | "masculino";
 
@@ -114,6 +114,23 @@ export function useShopChat() {
     [stream],
   );
 
+  /**
+   * Reopen a frozen turn (`?s=id`) at position `keep`: same tiles, order, answer and chips as
+   * whoever copied the URL saw, from KV, without a new search. The conversation continues from it.
+   */
+  const restore = useCallback(async (id: string, keep: number): Promise<Share | null> => {
+    const res = await fetch(`/api/share?id=${encodeURIComponent(id)}`).catch(() => null);
+    if (!res?.ok) return null;
+    const s = (await res.json()) as Share;
+    if (keep === 0 || !chatId.current) chatId.current = newId();
+    setModel(s.model);
+    setTurns((all) => [
+      ...all.slice(0, keep),
+      { key: newId(), user: s.q, answer: s.answer, products: s.tiles, curated: s.tiles.map((t) => t.id), refinements: s.refinements, shareId: s.id, done: true },
+    ]);
+    return s;
+  }, []);
+
   /** "Mais como este": category heuristics on the server, no model call. */
   const similarTo = useCallback(
     (t: Tile, keep: number, dept?: Dept) =>
@@ -131,7 +148,7 @@ export function useShopChat() {
     setTurns([]);
   };
 
-  return { turns, model, chatId: () => chatId.current, send, similarTo, reset };
+  return { turns, model, chatId: () => chatId.current, send, similarTo, restore, reset };
 }
 
 /** Fire-and-forget event to /api/event. */

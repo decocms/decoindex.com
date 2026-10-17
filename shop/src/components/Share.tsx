@@ -14,7 +14,10 @@ export function ShareButton({ id, q, variant = "pill" }: { id: string; q: string
   const [copied, setCopied] = useState(false);
 
   const native = async () => {
-    const data = { title: `deco shop: ${q}`, text: shareText(q), url: shareUrl(id) };
+    // Copy first, inside the click: the link is on the clipboard even if the sheet is dismissed.
+    // No `text` in the sheet: macOS "Copy" would paste the caption along with the link.
+    await navigator.clipboard?.writeText(shareUrl(id)).catch(() => {});
+    const data = { title: `deco shop: ${q}`, url: shareUrl(id) };
     if (typeof navigator.share === "function" && (!navigator.canShare || navigator.canShare(data))) {
       try {
         await navigator.share(data);
@@ -35,7 +38,7 @@ export function ShareButton({ id, q, variant = "pill" }: { id: string; q: string
   };
 
   return (
-    <div className="relative inline-block">
+    <div className="relative inline-flex items-center">
       <button
         type="button"
         onClick={native}
@@ -51,6 +54,15 @@ export function ShareButton({ id, q, variant = "pill" }: { id: string; q: string
         </svg>
         Compartilhar
       </button>
+      {variant === "pill" && (
+        <button
+          type="button"
+          onClick={copy}
+          className="tap-scale ml-1.5 inline-flex items-center gap-1 rounded-full border border-line px-3 py-1.5 text-xs font-medium transition hover:border-ink/40"
+        >
+          {copied ? "Copiado ✓" : "🔗 Link"}
+        </button>
+      )}
       {open && (
         <div className="absolute left-0 top-full z-40 mt-2 flex w-52 animate-rise flex-col overflow-hidden rounded-md border border-line bg-white p-1 text-sm shadow-[0_12px_40px_-12px_rgba(0,0,0,0.25)]">
           <a
