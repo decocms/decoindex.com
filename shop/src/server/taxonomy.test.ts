@@ -137,3 +137,9 @@ test("colorConflict drops a known other color, keeps unknown", async () => {
   expect(colorConflict(["linho", "branco"], { title: "Camisa Linho Ampla Cava" })).toBe(false); // unknown
   expect(colorConflict(["linho"], { title: "Camisa", colors: ["preto"] })).toBe(false); // no color asked
 });
+
+test("colorsFromClaims reads VTEX color specifications", async () => {
+  const { colorsFromClaims } = await import("./catalog");
+  expect(colorsFromClaims([{ predicate: "cor_filtro", value: "BORDO ESCURO" }, { predicate: "cor", value: "Bordo Escuro/Fungi-Marrom Claro" }, { predicate: "categoria", value: "Corrida" }])).toEqual(["BORDO ESCURO", "Bordo Escuro", "Fungi-Marrom Claro"]);
+  expect(colorsFromClaims(undefined)).toEqual([]);
+});

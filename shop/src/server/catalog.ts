@@ -16,6 +16,8 @@ interface IndexListing {
     description?: string;
     categories?: string[];
     images?: string[];
+    /** Product-level facts; VTEX specifications land here ("cor", "cor_filtro"). */
+    claims?: { predicate: string; value: string }[];
     variants?: {
       name?: string;
       priceMinor?: number;
@@ -128,6 +130,11 @@ export function colorsFromNames(slug: string, variants: { name?: string }[]): st
   return [...out].slice(0, 6);
 }
 
+export function colorsFromClaims(claims: { predicate: string; value: string }[] | undefined): string[] {
+  const vals = (claims ?? []).filter((c) => /^(cor|cores|color|colour)(_filtro)?$/i.test(c.predicate)).flatMap((c) => c.value.split(/[\/,]/));
+  return [...new Set(vals.map((v) => v.trim()).filter((v) => v && v.length < 40))].slice(0, 6);
+}
+
 function toTile(
   env: Env,
   domain: string,
@@ -157,6 +164,9 @@ function toTile(
     ),
   ].slice(0, 6);
   if (!colors.length) colors.push(...colorsFromNames(p.slug, variants));
+  // Stores that keep color as a product specification, not a variation (FILA, Blue Man, Maria Filó):
+  // decoindex passes it through as a claim ("cor: Bordo Escuro/Fungi-Marrom Claro").
+  if (!colors.length) colors.push(...colorsFromClaims(p.claims));
   return {
     id: `${domain}:${p.id}`,
     domain,
