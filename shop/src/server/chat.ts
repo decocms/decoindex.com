@@ -29,7 +29,7 @@ interface CachedAnswer {
 async function answerKey(q: string, dept?: string, store?: string) {
   const norm = q.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9$]+/g, " ").trim();
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${norm}|${dept ?? ""}|${store ?? ""}`));
-  return `answer:v4:${[...new Uint8Array(buf)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("")}`;
+  return `answer:v5:${[...new Uint8Array(buf)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("")}`;
 }
 const SORTS = ["relevance", "price_asc", "price_desc", "new", "discount"] as const;
 
