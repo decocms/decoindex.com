@@ -128,3 +128,12 @@ test("colorsFromNames reads the color out of SKU names when the slug agrees", as
   // Not in the slug → not trusted as a color.
   expect(colorsFromNames("/calca-agata/p", [{ name: "Calça Agata - Linho - 38" }])).toEqual([]);
 });
+
+test("colorConflict drops a known other color, keeps unknown", async () => {
+  const { colorConflict } = await import("./taxonomy");
+  expect(colorConflict(["linho", "branco"], { title: "Camisa classic linen", colors: ["preto"] })).toBe(true);
+  expect(colorConflict(["linho", "branco"], { title: "Camisa Slim Linho Branca" })).toBe(false);
+  expect(colorConflict(["branco"], { title: "Vestido", colors: ["OFF WHITE/OFF WHITE"] })).toBe(false);
+  expect(colorConflict(["linho", "branco"], { title: "Camisa Linho Ampla Cava" })).toBe(false); // unknown
+  expect(colorConflict(["linho"], { title: "Camisa", colors: ["preto"] })).toBe(false); // no color asked
+});

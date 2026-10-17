@@ -2,7 +2,7 @@ import type { Tile } from "../types";
 import { BRANDS, brandByDomain } from "./brands";
 import { browseCategory, categories, searchBrand, type Health } from "./catalog";
 import type { Env } from "./env";
-import { FAMILY, TYPES, attributes, detectType, isKids, otherDept, overlap, pickCategory, words, type ProductType } from "./taxonomy";
+import { FAMILY, TYPES, attributes, colorConflict, detectType, isKids, otherDept, overlap, pickCategory, words, type ProductType } from "./taxonomy";
 
 export type Sort = "relevance" | "price_asc" | "price_desc" | "new" | "discount";
 
@@ -74,7 +74,8 @@ function fit(ts: Tile[], o: { type?: ProductType; want: string[]; dept?: "femini
     (t) =>
       !otherDept(`${t.title} ${t.category ?? ""}`, o.dept) &&
       !(o.dept && t.dept && t.dept !== o.dept) && // the store's own breadcrumb says it's the other side
-      (wantsKids || !isKids(`${t.title} ${t.category ?? ""}`)),
+      (wantsKids || !isKids(`${t.title} ${t.category ?? ""}`)) &&
+      !colorConflict(o.want, t), // "camisa de linho branca" must not return the black one
   );
   const scored = kept.map((t, i) => {
     const seen = detectType(`${t.title} ${t.category ?? ""}`);
