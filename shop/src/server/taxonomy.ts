@@ -59,7 +59,7 @@ export function words(s: string): string[] {
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .split(/[^a-z0-9-]+/)
-    .flatMap((w) => (w === "t-shirt" ? [w] : w.split("-")))
+    .flatMap((w) => (/^t-shirts?$/.test(w) ? ["t-shirt"] : w.split("-"))) // "T-Shirts" too, or it splits into t + shirt
     .filter((w) => w.length > 1)
     .map((w) => (w.length > 3 && w.endsWith("s") && !/(is|us)$/.test(w) ? w.slice(0, -1) : w))
     .map((w) => (w.endsWith("oe") ? w.slice(0, -2) + "ao" : w)); // calcoes → calcao
