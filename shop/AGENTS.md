@@ -61,6 +61,30 @@ chat search that store first and show it on top (only roster domains honored).
 - **Never hardcode a model.** `CHAT_MODELS` (wrangler var) lists the candidates;
   each chat is pinned to one by hashing its id. `?model=<slug>` forces one.
 
+## Cost: this is a research project, and cheap is a requirement
+
+The shop exists to learn how agents browse catalogs cheaply. A change that makes
+it smarter by making it expensive has failed, even if the results look better.
+
+- **Price it before building it.** Write down cost and latency per shopper action
+  (a search, a "Mais como este", a page view) *before* coding: tokens × calls ×
+  price. If one action costs more than ~US$0.005, find a cheaper design first.
+- **One image per call, at most.** Images are the most expensive input there is.
+  Never send a grid of candidate thumbnails to a vision model (24 thumbnails was
+  ~27k tokens and US$0.02 per click on Gemini). If a photo matters, send *the
+  seed's* photo once, small (`thumb(url, 480)`), and turn it into text (color,
+  print, silhouette) that cheap steps can reuse.
+- **Cheapest step that can decide, decides.** Rules and heuristics first, then Jev
+  (`src/server/jev.ts`: typed scores, ~US$0.0003 per 50-90 items, input-only
+  billing), and a reasoning model only where something has to be written or planned.
+  Reasoning models get `reasoning: { effort: "minimal" }` unless a test shows it hurts.
+- **Measure, don't assume.** Every model call logs its cost (`meta.cost` on
+  `shop.chat` / `shop.similar`, summed per turn). A change that touches the AI path
+  ships with an A/B on preview (same queries, both arms, average tokens / cost /
+  latency) in its PR, like the Jev one (−59% tokens, −40% cost).
+- **Cache what repeats.** Opening answers are cached a day; snapshots (`?s=`,
+  `/s/`) reopen from KV for free. Prefer serving a snapshot to re-running a search.
+
 ## Admin (`/mcp`)
 
 `shop.decoindex.com/mcp?token=…` is an MCP app (add it in deco Studio as a URL;
