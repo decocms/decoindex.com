@@ -75,6 +75,7 @@ export async function sweepScrapers(env: Env): Promise<number> {
             COUNT(*) n, COUNT(DISTINCT json_extract(meta,'$.path')) paths
        FROM events
       WHERE name = 'read' AND ts >= ? AND json_extract(meta,'$.ua') IS NOT NULL
+        AND ua_class != 'first-party' -- our own shop over the service binding; see FirstParty in main.ts
       GROUP BY 1, 3
      HAVING n >= ? AND paths >= ?`,
   )

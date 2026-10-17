@@ -125,6 +125,8 @@ export function track(
     meta?: Record<string, unknown>;
     /** `request.cf` — network and verified-bot facts Cloudflare attaches. */
     cf?: Cf;
+    /** Came through the FirstParty entrypoint (our own shop), not the internet. */
+    firstParty?: boolean;
   },
 ): void {
   const cf = event.cf;
@@ -136,7 +138,7 @@ export function track(
     event.name,
     event.domain ?? null,
     event.surface ?? null,
-    classifyClient(event.ua, cf),
+    event.firstParty ? "first-party" : classifyClient(event.ua, cf),
     event.country ?? (cf?.country as string | undefined) ?? null,
     event.ms ?? null,
     JSON.stringify({ ...event.meta, ...clientFacts(event.ua, cf) }),

@@ -68,7 +68,7 @@ export default function ShopChat({
       if (turn >= 0 && turn >= turnsRef.current.length && q) {
         // Forward into a turn we no longer hold (the chat was reset): ask again.
         setView(turnsRef.current.length);
-        send(q, (p.get("dept") as Dept) || dept, store);
+        send(q, turnsRef.current.length, (p.get("dept") as Dept) || dept, store);
         return;
       }
       setOpen(null);
@@ -92,20 +92,24 @@ export default function ShopChat({
     if (q) {
       history.replaceState({ turn: 0 }, "");
       setView(0);
-      send(q, (d as Dept) || "feminino", s);
+      send(q, 0, (d as Dept) || "feminino", s);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Asking from turn `view` keeps turns 0..view and drops what came after it
+  // (from the home, view = -1: a fresh conversation), exactly like browser history.
   const ask = (text: string) => {
     setOpen(null);
-    pushTurn(turns.length, text);
-    send(text, dept, store);
+    const keep = view + 1;
+    pushTurn(keep, text);
+    send(text, keep, dept, store);
   };
   const more = (t: Tile) => {
     setOpen(null);
-    pushTurn(turns.length, `Mais opções parecidas com "${t.title}" da ${t.brand}.`);
-    similarTo(t, dept);
+    const keep = view + 1;
+    pushTurn(keep, `Mais opções parecidas com "${t.title}" da ${t.brand}.`);
+    similarTo(t, keep, dept);
   };
   const dismiss = (t: Tile) => {
     setHidden((h) => new Set(h).add(t.id));
@@ -257,7 +261,7 @@ function Thread({ turns, model, chatId, onAsk }: { turns: Turn[]; model?: string
     <ol className="flex flex-col gap-5" aria-live="polite">
       {turns.map((t, i) => (
         // Phones show only the latest turn, so the grid stays above the fold.
-        <li key={i} className={`flex-col gap-2.5 ${i === turns.length - 1 ? "flex" : "hidden lg:flex"}`}>
+        <li key={t.key} className={`flex-col gap-2.5 ${i === turns.length - 1 ? "flex" : "hidden lg:flex"}`}>
           <p className="self-end rounded-2xl rounded-br-md bg-ink px-4 py-2.5 text-sm text-paper">{t.user}</p>
           {t.status && !t.answer && (
             <p className="flex items-center gap-2 text-sm text-ink-soft">
@@ -351,8 +355,8 @@ function Results({
   if (turn.done && !shown.length) {
     return (
       <div className="grid place-items-center rounded-xl border border-dashed border-line p-12 text-center text-ink-soft">
-        <p className="font-medium tracking-tight text-2xl text-ink">Nada por aqui ainda.</p>
-        <p className="mt-2 text-sm">Tente dizer de outro jeito — uma peça, uma marca, uma faixa de preço.</p>
+        <p className="font-medium tracking-tight text-2xl text-ink">{turn.error ? "As lojas não responderam agora." : "Nada por aqui ainda."}</p>
+        <p className="mt-2 text-sm">{turn.error ? "Não é falta de produto — tente de novo em instantes." : "Tente dizer de outro jeito — uma peça, uma marca, uma faixa de preço."}</p>
       </div>
     );
   }

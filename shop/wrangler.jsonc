@@ -12,8 +12,10 @@
 
   // The catalog. Every search goes through decoindex over a service binding,
   // so it inherits its cache, its per-domain bound and its blocklist — and so
-  // the shopper's IP (not ours) is what its per-caller limit sees.
-  "services": [{ "binding": "INDEX", "service": "decoindex", "remote": true }],
+  // the shopper's IP (not ours) is what its per-caller limit sees. The FirstParty
+  // entrypoint marks us as first-party: never blocklisted by decoindex's scraper
+  // sweep (which once blocked the shop for a week and emptied every search).
+  "services": [{ "binding": "INDEX", "service": "decoindex", "entrypoint": "FirstParty", "remote": true }],
 
   // decoindex's own D1: shop events land in its append-only `events` table
   // (name = shop.*) so the improvement loop reads one place.
