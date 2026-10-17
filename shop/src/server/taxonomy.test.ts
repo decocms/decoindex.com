@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { BRAND_CONTEXT } from "./brand-context";
+import { BRANDS } from "./brands";
 import { attributes, detectType, overlap, pickCategory, toCategories, words } from "./taxonomy";
 
 // Shapes copied from real decoindex storefront docs (FARM: VTEX tree with depth;
@@ -103,4 +105,9 @@ describe("deptOf", () => {
     expect(deptOf("Masculino > Vestuário")).toBe("masculino");
     expect(deptOf("Calçados")).toBeUndefined();
   });
+});
+
+test("every roster brand has context, and nothing orphaned", () => {
+  expect(BRANDS.filter((b) => !BRAND_CONTEXT[b.domain]).map((b) => b.domain)).toEqual([]);
+  expect(Object.keys(BRAND_CONTEXT).filter((d) => !BRANDS.some((b) => b.domain === d))).toEqual([]);
 });

@@ -2,6 +2,7 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { stepCountIs, streamText, tool } from "ai";
 import { z } from "zod";
 import type { ChatEvent, ChatRequest, Share, SimilarRequest, Tile } from "../types";
+import { BRAND_CONTEXT } from "./brand-context";
 import { BRANDS, brandByDomain } from "./brands";
 import { newHealth, tileLine } from "./catalog";
 import type { Env, ExecutionContext } from "./env";
@@ -26,7 +27,7 @@ interface CachedAnswer {
 async function answerKey(q: string, dept?: string, store?: string) {
   const norm = q.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9$]+/g, " ").trim();
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${norm}|${dept ?? ""}|${store ?? ""}`));
-  return `answer:v1:${[...new Uint8Array(buf)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("")}`;
+  return `answer:v2:${[...new Uint8Array(buf)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("")}`;
 }
 const SORTS = ["relevance", "price_asc", "price_desc", "new", "discount"] as const;
 
@@ -47,10 +48,14 @@ export function pickModel(env: Env, chatId: string, forced?: string): string {
 
 function systemPrompt(dept?: string, store?: string): string {
   const home = store ? BRANDS.find((b) => b.domain === store) : undefined;
-  const roster = BRANDS.map((b) => `- ${b.domain} — ${b.name} [${b.segments.join(", ")}]: ${b.blurb}`).join("\n");
+  const roster = BRANDS.map((b) => {
+    const c = BRAND_CONTEXT[b.domain];
+    const facts = c ? [c.from, c.since && `desde ${c.since}`, c.price].filter(Boolean).join(" · ") : "";
+    return `- ${b.domain} — ${b.name} [${b.segments.join(", ")}]${facts ? ` (${facts})` : ""}: ${b.blurb}.${c ? ` ${c.about}` : ""}`;
+  }).join("\n");
   return `Você é o deco shop: um personal shopper que busca nos catálogos de marcas brasileiras de moda a partir de um único chat.
 
-Marcas disponíveis (use o domínio exato em find_products):
+Marcas disponíveis (use o domínio exato em find_products). Entre parênteses: origem, ano de fundação e faixa de preço ($ popular a $$$$ luxo). Use isso quando o pedido falar de origem ("marcas cariocas", "mineiras", "do Sul"), tradição ou faixa de preço ("de luxo", "baratinho"); sem origem informada, não suponha:
 ${roster}
 ${dept ? `\nO cliente está navegando em: ${dept}. Prefira marcas e produtos desse departamento.\n` : ""}${home ? `\nO cliente chegou pela loja ${home.name} (${home.domain}). Busque nela primeiro e mostre os produtos dela no topo. Só traga outras marcas para completar quando ela não tiver o suficiente.\n` : ""}
 Como trabalhar:
