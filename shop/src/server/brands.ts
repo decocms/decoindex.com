@@ -85,6 +85,12 @@ export const BRANDS: Brand[] = [
   { domain: "www.nannacay.com.br", name: "Nannacay", segments: ["bolsas", "feminino"], blurb: "bolsas artesanais feitas à mão por artesãs" },
   { domain: "www.neriage.com.br", name: "Neriage", segments: ["feminino"], blurb: "moda feminina autoral, vestidos e plissados" },
   { domain: "www.pacecompany.com.br", name: "PACE", segments: ["masculino", "calcados"], blurb: "streetwear: camisetas, moletons, tênis e acessórios" },
+  // Headless VTEX fronts (Azzas), readable since decoindex #54 detects the account behind them.
+  { domain: "www.crisbarros.com.br", name: "Cris Barros", segments: ["feminino"], blurb: "moda feminina de luxo, alfaiataria, vestidos e tricô" },
+  { domain: "www.mariafilo.com.br", name: "Maria Filó", segments: ["feminino"], blurb: "moda feminina, vestidos estampados, blusas e saias" },
+  { domain: "www.carolbassi.com.br", name: "Carol Bassi", segments: ["feminino"], blurb: "moda feminina de luxo, vestidos, alfaiataria e tricô" },
+  { domain: "www.foxtonbrasil.com.br", name: "Foxton", segments: ["masculino"], blurb: "moda masculina casual, camisas, polos e bermudas" },
+  { domain: "www.afabula.com.br", name: "Fábula", segments: ["infantil"], blurb: "moda infantil estampada, vestidos e conjuntos" },
 ];
 
 const byHost = new Map(BRANDS.map((b) => [b.domain.replace(/^www\./, ""), b]));
