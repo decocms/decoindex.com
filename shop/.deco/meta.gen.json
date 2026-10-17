@@ -6,16 +6,16 @@
   "manifest": {
     "blocks": {
       "sections": {
-        "site/sections/BrandStrip.tsx": {
-          "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==",
-          "namespace": "site"
-        },
         "site/sections/ShopChat.tsx": {
           "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG9wQ2hhdC50c3g=",
           "namespace": "site"
         },
         "site/sections/Showcase.tsx": {
           "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG93Y2FzZS50c3g=",
+          "namespace": "site"
+        },
+        "site/sections/BrandStrip.tsx": {
+          "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==",
           "namespace": "site"
         },
         "website/sections/Rendering/Lazy.tsx": {
@@ -992,16 +992,16 @@
                 "$ref": "#/definitions/Resolvable"
               },
               {
-                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==",
-                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props"
-              },
-              {
                 "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG9wQ2hhdC50c3g=",
                 "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3BDaGF0LnRzeA==@Props"
               },
               {
                 "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG93Y2FzZS50c3g=",
                 "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3djYXNlLnRzeA==@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props"
               }
             ]
           }
@@ -1278,16 +1278,16 @@
                       "$ref": "#/definitions/Resolvable"
                     },
                     {
-                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==",
-                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props"
-                    },
-                    {
                       "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG9wQ2hhdC50c3g=",
                       "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3BDaGF0LnRzeA==@Props"
                     },
                     {
                       "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG93Y2FzZS50c3g=",
                       "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3djYXNlLnRzeA==@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props"
                     }
                   ]
                 }
@@ -1325,16 +1325,16 @@
                 "$ref": "#/definitions/Resolvable"
               },
               {
-                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==",
-                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props"
-              },
-              {
                 "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG9wQ2hhdC50c3g=",
                 "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3BDaGF0LnRzeA==@Props"
               },
               {
                 "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG93Y2FzZS50c3g=",
                 "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3djYXNlLnRzeA==@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props"
               },
               {
                 "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g="
@@ -1368,16 +1368,16 @@
                       "$ref": "#/definitions/Resolvable"
                     },
                     {
-                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==",
-                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props"
-                    },
-                    {
                       "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG9wQ2hhdC50c3g=",
                       "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3BDaGF0LnRzeA==@Props"
                     },
                     {
                       "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG93Y2FzZS50c3g=",
                       "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3djYXNlLnRzeA==@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props"
                     },
                     {
                       "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g="
@@ -1441,16 +1441,16 @@
                                 "$ref": "#/definitions/Resolvable"
                               },
                               {
-                                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==",
-                                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props"
-                              },
-                              {
                                 "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG9wQ2hhdC50c3g=",
                                 "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3BDaGF0LnRzeA==@Props"
                               },
                               {
                                 "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG93Y2FzZS50c3g=",
                                 "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3djYXNlLnRzeA==@Props"
+                              },
+                              {
+                                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==",
+                                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props"
                               },
                               {
                                 "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g="
@@ -1567,65 +1567,6 @@
               "website/flags/multivariate/image.ts"
             ],
             "default": "website/flags/multivariate/image.ts"
-          }
-        }
-      },
-      "c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props": {
-        "type": "object",
-        "properties": {
-          "title": {
-            "type": "string",
-            "nullable": true,
-            "title": "Título"
-          },
-          "brands": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "title": "Name"
-                },
-                "domain": {
-                  "type": "string",
-                  "title": "Domínio (abre a loja)"
-                }
-              },
-              "required": [
-                "name",
-                "domain"
-              ],
-              "titleBy": "name"
-            },
-            "nullable": true,
-            "title": "Brands"
-          },
-          "footnote": {
-            "type": "string",
-            "nullable": true,
-            "title": "Rodapé"
-          }
-        }
-      },
-      "c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==": {
-        "title": "site/sections/BrandStrip.tsx",
-        "type": "object",
-        "allOf": [
-          {
-            "$ref": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props"
-          }
-        ],
-        "required": [
-          "__resolveType"
-        ],
-        "properties": {
-          "__resolveType": {
-            "type": "string",
-            "enum": [
-              "site/sections/BrandStrip.tsx"
-            ],
-            "default": "site/sections/BrandStrip.tsx"
           }
         }
       },
@@ -1979,15 +1920,48 @@
           }
         }
       },
+      "c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "title": "Título",
+            "description": "\"{n}\" vira o número de marcas."
+          },
+          "footnote": {
+            "type": "string",
+            "nullable": true,
+            "title": "Rodapé"
+          }
+        }
+      },
+      "c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==": {
+        "title": "site/sections/BrandStrip.tsx",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props"
+          }
+        ],
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "site/sections/BrandStrip.tsx"
+            ],
+            "default": "site/sections/BrandStrip.tsx"
+          }
+        }
+      },
       "__SECTION_REF__": {
         "title": "Section",
         "anyOf": [
           {
             "$ref": "#/definitions/Resolvable"
-          },
-          {
-            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==",
-            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props"
           },
           {
             "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG9wQ2hhdC50c3g=",
@@ -1996,6 +1970,10 @@
           {
             "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG93Y2FzZS50c3g=",
             "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3djYXNlLnRzeA==@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props"
           },
           {
             "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g="
@@ -2025,16 +2003,16 @@
             "$ref": "#/definitions/Resolvable"
           },
           {
-            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==",
-            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props"
-          },
-          {
             "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG9wQ2hhdC50c3g=",
             "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3BDaGF0LnRzeA==@Props"
           },
           {
             "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG93Y2FzZS50c3g=",
             "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3djYXNlLnRzeA==@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZFN0cmlwLnRzeA==",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kU3RyaXAudHN4@Props"
           },
           {
             "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g="
