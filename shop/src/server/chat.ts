@@ -103,7 +103,7 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
   const store = BRANDS.some((b) => b.domain === body.store) ? body.store : undefined;
 
   const seen = new Map<string, Tile>();
-  const stats = { searches: 0, viaCategory: 0, hits: 0, curated: 0 };
+  const stats = { searches: 0, viaCategory: 0, hits: 0, curated: 0, brands: [] as string[], share: "" };
   const final = { answer: "", ids: [] as string[], refinements: [] as string[] };
 
   const openrouter = createOpenRouter({
@@ -158,6 +158,7 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
               const names = [...new Set(known.map((r) => brandByDomain(r.domain)?.name))].join(", ");
               await send({ type: "status", text: `Procurando em ${names}…` });
               stats.searches += known.length;
+              stats.brands.push(...known.map((r) => r.domain).filter((d) => !stats.brands.includes(d)));
               const found = await Promise.all(
                 known.map((r) => findProducts({ env, ip, dept: body.dept }, r as Parameters<typeof findProducts>[1])),
               );
@@ -213,10 +214,15 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
         tiles: final.ids.map((i) => seen.get(i)).filter((t): t is Tile => !!t),
         refinements: final.refinements,
       });
-      if (id) await send({ type: "share", id });
+      if (id) {
+        stats.share = id;
+        await send({ type: "share", id });
+      }
     },
     (ms, error) =>
       logEvent(env, "shop.chat", ms, {
+        // What the shopper typed: the admin dashboard's main column. Search text, not identity.
+        q: messages.filter((m) => m.role === "user").at(-1)?.content.slice(0, 300),
         chat: body.chatId,
         model,
         turn: messages.filter((m) => m.role === "user").length,

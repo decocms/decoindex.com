@@ -61,6 +61,16 @@ chat search that store first and show it on top (only roster domains honored).
 - **Never hardcode a model.** `CHAT_MODELS` (wrangler var) lists the candidates;
   each chat is pinned to one by hashing its id. `?model=<slug>` forces one.
 
+## Admin (`/mcp`)
+
+`shop.decoindex.com/mcp?token=…` is an MCP app (add it in deco Studio as a URL;
+the token rides as `?token=` because Studio stores only the URL). Tools:
+`shop_dashboard` (opens the visual panel), `shop_queries`, `shop_top_queries`.
+`GET /mcp/ui?token=…` shows the same panel in a browser. Fails closed: no
+`MCP_AUTH_TOKEN` secret → 503; missing/wrong token → 401; no public tier, it
+shows what shoppers typed. Code: `src/server/admin/*`, handshake rules copied
+from decoindex's `/mcp` (read its comments before changing the widget).
+
 ## Learning in production
 
 Every chat, click, open, dismiss and 👍/👎 lands in decoindex's `events` table

@@ -19,6 +19,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:site_name", content: "deco shop" },
       { property: "og:title", content: TITLE },
       { property: "og:description", content: DESCRIPTION },
+      // 1200×630 card, rendered from design/og.html (≈75KB: WhatsApp drops previews much over 300KB).
+      { property: "og:image", content: "https://shop.decoindex.com/og.jpg" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "deco shop — todas as marcas brasileiras que você ama, num chat só" },
+      { property: "og:locale", content: "pt_BR" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://shop.decoindex.com/og.jpg" },
     ],
     links: [
       { rel: "preconnect", href: "https://api.fontshare.com" },

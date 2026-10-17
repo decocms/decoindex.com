@@ -45,6 +45,7 @@ export const Route = createFileRoute("/s/$id")({
           ? [
               // The merchant's own CDN, resized by it — never rehosted.
               { property: "og:image", content: thumb(image, 800) },
+              { name: "twitter:image", content: thumb(image, 800) },
             ]
           : []),
         { name: "twitter:card", content: "summary_large_image" },
