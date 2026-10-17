@@ -40,6 +40,7 @@
     "CHAT_MODELS": "anthropic/claude-haiku-5.5,anthropic/claude-sonnet-5.5,deepseek/deepseek-v4.1-flash,z-ai/glm-5.3-flash,qwen/qwen3.8-flash,meta/muse-glimmer-30b,google/gemini-3.8-flash",
     "AI_GATEWAY_ACCOUNT_ID": "55dd6d847f366735ef6e0f860c7bdc51",
     "AI_GATEWAY_NAME": "default",
+    "PRESELECT_MODEL": "~typesafe/jev-latest",
     "ATTRIBUTION_PARAM": "ref",
     "ATTRIBUTION_VALUE": "decoshop"
   }
