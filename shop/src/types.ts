@@ -15,6 +15,8 @@ export interface Tile {
   /** Sizes the catalog lists as available right now. A hint, not a stock promise. */
   sizes: string[];
   category?: string;
+  /** Department the store files it under, from the category breadcrumb ("Moda Feminina > …"). */
+  dept?: "feminino" | "masculino";
   description?: string;
 }
 

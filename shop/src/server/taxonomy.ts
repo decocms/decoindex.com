@@ -135,6 +135,13 @@ export function attributes(title: string, type?: ProductType): string[] {
   return words(title).filter((w) => !STOP.has(w) && !typeWords.has(w) && !/^\d+$/.test(w));
 }
 
+/** Department a breadcrumb files a product under, when it says so. */
+export function deptOf(text: string): "feminino" | "masculino" | undefined {
+  const t = words(text).join(" ");
+  const f = FEM.test(t), m = MASC.test(t);
+  return f && !m ? "feminino" : m && !f ? "masculino" : undefined;
+}
+
 /** Children's lines ("biquíni infantil", "jardineira infantil"): never shown to adults unless asked. */
 export function isKids(text: string): boolean {
   return KIDS.test(words(text).join(" "));

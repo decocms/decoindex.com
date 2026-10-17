@@ -1,7 +1,7 @@
 import type { Tile } from "../types";
 import { brandByDomain } from "./brands";
 import type { Env } from "./env";
-import { toCategories, type Category } from "./taxonomy";
+import { deptOf, toCategories, type Category } from "./taxonomy";
 
 const UA = "decoshop/0.1 (+https://shop.decoindex.com)";
 
@@ -133,6 +133,7 @@ function toTile(
     url: url.toString(),
     sizes,
     category: p.categories?.at(-1),
+    dept: deptOf((p.categories ?? []).join(" ")),
     description: p.description?.slice(0, 400),
   };
 }

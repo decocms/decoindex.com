@@ -95,3 +95,12 @@ describe("isKids", () => {
     expect(isKids("Vestido Longo Estampado")).toBe(false);
   });
 });
+
+describe("deptOf", () => {
+  test("reads the breadcrumb", async () => {
+    const { deptOf } = await import("./taxonomy");
+    expect(deptOf("Moda Feminina Macacão")).toBe("feminino");
+    expect(deptOf("Masculino > Vestuário")).toBe("masculino");
+    expect(deptOf("Calçados")).toBeUndefined();
+  });
+});
