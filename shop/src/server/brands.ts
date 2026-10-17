@@ -55,7 +55,7 @@ export const BRANDS: Brand[] = [
   { domain: "www.morenarosa.com.br", name: "Morena Rosa", segments: ["feminino"], blurb: "moda feminina, jeans e vestidos" },
   { domain: "www.tf.com.br", name: "Track & Field", segments: ["esporte", "feminino", "masculino"], blurb: "roupas esportivas premium para corrida e yoga" },
   { domain: "www.altogiro.com.br", name: "Alto Giro", segments: ["esporte", "feminino"], blurb: "moda fitness feminina de alta performance, leggings" },
-  { domain: "www.handred.com.br", name: "Handred", segments: ["masculino"], blurb: "moda masculina minimalista em linho e algodão" },
+  { domain: "www.handred.com.br", name: "Handred", segments: ["masculino", "feminino"], blurb: "moda minimalista em linho, seda e algodão, masculina e feminina" },
   { domain: "www.dudalina.com.br", name: "Dudalina", segments: ["masculino", "feminino"], blurb: "camisaria premium masculina e feminina" },
   { domain: "www.aramis.com.br", name: "Aramis", segments: ["masculino"], blurb: "moda masculina, camisas e alfaiataria casual" },
   { domain: "www.sergiok.com.br", name: "Sergio K", segments: ["masculino"], blurb: "moda masculina casual-luxo, camisetas e polos" },
