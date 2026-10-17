@@ -3,7 +3,7 @@ import type { Tile } from "../types";
 import { BRANDS, type Segment } from "./brands";
 import { findProducts, type Sort } from "./find";
 import { categories, newHealth } from "./catalog";
-import { TYPES, TYPE_NAMES, detectType, overlap, pickCategory, words, type ProductType } from "./taxonomy";
+import { TYPES, TYPE_NAMES, deptOf, detectType, overlap, pickCategory, words, type ProductType } from "./taxonomy";
 
 /**
  * Real product photos for the home's cards, ideas and shelves — a daily index,
@@ -40,7 +40,7 @@ interface Snapshot {
 }
 
 const DAY = 86_400_000;
-const SNAPSHOT = (h: string) => `showcase:v9:${h}`;
+const SNAPSHOT = (h: string) => `showcase:v11:${h}`;
 const SPEC = (h: string) => `showcase-spec:${h}`;
 const LOCK = (h: string) => `showcase-lock:${h}`;
 // One shared caller key: showcase reads are few and must not eat a shopper's per-IP budget.
@@ -89,7 +89,13 @@ function deptBrands(dept: ShowcaseSpec["dept"], type: ProductType, day: number, 
 const FAMILY: ProductType[][] = [["biquini", "maio", "praia"], ["camisa", "camiseta", "polo"], ["short", "bermuda"], ["casaco", "moletom"]];
 const sameFamily = (a: ProductType, b: ProductType) => a === b || FAMILY.some((f) => f.includes(a) && f.includes(b));
 
-function heroScore(t: Tile, type: ProductType, want: string[]): number {
+const UNDERWEAR = new Set(["calcinha", "sutia", "cueca", "lingerie"]);
+
+function heroScore(t: Tile, type: ProductType, want: string[], beachBrand = false): number {
+  const ws = words(t.title);
+  // Multi-packs are never a hero ("Kit 10 Calcinhas…"); underwear words only pass as swimwear from a beachwear brand.
+  if (ws[0] === "kit") return 0;
+  if (ws.some((w) => UNDERWEAR.has(w)) && sameFamily(type, "biquini") && !beachBrand) return 0;
   // The store's category is the stronger signal: "Calcinha Biquíni" filed under lingerie is not swimwear.
   const catType = t.category ? detectType(t.category) : undefined;
   if (catType && !sameFamily(catType, type)) return 0;
@@ -117,17 +123,26 @@ async function sample(
   // blindly made "saia" try six stores that sell no skirts and come out empty.
   // Tree reads don't count against the item budget (memoized, cached upstream).
   const rotated = deptBrands(spec.dept, type, day, item);
+  // Shoes and bags are genuinely unisex; for clothing, a store selling to both sides must prove the department.
+  const unisexType = SHOES.includes(type) || BAGS.includes(type);
+  const isMixed = (b: (typeof rotated)[number]) => !unisexType && b.segments.includes("feminino") && b.segments.includes("masculino");
   const trees = newHealth();
   const carry: typeof rotated = [];
   for (const b of rotated.slice(0, TREE_PROBES)) {
-    if (pickCategory(await categories(env, b.domain, IP, trees), type, { dept: spec.dept })) carry.push(b);
+    const pick = pickCategory(await categories(env, b.domain, IP, trees), type, { dept: spec.dept });
+    if (!pick) continue;
+    // A brand that sells to both sides only leads if its category says the department
+    // (Handred's "Calças" is mixed: a woman's jumpsuit fronted masculino Calças).
+    if (isMixed(b) && deptOf(pick.category.words.join(" ")) !== spec.dept) continue;
+    carry.push(b);
   }
   // For fashion types, sports and shoe brands are a fallback, not the lead (ASICS and Havaianas fronting "Calças").
   // Same for lingerie brands outside lingerie: their "biquíni" is a panty cut, not swimwear.
   const sporty = (b: (typeof rotated)[number]) =>
     (!SHOES.includes(type) && (b.segments.includes("esporte") || b.segments.includes("calcados"))) ||
     (type !== "lingerie" && b.segments.includes("lingerie"));
-  const all = [...carry, ...rotated.filter((b) => !carry.includes(b))];
+  // Mixed-department brands that didn't qualify above can't be trusted for a hero photo at all.
+  const all = [...carry, ...rotated.filter((b) => !carry.includes(b) && !isMixed(b))];
   const ordered = [...all.filter((b) => !sporty(b)), ...all.filter(sporty)];
   // Prefer stores with a real category for the type; fall back to their search
   // (no store has a "biquíni" category, but several sell biquínis). Bounded:
@@ -142,7 +157,7 @@ async function sample(
     // Best photos first; a store whose best is score 0 still counts, but sorts last.
     const withImg = f.tiles
       .filter((t) => t.images[0])
-      .map((t, i) => ({ t, i, s: heroScore(t, type, want) }))
+      .map((t, i) => ({ t, i, s: heroScore(t, type, want, b.segments.includes("praia")) }))
       .filter((x) => x.s > 0 && !taken.has(x.t.id)) // good candidates not used elsewhere; rotation stays among them
       .sort((a, b) => b.s - a.s || a.i - b.i)
       .map((x) => x.t);
