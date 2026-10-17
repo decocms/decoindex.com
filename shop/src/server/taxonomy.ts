@@ -111,7 +111,12 @@ export function pickCategory(
     score += Math.min(c.depth, 3) * 2;
     if (opts.dept === "feminino") score += FEM.test(text) ? 5 : MASC.test(text) ? -25 : 0;
     if (opts.dept === "masculino") score += MASC.test(text) ? 5 : FEM.test(text) ? -25 : 0;
-    if (KIDS.test(text)) score -= 15;
+    // An adult department never lands in a kids line: "Biquíni Infantil" was the only biquíni
+    // category at one store and "Mais como este" came back empty after the kids filter.
+    if (KIDS.test(text)) {
+      if (opts.dept) continue;
+      score -= 15;
+    }
     if (SALE.test(text)) score += opts.sale ? 4 : -8;
     if (c.count) score += Math.min(Math.log10(c.count), 3);
     if (!best || score > best.score) best = { category: c, score };
@@ -161,3 +166,6 @@ export function overlap(want: string[], text: string): number {
   // Prefix match so "estampa" finds "estampado" and "azul" finds "azul-marinho".
   return want.filter((w) => have.has(w) || [...have].some((h) => h.length > 4 && w.length > 4 && (h.startsWith(w) || w.startsWith(h)))).length;
 }
+
+/** Types that stand in for each other when a store files things under a sibling ("Praia" for biquíni). */
+export const FAMILY: ProductType[][] = [["biquini", "maio", "praia", "top"], ["camisa", "camiseta", "polo"], ["short", "bermuda"], ["casaco", "moletom"]];

@@ -410,6 +410,7 @@ export async function handleSimilar(req: Request, env: Env, ctx: ExecutionContex
         await send({ type: "text", text: "Não achei nada parecido agora. Tente descrever o que você gostou nele." });
         return;
       }
+      found.tiles = mixBrands(found.tiles);
       await send({ type: "products", items: found.tiles });
       await send({ type: "curate", ids: found.tiles.map((t) => t.id), refinements: [] });
       const brands = [...new Set(found.tiles.map((t) => t.brand))].slice(0, 4).join(", ");

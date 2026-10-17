@@ -2,7 +2,7 @@ import type { Tile } from "../types";
 import { BRANDS, brandByDomain } from "./brands";
 import { browseCategory, categories, searchBrand, type Health } from "./catalog";
 import type { Env } from "./env";
-import { TYPES, attributes, detectType, isKids, otherDept, overlap, pickCategory, words, type ProductType } from "./taxonomy";
+import { FAMILY, TYPES, attributes, detectType, isKids, otherDept, overlap, pickCategory, words, type ProductType } from "./taxonomy";
 
 export type Sort = "relevance" | "price_asc" | "price_desc" | "new" | "discount";
 
@@ -112,7 +112,10 @@ export async function similar(ctx: Ctx, seed: Pick<Tile, "id" | "domain" | "titl
   const withType: { domain: string; path: string }[] = [];
   for (const domain of stores) {
     if (withType.length >= 5) break;
-    const pick = pickCategory(await categories(ctx.env, domain, ctx.ip, ctx.health), type, { dept: ctx.dept });
+    const cats = await categories(ctx.env, domain, ctx.ip, ctx.health);
+    // A store with no "biquíni" category may still file them under a sibling ("Praia", "Maiô").
+    const family = FAMILY.find((f) => f.includes(type)) ?? [type];
+    const pick = [type, ...family.filter((t) => t !== type)].map((t) => pickCategory(cats, t, { dept: ctx.dept })).find(Boolean);
     if (pick) withType.push({ domain, path: pick.category.path });
   }
   if (!withType.length) {
@@ -134,7 +137,13 @@ export async function similar(ctx: Ctx, seed: Pick<Tile, "id" | "domain" | "titl
     .slice(0, 24)
     .map((x) => x.t);
   const names = withType.map((s) => brandByDomain(s.domain)?.name ?? s.domain);
-  return { tiles: scored, via: names.join(", "), type, attrs };
+  if (scored.length >= 6) return { tiles: scored, via: names.join(", "), type, attrs };
+  // Categories came back thin (kids lines, sale bins, a sibling with other things): search the seed's
+  // store and the next two for "type + its words". 3 more reads at most, only on this path.
+  const query = [TYPES[type][0], ...attrs.slice(0, 2)].join(" ");
+  const searched = await Promise.all(stores.slice(0, 3).map((d) => searchBrand(ctx.env, d, query, ctx.ip, ctx.health)));
+  const more = fit(dedupe([...scored, ...searched.flat()]), { type, want: attrs, dept: ctx.dept }).filter((t) => t.id !== seed.id);
+  return { tiles: more.slice(0, 24), via: `${names.join(", ")} + busca “${query}”`, type, attrs };
 }
 
 

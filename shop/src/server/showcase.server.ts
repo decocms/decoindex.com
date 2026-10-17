@@ -3,7 +3,7 @@ import type { Tile } from "../types";
 import { BRANDS, type Segment } from "./brands";
 import { findProducts, type Sort } from "./find";
 import { categories, newHealth } from "./catalog";
-import { TYPES, TYPE_NAMES, deptOf, detectType, overlap, pickCategory, words, type ProductType } from "./taxonomy";
+import { TYPES, TYPE_NAMES, deptOf, detectType, overlap, pickCategory, words, type ProductType, FAMILY } from "./taxonomy";
 
 /**
  * Real product photos for the home's cards, ideas and shelves — a daily index,
@@ -86,7 +86,6 @@ function deptBrands(dept: ShowcaseSpec["dept"], type: ProductType, day: number, 
  *   0 — anything else
  */
 /** Types that are the same thing for a photo: a "calcinha de biquíni" in a swimwear category is fine. */
-const FAMILY: ProductType[][] = [["biquini", "maio", "praia", "top"], ["camisa", "camiseta", "polo"], ["short", "bermuda"], ["casaco", "moletom"]];
 const sameFamily = (a: ProductType, b: ProductType) => a === b || FAMILY.some((f) => f.includes(a) && f.includes(b));
 
 const UNDERWEAR = new Set(["calcinha", "sutia", "cueca", "lingerie"]);
