@@ -1,23 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { cmsHomeRouteConfig, CmsPage } from "@decocms/tanstack";
+import { cmsHomeRouteConfig } from "@decocms/tanstack";
+import { HomePage } from "~/components/HomePage";
 
 const config = cmsHomeRouteConfig({ defaultTitle: "deco shop", siteName: "deco shop", pendingMs: 60_000, pendingMinMs: 0 });
 
 export const Route = createFileRoute("/")({
   ...config,
-  component: Home,
+  component: () => <HomePage data={Route.useLoaderData() as Record<string, any> | null} />,
 });
-
-function Home() {
-  const data = Route.useLoaderData() as Record<string, any> | null;
-  if (!data) return <p className="p-10 text-center">Nenhuma página no CMS para "/".</p>;
-  return (
-    <CmsPage
-      sections={data.resolvedSections ?? []}
-      deferredSections={data.deferredSections ?? []}
-      pagePath={data.pagePath}
-      pageUrl={data.pageUrl}
-      device={data.device}
-    />
-  );
-}

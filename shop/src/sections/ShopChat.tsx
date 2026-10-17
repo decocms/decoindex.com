@@ -28,6 +28,17 @@ export interface Props {
   disclaimer?: string;
 }
 
+/**
+ * The frozen turn this URL points at: `/c/{id}` (current), or `?s={id}` (links shared before /c/).
+ * A `?q=` without `s` is a turn still running (or a deep link), so the path id doesn't apply.
+ */
+function snapshotOf(loc: Location): string | null {
+  const p = new URLSearchParams(loc.search);
+  if (p.get("s")) return p.get("s");
+  if (p.get("q")) return null;
+  return loc.pathname.match(/^\/c\/([0-9A-Za-z]{8})$/)?.[1] ?? null;
+}
+
 export default function ShopChat({
   headline = "Todas as marcas brasileiras que você ama. Um chat.",
   subheadline = "Diga o que procura e eu busco nos catálogos de FARM, Animale, Osklen, Reserva, FILA, New Balance e mais.",
@@ -56,7 +67,9 @@ export default function ShopChat({
     const p = new URLSearchParams(location.search);
     p.set("q", q);
     p.set("dept", dept);
-    p.delete("s"); // the new turn gets its own snapshot id when it finishes
+    p.delete("s"); // the new turn gets its own /c/{id} when it finishes
+    // Same path, new query: changing the path here (/c/x → /) switched routes, remounted the chat
+    // and sent the follow-up as a brand-new conversation. Only the finished turn moves to /c/{id}.
     // Asked from inside the drawer: take over its history entry, so Back skips the closed drawer.
     if (history.state?.layer) history.replaceState({ turn }, "", `?${p}`);
     else history.pushState({ turn }, "", `?${p}`);
@@ -68,14 +81,14 @@ export default function ShopChat({
       if (e.state?.layer) return; // an overlay's own entry (drawer, gallery): it handles itself
       const p = new URLSearchParams(location.search);
       const q = p.get("q");
-      const turn: number = typeof e.state?.turn === "number" ? e.state.turn : q ? 0 : -1;
-      if (turn >= 0 && turn >= turnsRef.current.length && q) {
+      const snap = snapshotOf(location);
+      const turn: number = typeof e.state?.turn === "number" ? e.state.turn : q || snap ? 0 : -1;
+      if (turn >= 0 && turn >= turnsRef.current.length && (q || snap)) {
         // Forward into a turn we no longer hold (the chat was reset): reopen its snapshot, or ask again.
         const at = turnsRef.current.length;
         setView(at);
-        const snap = p.get("s");
-        if (snap) void restore(snap, at).then((ok) => { if (!ok) send(q, at, (p.get("dept") as Dept) || dept, store); });
-        else send(q, at, (p.get("dept") as Dept) || dept, store);
+        if (snap) void restore(snap, at).then((ok) => { if (!ok && q) send(q, at, (p.get("dept") as Dept) || dept, store); });
+        else if (q) send(q, at, (p.get("dept") as Dept) || dept, store);
         return;
       }
       setOpen(null);
@@ -85,16 +98,13 @@ export default function ShopChat({
     return () => removeEventListener("popstate", onPop);
   });
 
-  // When the turn on screen is frozen, its URL becomes the snapshot (?s=id): copying the address bar
-  // shares exactly these picks, like the Share button, instead of re-running the search.
+  // When the turn on screen is frozen, its URL becomes /c/{id}: copying the address bar shares
+  // exactly these picks, like the Share button, instead of re-running the search.
   const onScreen = view >= 0 ? turns[view] : undefined;
   useEffect(() => {
     const id = onScreen?.shareId;
-    if (!id) return;
-    const p = new URLSearchParams(location.search);
-    if (p.get("s") === id) return;
-    p.set("s", id);
-    history.replaceState(history.state, "", `?${p}`);
+    if (!id || location.pathname === `/c/${id}`) return;
+    history.replaceState(history.state, "", `/c/${id}${store ? `?store=${encodeURIComponent(store)}` : ""}`);
   }, [onScreen?.shareId]);
 
   // ?q= makes a search shareable and lets the home page deep-link a prompt.
@@ -108,12 +118,16 @@ export default function ShopChat({
     const s = p.get("store") ?? undefined;
     setStore(s);
     const q = p.get("q");
-    const snap = p.get("s");
+    const snap = snapshotOf(location);
     if (q || snap) {
       history.replaceState({ turn: 0 }, "");
       setView(0);
       // ?s= is what someone saw and copied: show exactly that. Only a bare ?q= runs a new search.
-      if (snap) void restore(snap, 0).then((ok) => { if (!ok && q) send(q, 0, (d as Dept) || "feminino", s); });
+      if (snap)
+        void restore(snap, 0).then((ok) => {
+          if (ok?.dept) setDept(ok.dept);
+          else if (!ok && q) send(q, 0, (d as Dept) || "feminino", s);
+        });
       else if (q) send(q, 0, (d as Dept) || "feminino", s);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

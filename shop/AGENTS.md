@@ -157,3 +157,10 @@ Local D1 is empty, so event inserts log an error and move on — expected.
 Own Workers Build with root directory `shop/`, build `npm run build`, deploy
 `npx wrangler deploy`. Secrets: `CF_AI_GATEWAY_TOKEN`, `OPENROUTER_API_KEY`
 (`wrangler secret put …`, typed by a human).
+
+**Preview worker** (`decoindex-shop-preview`, workers.dev, no route, no cron): build, copy
+`dist/server/wrangler.json` to `wrangler.preview.json` with `name` changed and `routes`/`triggers`
+removed, then `npx wrangler deploy -c dist/server/wrangler.preview.json --var BUILD_HASH:p$(date +%s)`.
+The `BUILD_HASH` is required for uncommitted builds: the edge HTML cache is versioned by the git
+commit, so two preview builds of the same commit share a cache and the second one serves HTML that
+points at the first one's deleted JS chunks (404s, nothing hydrates). Then `git checkout -- .deco`.
