@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import type { Tile } from "../types";
 import { BRANDS, type Segment } from "./brands";
 import { findProducts, type Sort } from "./find";
+import { newHealth, type Health } from "./catalog";
 import { TYPE_NAMES, type ProductType } from "./taxonomy";
 
 /**
@@ -35,14 +36,22 @@ function deptBrands(dept: ShowcaseSpec["dept"], type: ProductType) {
 }
 
 /** A few stores that carry `type` for this department, read via their category pages, interleaved. */
-async function sample(spec: ShowcaseSpec, type: ProductType, terms: string | undefined, n: number): Promise<Tile[]> {
+/** Most stores one card may try, and most decoindex reads one showcase build may spend. */
+const MAX_TRIES = 6;
+const READ_BUDGET = 80;
+
+async function sample(spec: ShowcaseSpec, type: ProductType, terms: string | undefined, n: number, health: Health): Promise<Tile[]> {
   // Prefer stores with a real category for the type; fall back to their search
   // (no store has a "biquíni" category, but several sell biquínis).
+  // Bounded on purpose: when reads failed, this loop used to walk all ~57 brands
+  // for every card — ~1,000 reads per home visit, in bursts, while blocked.
   const out: Tile[][] = [];
   const searched: Tile[][] = [];
+  let tries = 0;
   for (const b of deptBrands(spec.dept, type)) {
     if (out.length >= 3 || out.length + searched.length >= 4) break;
-    const f = await findProducts({ env, ip: IP, dept: spec.dept }, { domain: b.domain, type, terms });
+    if (++tries > MAX_TRIES || health.ok + health.failed >= READ_BUDGET) break;
+    const f = await findProducts({ env, ip: IP, dept: spec.dept, health }, { domain: b.domain, type, terms });
     const withImg = f.tiles.filter((t) => t.images[0]);
     if (!withImg.length) continue;
     (f.via.includes("›") ? out : searched).push(withImg);
@@ -73,12 +82,13 @@ export const getShowcase = createServerFn({ method: "POST" })
     const hit = await env.SHARES?.get(key);
     if (hit) return JSON.parse(hit) as ShowcaseData;
 
+    const health = newHealth();
     const [cards, ideas, shelves] = await Promise.all([
-      Promise.all(spec.cards.map((c) => sample(spec, c.type, undefined, 3))),
-      Promise.all(spec.ideas.map(async (i) => (i.type ? (await sample(spec, i.type, i.terms, 1))[0] ?? null : null))),
+      Promise.all(spec.cards.map((c) => sample(spec, c.type, undefined, 3, health))),
+      Promise.all(spec.ideas.map(async (i) => (i.type ? (await sample(spec, i.type, i.terms, 1, health))[0] ?? null : null))),
       Promise.all(
         spec.shelves.map(async (s) =>
-          (await findProducts({ env, ip: IP, dept: spec.dept }, { domain: s.domain, type: s.type, terms: s.terms, sort: s.sort })).tiles
+          (await findProducts({ env, ip: IP, dept: spec.dept, health }, { domain: s.domain, type: s.type, terms: s.terms, sort: s.sort })).tiles
             .filter((t) => t.images[0])
             .slice(0, 12),
         ),

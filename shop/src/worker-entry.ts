@@ -18,6 +18,7 @@ import { brandForUrl } from "./server/brands";
 import { logEvent } from "./server/events";
 import { EMBED_JS } from "./server/embed";
 import { handleMcp } from "./server/admin/mcp";
+import { fromOurPages, trackView } from "./server/traffic";
 import type { Env, ExecutionContext } from "./server/env";
 
 const decoWorker = createDecoWorkerEntry(createServerEntry({ fetch: handler.fetch }), {
@@ -41,6 +42,11 @@ const EVENT_NAMES = new Set(["shop.feedback", "shop.dismiss", "shop.open", "shop
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    // Our POST APIs are only for our own pages (cheap bot filter; CHAT_LIMIT still applies).
+    if (request.method === "POST" && url.pathname.startsWith("/api/") && !fromOurPages(request)) {
+      return Response.json({ error: "forbidden" }, { status: 403 });
+    }
 
     if (url.pathname === "/api/chat" && request.method === "POST") return handleChat(request, env, ctx);
     if (url.pathname === "/api/similar" && request.method === "POST") return handleSimilar(request, env, ctx);
@@ -71,6 +77,7 @@ export default {
       return Response.redirect(to, 302);
     }
 
+    trackView(request, env, ctx);
     return decoWorker.fetch(request, env as never, ctx as never);
   },
 };

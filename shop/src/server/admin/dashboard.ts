@@ -38,6 +38,8 @@ export const DASHBOARD_HTML = `<!doctype html>
   .bar span { position:absolute; bottom:-18px; left:50%; transform: translateX(-50%); font-size: 10px; color: var(--soft); white-space: nowrap; }
   .legend { font-size: 11px; color: var(--soft); margin-top: 24px; }
   .cols { display:grid; grid-template-columns: 1.6fr 1fr; gap: 28px; }
+  .cols3 { display:grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  @media (max-width: 820px) { .cols3 { grid-template-columns: 1fr; } }
   @media (max-width: 820px) { .cols { grid-template-columns: 1fr; } }
   .q { font-weight: 500; }
   .meta { color: var(--soft); font-size: 12px; margin-top: 2px; display:flex; gap:8px; flex-wrap: wrap; }
@@ -105,6 +107,27 @@ export const DASHBOARD_HTML = `<!doctype html>
       ["Buscas", t.turns || 0], ["Conversas", chats], ["Conversas com clique", pct(clicked, chats)],
       ["Cliques p/ lojas", t.clicks || 0], ["Mais como este", t.similar || 0], ["Compartilhados", t.shares || 0], ["👍", pct(up, fb)],
     ].map(function (k) { return el("div", { class: "kpi" }, [el("div", { class: "v", text: String(k[1]) }), el("div", { class: "l", text: k[0] })]); })));
+
+    // Traffic: people vs link previews vs bots, and where people come from.
+    var tr = d.traffic;
+    if (tr) {
+      wrap.appendChild(el("h2", { text: "Tráfego" }));
+      wrap.appendChild(el("div", { class: "kpis" }, [
+        ["Visitas (pessoas)", tr.people], ["Home", tr.kinds.home], ["Links de busca abertos", tr.kinds.share],
+        ["Visita → busca", pct(t.turns || 0, tr.people)], ["Previews de link", tr.previews], ["Bots", tr.bots],
+      ].map(function (k) { return el("div", { class: "kpi" }, [el("div", { class: "v", text: String(k[1]) }), el("div", { class: "l", text: k[0] })]); })));
+      var list = function (title, rows, label, empty) {
+        var box = el("div", null, [el("h2", { text: title })]);
+        if (!rows.length) box.appendChild(el("p", { class: "empty", text: empty }));
+        rows.forEach(function (r) { box.appendChild(el("div", { class: "row" }, [el("span", { text: label(r) }), el("span", { class: "meta", text: String(r.n) })])); });
+        return box;
+      };
+      wrap.appendChild(el("div", { class: "cols3" }, [
+        list("De onde vêm", tr.refs || [], function (r) { return r.ref; }, "Sem visitas ainda."),
+        list("Países", tr.countries || [], function (r) { return r.country || "?"; }, "–"),
+        list("Bots e previews", tr.botAgents || [], function (r) { return (r.cls === "preview" ? "preview · " : "bot · ") + String(r.ua || "(sem UA)").slice(0, 48); }, "Nenhum."),
+      ]));
+    }
 
     // Models: the comparison CHAT_MODELS exists for.
     wrap.appendChild(el("h2", { text: "Modelos" }));

@@ -152,3 +152,47 @@ export async function topQueries(env: Env, days: number, limit = 20) {
     Math.min(Math.max(limit, 1), 100),
   );
 }
+
+/** Page views (shop.view): people vs link previews vs bots, where people come from, which bots. */
+export async function traffic(env: Env, days: number) {
+  const from = since(days);
+  const [byKind, refs, countries, bots] = await Promise.all([
+    all<{ cls: string; kind: string; n: number }>(
+      env,
+      `SELECT json_extract(meta,'$.cls') AS cls, json_extract(meta,'$.kind') AS kind, COUNT(*) AS n
+         FROM events WHERE name = 'shop.view' AND ts > ? GROUP BY 1, 2`,
+      from,
+    ),
+    all<{ ref: string | null; n: number }>(
+      env,
+      `SELECT COALESCE(json_extract(meta,'$.ref'), 'direto / app') AS ref, COUNT(*) AS n
+         FROM events WHERE name = 'shop.view' AND ts > ? AND json_extract(meta,'$.cls') = 'browser'
+        GROUP BY 1 ORDER BY 2 DESC LIMIT 10`,
+      from,
+    ),
+    all<{ country: string | null; n: number }>(
+      env,
+      `SELECT country, COUNT(*) AS n FROM events
+        WHERE name = 'shop.view' AND ts > ? AND json_extract(meta,'$.cls') = 'browser'
+        GROUP BY 1 ORDER BY 2 DESC LIMIT 8`,
+      from,
+    ),
+    all<{ ua: string | null; cls: string; n: number }>(
+      env,
+      `SELECT json_extract(meta,'$.ua') AS ua, json_extract(meta,'$.cls') AS cls, COUNT(*) AS n FROM events
+        WHERE name = 'shop.view' AND ts > ? AND json_extract(meta,'$.cls') != 'browser'
+        GROUP BY 1, 2 ORDER BY 3 DESC LIMIT 8`,
+      from,
+    ),
+  ]);
+  const sum = (f: (r: { cls: string; kind: string }) => boolean) => byKind.filter(f).reduce((s, r) => s + r.n, 0);
+  return {
+    people: sum((r) => r.cls === "browser"),
+    previews: sum((r) => r.cls === "preview"),
+    bots: sum((r) => r.cls === "bot"),
+    kinds: Object.fromEntries(["home", "chat", "share", "other"].map((k) => [k, sum((r) => r.cls === "browser" && r.kind === k)])),
+    refs,
+    countries,
+    botAgents: bots,
+  };
+}

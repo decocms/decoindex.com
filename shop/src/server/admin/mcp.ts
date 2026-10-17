@@ -1,6 +1,6 @@
 import type { Env } from "../env";
 import { DASHBOARD_HTML } from "./dashboard";
-import { overview, queries, topQueries } from "./stats";
+import { overview, queries, topQueries, traffic } from "./stats";
 
 /**
  * `/mcp` — the shop's admin as an MCP app, to add in deco Studio (or any MCP
@@ -32,7 +32,7 @@ const TOOLS = [
     name: "shop_dashboard",
     title: "deco shop — painel",
     description:
-      "Painel do deco shop: volume, comparação entre modelos (latência, resultados, click-through, 👍/👎, erros), buscas recentes, buscas mais feitas e marcas mais clicadas.",
+      "Painel do deco shop: tráfego (pessoas vs previews de link vs bots, de onde vêm), volume, comparação entre modelos (latência, resultados, click-through, 👍/👎, erros), buscas recentes, buscas mais feitas e marcas mais clicadas.",
     inputSchema: {
       type: "object",
       properties: {
@@ -45,8 +45,13 @@ const TOOLS = [
     _meta: { ui: { resourceUri: UI_MCP_APP }, "openai/outputTemplate": UI_SKYBRIDGE },
     execute: async (env: Env, a: Args) => {
       const days = num(a.days, 7);
-      const [ov, recent, top] = await Promise.all([overview(env, days), queries(env, days, 60, str(a.q)), topQueries(env, days, 15)]);
-      return { ...ov, q: str(a.q) ?? null, recent, top };
+      const [ov, recent, top, tr] = await Promise.all([
+        overview(env, days),
+        queries(env, days, 60, str(a.q)),
+        topQueries(env, days, 15),
+        traffic(env, days),
+      ]);
+      return { ...ov, q: str(a.q) ?? null, recent, top, traffic: tr };
     },
   },
   {
