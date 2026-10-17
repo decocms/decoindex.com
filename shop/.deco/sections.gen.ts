@@ -14,7 +14,8 @@
 //   export const renderJson = (p)=> → project props for ?renderJson (mobile)
 
 import * as _sync0 from "../src/sections/ShopChat";
-import * as _sync1 from "../src/sections/BrandStrip";
+import * as _sync1 from "../src/sections/Showcase";
+import * as _sync2 from "../src/sections/BrandStrip";
 
 export interface SectionMetaEntry {
   eager?: boolean;
@@ -33,12 +34,14 @@ export interface SectionMetaEntry {
 
 export const sectionMeta: Record<string, SectionMetaEntry> = {
   "site/sections/ShopChat.tsx": { eager: true, sync: true },
+  "site/sections/Showcase.tsx": { eager: true, sync: true },
   "site/sections/BrandStrip.tsx": { eager: true, sync: true },
 };
 
 export const syncComponents: Record<string, any> = {
   "site/sections/ShopChat.tsx": _sync0,
-  "site/sections/BrandStrip.tsx": _sync1,
+  "site/sections/Showcase.tsx": _sync1,
+  "site/sections/BrandStrip.tsx": _sync2,
 };
 
 export const loadingFallbacks: Record<string, React.ComponentType<any>> = {};

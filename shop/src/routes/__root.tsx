@@ -24,7 +24,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://api.fontshare.com" },
       { rel: "stylesheet", href: "https://api.fontshare.com/v2/css?f[]=switzer@400,500,600,700&display=swap" },
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%230a0a0a'/><text x='16' y='22' font-size='18' text-anchor='middle' fill='%23d9f99d' font-family='serif'>d</text></svg>" },
+      // Same mark as demo-storefront.
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32x32.png" },
+      { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16x16.png" },
+      { rel: "shortcut icon", href: "/favicon.ico" },
     ],
   }),
   component: () => (

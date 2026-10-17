@@ -3,6 +3,7 @@
  * worker; everything else (pages, Studio admin protocol) is the framework's.
  *
  *   POST /api/chat   NDJSON stream: the shopping agent (server/chat.ts)
+ *   POST /api/similar NDJSON stream: "mais como este" by category heuristics, no model (server/find.ts)
  *   POST /api/event  feedback + small client events, into decoindex's events table
  *   GET  /go         outbound click to a merchant PDP: logged, then 302
  *   GET  /embed.js   partner widget for empty-search pages (server/embed.ts)
@@ -11,7 +12,7 @@ import "./setup";
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
 import { createDecoWorkerEntry } from "@decocms/tanstack";
 import { handleMeta, handleDecofileRead, handleDecofileReload, handleRender, corsHeaders } from "@decocms/blocks-admin";
-import { handleChat } from "./server/chat";
+import { handleChat, handleSimilar } from "./server/chat";
 import { brandForUrl } from "./server/brands";
 import { logEvent } from "./server/events";
 import { EMBED_JS } from "./server/embed";
@@ -40,6 +41,7 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/chat" && request.method === "POST") return handleChat(request, env, ctx);
+    if (url.pathname === "/api/similar" && request.method === "POST") return handleSimilar(request, env, ctx);
 
     if (url.pathname === "/api/event" && request.method === "POST") {
       const e = (await request.json().catch(() => null)) as { name?: string; meta?: Record<string, unknown> } | null;

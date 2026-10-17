@@ -12,7 +12,7 @@
     {
       "__resolveType": "site/sections/ShopChat.tsx",
       "headline": "Todas as marcas brasileiras que você ama. Um chat.",
-      "subheadline": "Diga o que procura e eu busco nos catálogos de FARM, Animale, Osklen, Reserva, FILA, New Balance e mais.",
+      "subheadline": "Diga o que procura e eu busco nos catálogos de FARM, Animale, Lenny Niemeyer, Osklen, Dress To, Reserva e mais de 50 marcas.",
       "placeholder": "O que você está procurando?",
       "suggestions": [
         {
@@ -45,8 +45,204 @@
       "disclaimer": "Preços de catálogo. Estoque, frete e preço final são confirmados na loja."
     },
     {
+      "__resolveType": "site/sections/Showcase.tsx",
+      "categoriesTitle": "O que você procura?",
+      "cards": [
+        {
+          "label": "Vestidos",
+          "type": "vestido",
+          "dept": "feminino",
+          "color": "#b5533c"
+        },
+        {
+          "label": "Saias",
+          "type": "saia",
+          "dept": "feminino",
+          "color": "#c4a184"
+        },
+        {
+          "label": "Biquínis",
+          "type": "biquini",
+          "dept": "feminino",
+          "color": "#3f5f86",
+          "prompt": "Biquínis e maiôs para o verão"
+        },
+        {
+          "label": "Blusas",
+          "type": "blusa",
+          "dept": "feminino",
+          "color": "#a8862f"
+        },
+        {
+          "label": "Calças",
+          "type": "calca",
+          "dept": "feminino",
+          "color": "#2c3e5c"
+        },
+        {
+          "label": "Bolsas",
+          "type": "bolsa",
+          "dept": "feminino",
+          "color": "#5a3550"
+        },
+        {
+          "label": "Sandálias",
+          "type": "sandalia",
+          "dept": "feminino",
+          "color": "#2f4a3a"
+        },
+        {
+          "label": "Camisas",
+          "type": "camisa",
+          "dept": "masculino",
+          "color": "#2c3e5c"
+        },
+        {
+          "label": "Camisetas",
+          "type": "camiseta",
+          "dept": "masculino",
+          "color": "#a8862f"
+        },
+        {
+          "label": "Bermudas",
+          "type": "bermuda",
+          "dept": "masculino",
+          "color": "#2f4a3a"
+        },
+        {
+          "label": "Polos",
+          "type": "polo",
+          "dept": "masculino",
+          "color": "#b5533c"
+        },
+        {
+          "label": "Calças",
+          "type": "calca",
+          "dept": "masculino",
+          "color": "#5a3550"
+        },
+        {
+          "label": "Moletons",
+          "type": "moletom",
+          "dept": "masculino",
+          "color": "#6b6b3a"
+        },
+        {
+          "label": "Tênis",
+          "type": "tenis",
+          "color": "#3f5f86",
+          "prompt": "Tênis para o dia a dia"
+        },
+        {
+          "label": "Malas",
+          "type": "mala",
+          "color": "#c4a184",
+          "prompt": "Mala de bordo leve"
+        }
+      ],
+      "ideasTitle": "Buscas em alta.",
+      "ideasSubtitle": "O que as pessoas estão pedindo ao deco shop agora.",
+      "ideas": [
+        {
+          "kicker": "Por ocasião",
+          "text": "Vestido longo para madrinha de casamento de dia",
+          "type": "vestido",
+          "terms": "longo",
+          "dept": "feminino"
+        },
+        {
+          "kicker": "Por tendência",
+          "text": "Estampas tropicais para as férias de verão",
+          "type": "vestido",
+          "terms": "estampado",
+          "dept": "feminino"
+        },
+        {
+          "kicker": "Por material",
+          "text": "Tudo de linho, das marcas cariocas",
+          "type": "calca",
+          "terms": "linho",
+          "dept": "feminino"
+        },
+        {
+          "kicker": "Por estilo",
+          "text": "Look de trabalho confortável e elegante",
+          "type": "blusa",
+          "terms": "alfaiataria",
+          "dept": "feminino"
+        },
+        {
+          "kicker": "Por ocasião",
+          "text": "Camisa de linho para casamento na praia",
+          "type": "camisa",
+          "terms": "linho",
+          "dept": "masculino"
+        },
+        {
+          "kicker": "Por esporte",
+          "text": "Tênis de corrida para começar a treinar",
+          "type": "tenis",
+          "terms": "corrida",
+          "dept": "masculino"
+        },
+        {
+          "kicker": "Por estilo",
+          "text": "Bermuda e polo para o fim de semana",
+          "type": "bermuda",
+          "dept": "masculino"
+        },
+        {
+          "kicker": "Por viagem",
+          "text": "Mala de bordo leve para uma viagem curta",
+          "type": "mala",
+          "dept": "masculino"
+        }
+      ],
+      "shelves": [
+        {
+          "kicker": "Novidades",
+          "title": "Acabou de chegar na FARM Rio",
+          "domain": "www.farmrio.com.br",
+          "type": "vestido",
+          "sort": "new",
+          "dept": "feminino"
+        },
+        {
+          "kicker": "Promoção",
+          "title": "Animale com desconto",
+          "domain": "www.animale.com.br",
+          "type": "vestido",
+          "sort": "discount",
+          "dept": "feminino"
+        },
+        {
+          "kicker": "Novidades",
+          "title": "Osklen: o que é novo",
+          "domain": "www.osklen.com.br",
+          "type": "camiseta",
+          "sort": "new",
+          "dept": "masculino"
+        },
+        {
+          "kicker": "Promoção",
+          "title": "Reserva com desconto",
+          "domain": "www.usereserva.com",
+          "type": "bermuda",
+          "sort": "discount",
+          "dept": "masculino"
+        },
+        {
+          "kicker": "Para correr",
+          "title": "Tênis New Balance",
+          "domain": "www.newbalance.com.br",
+          "type": "tenis",
+          "sort": "new"
+        }
+      ]
+    },
+    {
       "__resolveType": "site/sections/BrandStrip.tsx",
-      "title": "Buscando em",
+      "title": "Buscando em 56 marcas",
       "brands": [
         {
           "name": "FARM Rio",
@@ -111,6 +307,166 @@
         {
           "name": "Bagaggio",
           "domain": "www.bagaggio.com.br"
+        },
+        {
+          "name": "Lenny Niemeyer",
+          "domain": "www.lennyniemeyer.com.br"
+        },
+        {
+          "name": "Adriana Degreas",
+          "domain": "www.adrianadegreas.com"
+        },
+        {
+          "name": "PatBO",
+          "domain": "www.patbo.com.br"
+        },
+        {
+          "name": "Iódice",
+          "domain": "www.iodice.com.br"
+        },
+        {
+          "name": "Le Lis",
+          "domain": "www.lelis.com.br"
+        },
+        {
+          "name": "Gloria Coelho",
+          "domain": "www.gloriacoelho.com.br"
+        },
+        {
+          "name": "Ricardo Almeida",
+          "domain": "www.ricardoalmeida.com.br"
+        },
+        {
+          "name": "NK Store",
+          "domain": "www.nkstore.com.br"
+        },
+        {
+          "name": "Bo.Bô",
+          "domain": "www.bobo.com.br"
+        },
+        {
+          "name": "Dress To",
+          "domain": "www.dressto.com.br"
+        },
+        {
+          "name": "Água de Coco",
+          "domain": "www.aguadecoco.com.br"
+        },
+        {
+          "name": "Cia. Marítima",
+          "domain": "www.ciamaritima.com.br"
+        },
+        {
+          "name": "Blue Man",
+          "domain": "www.blueman.com.br"
+        },
+        {
+          "name": "Lança Perfume",
+          "domain": "www.lancaperfume.com.br"
+        },
+        {
+          "name": "Cantão",
+          "domain": "www.cantao.com.br"
+        },
+        {
+          "name": "Maria Valentina",
+          "domain": "www.mariavalentina.com.br"
+        },
+        {
+          "name": "Iorane",
+          "domain": "www.iorane.com.br"
+        },
+        {
+          "name": "Sacada",
+          "domain": "www.sacada.com"
+        },
+        {
+          "name": "Lez a Lez",
+          "domain": "www.lezalez.com.br"
+        },
+        {
+          "name": "Morena Rosa",
+          "domain": "www.morenarosa.com.br"
+        },
+        {
+          "name": "Track & Field",
+          "domain": "www.tf.com.br"
+        },
+        {
+          "name": "Alto Giro",
+          "domain": "www.altogiro.com.br"
+        },
+        {
+          "name": "Handred",
+          "domain": "www.handred.com.br"
+        },
+        {
+          "name": "Dudalina",
+          "domain": "www.dudalina.com.br"
+        },
+        {
+          "name": "Aramis",
+          "domain": "www.aramis.com.br"
+        },
+        {
+          "name": "Sergio K",
+          "domain": "www.sergiok.com.br"
+        },
+        {
+          "name": "Redley",
+          "domain": "www.redley.com.br"
+        },
+        {
+          "name": "Jorge Bischoff",
+          "domain": "www.jorgebischoff.com.br"
+        },
+        {
+          "name": "Santa Lolla",
+          "domain": "www.santalolla.com.br"
+        },
+        {
+          "name": "Capodarte",
+          "domain": "www.capodarte.com.br"
+        },
+        {
+          "name": "Constance",
+          "domain": "www.constance.com.br"
+        },
+        {
+          "name": "Mr. Cat",
+          "domain": "www.mrcat.com.br"
+        },
+        {
+          "name": "Luz da Lua",
+          "domain": "www.luzdalua.com.br"
+        },
+        {
+          "name": "Ferracini",
+          "domain": "www.ferracini.com.br"
+        },
+        {
+          "name": "Usaflex",
+          "domain": "www.usaflex.com.br"
+        },
+        {
+          "name": "Loungerie",
+          "domain": "www.loungerie.com.br"
+        },
+        {
+          "name": "Valisère",
+          "domain": "www.valisere.com.br"
+        },
+        {
+          "name": "Recco",
+          "domain": "www.recco.com.br"
+        },
+        {
+          "name": "Lupo",
+          "domain": "www.lupo.com.br"
+        },
+        {
+          "name": "Pituchinhus",
+          "domain": "www.pituchinhus.com.br"
         }
       ],
       "footnote": "deco shop é um experimento da deco.cx sobre o decoindex. Você compra direto na loja de cada marca — a gente só ajuda a achar."

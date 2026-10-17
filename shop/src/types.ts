@@ -44,6 +44,13 @@ export interface ChatRequest {
   model?: string;
 }
 
+/** POST /api/similar: "mais como este", answered without a model. */
+export interface SimilarRequest {
+  chatId: string;
+  dept?: "feminino" | "masculino";
+  tile: Pick<Tile, "id" | "domain" | "title" | "category" | "priceMinor">;
+}
+
 /** A finished turn, frozen for `/s/{id}`. Prices are as observed at `createdAt`. */
 export interface Share {
   id: string;
