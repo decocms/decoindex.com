@@ -56,12 +56,15 @@ export default function ShopChat({
     const p = new URLSearchParams(location.search);
     p.set("q", q);
     p.set("dept", dept);
-    history.pushState({ turn }, "", `?${p}`);
+    // Asked from inside the drawer: take over its history entry, so Back skips the closed drawer.
+    if (history.state?.layer) history.replaceState({ turn }, "", `?${p}`);
+    else history.pushState({ turn }, "", `?${p}`);
     setView(turn);
   };
 
   useEffect(() => {
     const onPop = (e: PopStateEvent) => {
+      if (e.state?.layer) return; // an overlay's own entry (drawer, gallery): it handles itself
       const p = new URLSearchParams(location.search);
       const q = p.get("q");
       const turn: number = typeof e.state?.turn === "number" ? e.state.turn : q ? 0 : -1;

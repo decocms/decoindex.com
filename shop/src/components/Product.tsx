@@ -102,6 +102,27 @@ export function TileSkeleton() {
   );
 }
 
+/**
+ * An overlay owns a history entry while it is open, so the browser's Back
+ * (iOS edge swipe included) closes it instead of leaving the page. `layer`
+ * nests them: Back from the gallery closes only the gallery. Returns the
+ * close function the overlay's own buttons should use.
+ */
+function useBackToClose(layer: number, onClose: () => void) {
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    history.pushState({ turn: history.state?.turn, layer }, "");
+    const onPop = (e: PopStateEvent) => {
+      if ((e.state?.layer ?? 0) < layer) closeRef.current();
+    };
+    addEventListener("popstate", onPop);
+    return () => removeEventListener("popstate", onPop);
+  }, [layer]);
+  // Closing from inside pops our own entry; the popstate above does the rest.
+  return () => (history.state?.layer === layer ? history.back() : closeRef.current());
+}
+
 export function ProductDrawer({
   t,
   href,
@@ -117,17 +138,18 @@ export function ProductDrawer({
 }) {
   const [change, setChange] = useState("");
   const [shown, setShown] = useState<number | null>(null);
+  const close = useBackToClose(1, onClose);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && shown == null && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && shown == null && close();
     addEventListener("keydown", onKey);
     return () => removeEventListener("keydown", onKey);
-  }, [onClose, shown]);
+  }, [close, shown]);
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label={t.title}>
-      <button type="button" aria-label="Fechar" onClick={onClose} className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]" />
+      <button type="button" aria-label="Fechar" onClick={close} className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]" />
       <aside className="relative flex h-full w-full max-w-[520px] animate-rise flex-col overflow-y-auto bg-card shadow-2xl">
-        <button type="button" onClick={onClose} aria-label="Fechar" className="absolute right-3 top-3 z-10 grid size-9 place-items-center rounded-full bg-card/90 text-lg">
+        <button type="button" onClick={close} aria-label="Fechar" className="absolute right-3 top-3 z-10 grid size-9 place-items-center rounded-full bg-card/90 text-lg">
           ×
         </button>
         <div className="flex flex-col gap-4 p-6 pt-14">
@@ -200,6 +222,7 @@ export function ProductDrawer({
 
 /** Full-screen photos of one product. Native snap scrolling does the swiping; arrows and keys page it. */
 function Gallery({ images, start, onClose }: { images: string[]; start: number; onClose: () => void }) {
+  const close = useBackToClose(2, onClose);
   const strip = useRef<HTMLDivElement>(null);
   const [at, setAt] = useState(start);
   const go = (d: number) => strip.current?.scrollBy({ left: d * strip.current.clientWidth, behavior: "smooth" });
@@ -209,13 +232,13 @@ function Gallery({ images, start, onClose }: { images: string[]; start: number; 
   }, [start]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") close();
       if (e.key === "ArrowRight") go(1);
       if (e.key === "ArrowLeft") go(-1);
     };
     addEventListener("keydown", onKey);
     return () => removeEventListener("keydown", onKey);
-  }, [onClose]);
+  });
 
   const arrow = "absolute top-1/2 hidden size-11 -translate-y-1/2 place-items-center rounded-full bg-paper/90 text-xl text-ink transition hover:bg-paper disabled:opacity-0 sm:grid";
   return (
@@ -231,7 +254,7 @@ function Gallery({ images, start, onClose }: { images: string[]; start: number; 
           </div>
         ))}
       </div>
-      <button type="button" onClick={onClose} aria-label="Fechar" className="absolute right-3 top-3 grid size-10 place-items-center rounded-full bg-paper/90 text-lg text-ink">
+      <button type="button" onClick={close} aria-label="Fechar" className="absolute right-3 top-3 grid size-10 place-items-center rounded-full bg-paper/90 text-lg text-ink">
         ×
       </button>
       <button type="button" onClick={() => go(-1)} disabled={at === 0} aria-label="Foto anterior" className={`${arrow} left-4`}>
