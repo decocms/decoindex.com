@@ -198,45 +198,127 @@
           "dept": "masculino"
         }
       ],
-      "shelves": [
+      "ideaSections": [
         {
-          "kicker": "Novidades",
-          "title": "Acabou de chegar na FARM Rio",
-          "domain": "www.farmrio.com.br",
-          "type": "vestido",
-          "sort": "new",
-          "dept": "feminino"
+          "title": "Para cada ocasião.",
+          "subtitle": "Diga aonde você vai e o deco shop monta as opções.",
+          "ideas": [
+            {
+              "kicker": "Réveillon",
+              "text": "Vestido branco leve para a virada na praia",
+              "type": "vestido",
+              "terms": "branco",
+              "dept": "feminino"
+            },
+            {
+              "kicker": "Formatura",
+              "text": "Vestido longo para formatura à noite",
+              "type": "vestido",
+              "terms": "longo",
+              "dept": "feminino"
+            },
+            {
+              "kicker": "Entrevista",
+              "text": "Look de alfaiataria para uma entrevista de emprego",
+              "type": "calca",
+              "terms": "alfaiataria",
+              "dept": "feminino"
+            },
+            {
+              "kicker": "Viagem",
+              "text": "Biquíni e saída de praia para uma semana no Nordeste",
+              "type": "biquini",
+              "dept": "feminino"
+            },
+            {
+              "kicker": "Réveillon",
+              "text": "Camisa de linho branca para a virada",
+              "type": "camisa",
+              "terms": "linho",
+              "dept": "masculino"
+            },
+            {
+              "kicker": "Casamento",
+              "text": "Look para casamento à noite, sem terno",
+              "type": "calca",
+              "terms": "alfaiataria",
+              "dept": "masculino"
+            },
+            {
+              "kicker": "Entrevista",
+              "text": "Camisa social e calça para uma entrevista",
+              "type": "camisa",
+              "terms": "social",
+              "dept": "masculino"
+            },
+            {
+              "kicker": "Viagem",
+              "text": "Bermuda e chinelo para dias de praia",
+              "type": "bermuda",
+              "dept": "masculino"
+            }
+          ]
         },
         {
-          "kicker": "Promoção",
-          "title": "Animale com desconto",
-          "domain": "www.animale.com.br",
-          "type": "vestido",
-          "sort": "discount",
-          "dept": "feminino"
-        },
-        {
-          "kicker": "Novidades",
-          "title": "Osklen: o que é novo",
-          "domain": "www.osklen.com.br",
-          "type": "camiseta",
-          "sort": "new",
-          "dept": "masculino"
-        },
-        {
-          "kicker": "Promoção",
-          "title": "Reserva com desconto",
-          "domain": "www.usereserva.com",
-          "type": "bermuda",
-          "sort": "discount",
-          "dept": "masculino"
-        },
-        {
-          "kicker": "Para correr",
-          "title": "Tênis New Balance",
-          "domain": "www.newbalance.com.br",
-          "type": "tenis",
-          "sort": "new"
+          "title": "Por estilo e clima.",
+          "subtitle": "Comece por uma sensação, não por uma peça.",
+          "ideas": [
+            {
+              "kicker": "Minimalista",
+              "text": "Básicos de qualidade que combinam com tudo",
+              "type": "camiseta",
+              "terms": "lisa",
+              "dept": "feminino"
+            },
+            {
+              "kicker": "Calor",
+              "text": "Tecidos leves para os dias mais quentes",
+              "type": "vestido",
+              "terms": "linho",
+              "dept": "feminino"
+            },
+            {
+              "kicker": "Frio",
+              "text": "Tricô e casaco para um fim de semana na serra",
+              "type": "casaco",
+              "terms": "trico",
+              "dept": "feminino"
+            },
+            {
+              "kicker": "Noite",
+              "text": "Tudo preto, elegante e sem esforço",
+              "type": "vestido",
+              "terms": "preto",
+              "dept": "feminino"
+            },
+            {
+              "kicker": "Minimalista",
+              "text": "Camisetas básicas que duram",
+              "type": "camiseta",
+              "terms": "lisa",
+              "dept": "masculino"
+            },
+            {
+              "kicker": "Calor",
+              "text": "Linho e algodão para o verão",
+              "type": "camisa",
+              "terms": "linho",
+              "dept": "masculino"
+            },
+            {
+              "kicker": "Frio",
+              "text": "Moletom e jaqueta para dias frios",
+              "type": "moletom",
+              "dept": "masculino"
+            },
+            {
+              "kicker": "Versátil",
+              "text": "Tênis branco que vai com tudo",
+              "type": "tenis",
+              "terms": "branco",
+              "dept": "masculino"
+            }
+          ]
         }
       ]
     },

@@ -73,7 +73,7 @@ function HowItWorks() {
         <div className="mt-10 grid gap-4 md:grid-cols-3">
           <Stat value="127×" label="menos tokens por página (mediana, 12 lojas)" />
           <Stat value="1.356×" label="na loja mais pesada do benchmark" />
-          <Stat value="até 2" label="chamadas à loja por leitura, com cache" />
+          <Stat value="até 2" label="pedidos à API da loja por página lida; se alguém já leu, sai do cache" />
         </div>
         <Note>
           Com páginas tão menores, o modelo pode navegar <i>mais</i>. Ele abre a árvore de categorias de seis lojas, compara, volta e
