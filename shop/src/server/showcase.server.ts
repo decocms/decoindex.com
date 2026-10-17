@@ -40,7 +40,7 @@ interface Snapshot {
 }
 
 const DAY = 86_400_000;
-const SNAPSHOT = (h: string) => `showcase:v11:${h}`;
+const SNAPSHOT = (h: string) => `showcase:v12:${h}`;
 const SPEC = (h: string) => `showcase-spec:${h}`;
 const LOCK = (h: string) => `showcase-lock:${h}`;
 // One shared caller key: showcase reads are few and must not eat a shopper's per-IP budget.
@@ -86,7 +86,7 @@ function deptBrands(dept: ShowcaseSpec["dept"], type: ProductType, day: number, 
  *   0 — anything else
  */
 /** Types that are the same thing for a photo: a "calcinha de biquíni" in a swimwear category is fine. */
-const FAMILY: ProductType[][] = [["biquini", "maio", "praia"], ["camisa", "camiseta", "polo"], ["short", "bermuda"], ["casaco", "moletom"]];
+const FAMILY: ProductType[][] = [["biquini", "maio", "praia", "top"], ["camisa", "camiseta", "polo"], ["short", "bermuda"], ["casaco", "moletom"]];
 const sameFamily = (a: ProductType, b: ProductType) => a === b || FAMILY.some((f) => f.includes(a) && f.includes(b));
 
 const UNDERWEAR = new Set(["calcinha", "sutia", "cueca", "lingerie"]);
@@ -95,6 +95,9 @@ function heroScore(t: Tile, type: ProductType, want: string[], beachBrand = fals
   const ws = words(t.title);
   // Multi-packs are never a hero ("Kit 10 Calcinhas…"); underwear words only pass as swimwear from a beachwear brand.
   if (ws[0] === "kit") return 0;
+  // The first word names the piece: "Calça Moletom" is trousers, not a sweatshirt.
+  const firstType = ws[0] ? detectType(ws[0]) : undefined;
+  if (firstType && !sameFamily(firstType, type)) return 0;
   if (ws.some((w) => UNDERWEAR.has(w)) && sameFamily(type, "biquini") && !beachBrand) return 0;
   // The store's category is the stronger signal: "Calcinha Biquíni" filed under lingerie is not swimwear.
   const catType = t.category ? detectType(t.category) : undefined;
@@ -129,7 +132,10 @@ async function sample(
   const trees = newHealth();
   const carry: typeof rotated = [];
   for (const b of rotated.slice(0, TREE_PROBES)) {
-    const pick = pickCategory(await categories(env, b.domain, IP, trees), type, { dept: spec.dept });
+    // A sibling category counts: beachwear stores file bikinis under "Moda Praia", not "Biquíni".
+    const cats = await categories(env, b.domain, IP, trees);
+    const family = FAMILY.find((f) => f.includes(type)) ?? [type];
+    const pick = [type, ...family.filter((f) => f !== type)].map((ft) => pickCategory(cats, ft, { dept: spec.dept })).find(Boolean);
     if (!pick) continue;
     // A brand that sells to both sides only leads if its category says the department
     // (Handred's "Calças" is mixed: a woman's jumpsuit fronted masculino Calças).
