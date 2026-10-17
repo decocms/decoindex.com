@@ -2,12 +2,12 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { stepCountIs, streamText, tool } from "ai";
 import { z } from "zod";
 import type { ChatEvent, ChatRequest, Share, SimilarRequest, Tile } from "../types";
-import { BRAND_CONTEXT } from "./brand-context";
-import { BRANDS, brandByDomain } from "./brands";
+import { BRANDS, type Brand, brandByDomain } from "./brands";
 import { newHealth, tileLine } from "./catalog";
 import type { Env, ExecutionContext } from "./env";
 import { logEvent } from "./events";
 import { findProducts, similar } from "./find";
+import { preselect, rosterLine } from "./preselect";
 import { TYPE_NAMES } from "./taxonomy";
 
 const MAX_SEARCHES = 6;
@@ -46,13 +46,10 @@ export function pickModel(env: Env, chatId: string, forced?: string): string {
   return models[Math.abs(h) % models.length];
 }
 
-function systemPrompt(dept?: string, store?: string): string {
+function systemPrompt(dept?: string, store?: string, domains?: string[]): string {
   const home = store ? BRANDS.find((b) => b.domain === store) : undefined;
-  const roster = BRANDS.map((b) => {
-    const c = BRAND_CONTEXT[b.domain];
-    const facts = c ? [c.from, c.since && `desde ${c.since}`, c.price].filter(Boolean).join(" · ") : "";
-    return `- ${b.domain} — ${b.name} [${b.segments.join(", ")}]${facts ? ` (${facts})` : ""}: ${b.blurb}.${c ? ` ${c.about}` : ""}`;
-  }).join("\n");
+  const brands = domains ? domains.map(brandByDomain).filter((b): b is Brand => !!b) : BRANDS;
+  const roster = brands.map(rosterLine).join("\n");
   return `Você é o deco shop: um personal shopper que busca nos catálogos de marcas brasileiras de moda a partir de um único chat.
 
 Marcas disponíveis (use o domínio exato em find_products). Entre parênteses: origem, ano de fundação e faixa de preço ($ popular a $$$$ luxo). Use isso quando o pedido falar de origem ("marcas cariocas", "mineiras", "do Sul"), tradição ou faixa de preço ("de luxo", "baratinho"); sem origem informada, não suponha:
@@ -137,7 +134,7 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
   const model = pickModel(env, body.chatId, body.model);
 
   const seen = new Map<string, Tile>();
-  const stats = { searches: 0, viaCategory: 0, hits: 0, curated: 0, brands: [] as string[], share: "", fallback: false, tokensIn: 0, tokensOut: 0, cost: 0, lateError: "" };
+  const stats = { searches: 0, viaCategory: 0, hits: 0, curated: 0, brands: [] as string[], share: "", fallback: false, tokensIn: 0, tokensOut: 0, cost: 0, lateError: "", preselect: null as { ms: number; n: number } | null };
   const final = { answer: "", ids: [] as string[], refinements: [] as string[] };
   const health = newHealth();
   const UNREACHABLE = "As lojas não responderam agora — não é falta de produto. Tente de novo em instantes.";
@@ -164,10 +161,18 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
     ctx,
     async (send) => {
       await send({ type: "meta", chatId: body.chatId, model });
+      await send({ type: "status", text: "Escolhendo marcas…" });
+      const pick = await preselect(env, {
+        asks: messages.filter((m) => m.role === "user").slice(-3).map((m) => m.content),
+        dept: body.dept,
+        store,
+      });
+      stats.preselect = pick ? { ms: pick.ms, n: pick.domains.length } : null;
+      stats.cost += pick?.cost ?? 0;
       const result = streamText({
         // usage.include: OpenRouter reports tokens and USD cost per step, logged below for the admin's cost view.
         model: openrouter(model, { usage: { include: true } }),
-        system: systemPrompt(body.dept, store),
+        system: systemPrompt(body.dept, store, pick?.domains),
         messages,
         stopWhen: stepCountIs(5),
         maxOutputTokens: 3000, // per step; DeepSeek ran out at 1200 mid show_products ("Tool calls cutoff by max_tokens")
