@@ -1,5 +1,6 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { cmsRouteConfig, CmsPage, NotFoundPage } from "@decocms/tanstack";
+import { cmsRouteConfig, CmsPage } from "@decocms/tanstack";
+import { Lost } from "~/components/NotFound";
 
 const config = cmsRouteConfig({ siteName: "deco shop", defaultTitle: "deco shop" });
 
@@ -12,7 +13,7 @@ export const Route = createFileRoute("/$")({
     return page;
   },
   component: Page,
-  notFoundComponent: NotFoundPage,
+  notFoundComponent: () => <Lost />,
 });
 
 function Page() {

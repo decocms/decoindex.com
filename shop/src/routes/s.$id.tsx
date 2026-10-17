@@ -4,6 +4,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { env } from "cloudflare:workers";
 import type { Share, Tile } from "~/types";
 import { ProductDrawer, ProductTile, outbound, thumb } from "~/components/Product";
+import { Lost } from "~/components/NotFound";
 import { ShareButton, SiteHeader } from "~/components/Share";
 import { track } from "~/sdk/useShopChat";
 
@@ -134,16 +135,5 @@ function SharedBoard() {
 }
 
 function Gone() {
-  return (
-    <section className="min-h-dvh">
-      <SiteHeader />
-      <div className="mx-auto max-w-xl px-5 pt-[18vh] text-center">
-        <h1 className="text-3xl font-medium tracking-tight">Essa seleção não existe mais.</h1>
-        <p className="mt-3 text-ink-soft">Mas dá pra fazer uma nova em segundos.</p>
-        <a href="/" className="tap-scale mt-6 inline-block rounded-full bg-ink px-6 py-3.5 text-sm font-medium text-white">
-          Fazer minha busca
-        </a>
-      </div>
-    </section>
-  );
+  return <Lost title="Essa seleção não existe mais." body="Mas dá pra fazer uma nova em segundos. O que você procura?" />;
 }
