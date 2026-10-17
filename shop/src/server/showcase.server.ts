@@ -3,7 +3,7 @@ import type { Tile } from "../types";
 import { BRANDS, type Segment } from "./brands";
 import { findProducts, type Sort } from "./find";
 import { newHealth, type Health } from "./catalog";
-import { TYPE_NAMES, type ProductType } from "./taxonomy";
+import { TYPES, TYPE_NAMES, detectType, overlap, words, type ProductType } from "./taxonomy";
 
 /**
  * Real product photos for the home's cards, ideas and shelves — a daily index,
@@ -40,27 +40,58 @@ interface Snapshot {
 }
 
 const DAY = 86_400_000;
-const SNAPSHOT = (h: string) => `showcase:v2:${h}`;
+const SNAPSHOT = (h: string) => `showcase:v3:${h}`;
 const SPEC = (h: string) => `showcase-spec:${h}`;
 const LOCK = (h: string) => `showcase-lock:${h}`;
 // One shared caller key: showcase reads are few and must not eat a shopper's per-IP budget.
 const IP = "decoshop-showcase";
-/** Most stores one card may try, and most decoindex reads one build may spend. */
+/**
+ * Most stores one card/idea may try, and its own read budget. Per item, not one
+ * shared pool: items run in parallel and a shared budget let the first cards
+ * starve the ideas (empty photos). Builds are offline (cron/SWR), so ~20 items ×
+ * 12 reads a day is fine — and still bounded.
+ */
 const MAX_TRIES = 6;
-const READ_BUDGET = 80;
+const ITEM_BUDGET = 12;
 
+const SHOES: ProductType[] = ["tenis", "sandalia", "chinelo", "sapato"];
+const BAGS: ProductType[] = ["bolsa", "mochila", "mala"];
+
+/**
+ * Brands that sell `type` to this department. A brand needs the department
+ * itself; shoe and bag brands also count for shoes and bags. ("Neutral"
+ * segments like praia let FARM into masculino.)
+ */
 function deptBrands(dept: ShowcaseSpec["dept"], type: ProductType, day: number) {
-  const neutral: Segment[] = ["esporte", "calcados", "bolsas", "praia"];
-  const list = BRANDS.filter((b) => b.segments.includes(dept) || b.segments.some((s) => neutral.includes(s))).filter(
-    (b) => !(type === "tenis" && !b.segments.includes("calcados")),
-  );
+  const has = (b: (typeof BRANDS)[number], seg: Segment) => b.segments.includes(seg);
+  const list = BRANDS.filter((b) => {
+    if (SHOES.includes(type)) return has(b, "calcados") || (has(b, "esporte") && type === "tenis");
+    if (BAGS.includes(type)) return has(b, "bolsas") || has(b, dept);
+    return has(b, dept);
+  });
   // Rotate by day: a different first store per day, so the same card shows different brands.
   const k = list.length ? day % list.length : 0;
   return [...list.slice(k), ...list.slice(0, k)];
 }
 
 /** A few stores that carry `type` for this department, read via their category pages, interleaved. */
-async function sample(spec: ShowcaseSpec, type: ProductType, terms: string | undefined, n: number, health: Health, day: number) {
+/**
+ * How good a tile is as *the* photo for a card or idea:
+ *   2 — the title starts with the type ("Mala…", not "Tag de mala…") and has the terms
+ *   1 — it is that type and has the terms
+ *   0 — anything else
+ */
+function heroScore(t: Tile, type: ProductType, want: string[]): number {
+  const first = words(t.title)[0] ?? "";
+  const hasTerms = !want.length || overlap(want, `${t.title} ${t.description ?? ""}`) > 0;
+  if (!hasTerms) return 0;
+  if ((TYPES[type] as readonly string[]).includes(first)) return 2;
+  return detectType(`${t.title} ${t.category ?? ""}`) === type ? 1 : 0;
+}
+
+async function sample(spec: ShowcaseSpec, type: ProductType, terms: string | undefined, n: number, _shared: Health, day: number) {
+  const health = newHealth(); // own budget, see ITEM_BUDGET
+  const want = terms ? words(terms) : [];
   // Prefer stores with a real category for the type; fall back to their search
   // (no store has a "biquíni" category, but several sell biquínis). Bounded:
   // with failing reads this once walked all ~57 brands per card (~1,000 reads/visit).
@@ -69,9 +100,15 @@ async function sample(spec: ShowcaseSpec, type: ProductType, terms: string | und
   let tries = 0;
   for (const b of deptBrands(spec.dept, type, day)) {
     if (out.length >= 3 || out.length + searched.length >= 4) break;
-    if (++tries > MAX_TRIES || health.ok + health.failed >= READ_BUDGET) break;
+    if (++tries > MAX_TRIES || health.ok + health.failed >= ITEM_BUDGET) break;
     const f = await findProducts({ env, ip: IP, dept: spec.dept, health }, { domain: b.domain, type, terms });
-    const withImg = f.tiles.filter((t) => t.images[0]);
+    // Best photos first; a store whose best is score 0 still counts, but sorts last.
+    const withImg = f.tiles
+      .filter((t) => t.images[0])
+      .map((t, i) => ({ t, i, s: heroScore(t, type, want) }))
+      .filter((x) => x.s > 0) // only good candidates, so the daily rotation never lands on a weak one
+      .sort((a, b) => b.s - a.s || a.i - b.i)
+      .map((x) => x.t);
     if (!withImg.length) continue;
     (f.via.includes("›") ? out : searched).push(withImg);
   }
@@ -104,7 +141,9 @@ async function build(spec: ShowcaseSpec, now = Date.now()): Promise<Snapshot> {
       ),
     ),
   ]);
-  return { data: { cards, ideas, shelves }, builtAt: now, complete: cards.every((c) => c.length) && shelves.every((s) => s.length) };
+  const complete =
+    cards.every((c) => c.length) && shelves.every((s) => s.length) && ideas.every((t, i) => t || !spec.ideas[i].type);
+  return { data: { cards, ideas, shelves }, builtAt: now, complete };
 }
 
 /** Rebuild and store, unless the new one is worse than what we have. */

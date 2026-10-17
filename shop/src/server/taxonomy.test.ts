@@ -30,6 +30,7 @@ describe("words", () => {
     expect(words("Tênis")).toEqual(["tenis"]);
     expect(words("Calções")).toEqual(["calcao"]);
     expect(words("t-shirt")).toEqual(["t-shirt"]);
+    expect(words("Kit 3 Tech T-Shirts")).toEqual(["kit", "tech", "t-shirt"]);
   });
 });
 
