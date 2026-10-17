@@ -31,26 +31,17 @@ export function useShopChat() {
   const patchLast = (fn: (t: Turn) => Turn) =>
     setTurns((all) => (all.length ? [...all.slice(0, -1), fn(all[all.length - 1])] : all));
 
-  const send = useCallback(
-    async (text: string, dept?: Dept, store?: string) => {
-      const q = text.trim();
-      if (!q) return;
-      abort.current?.abort();
-      const ctrl = (abort.current = new AbortController());
-      if (!chatId.current) chatId.current = newId();
-
-      const history: ChatTurn[] = turns.flatMap((t) => [
-        { role: "user" as const, content: t.user },
-        ...(t.answer ? [{ role: "assistant" as const, content: t.answer }] : []),
-      ]);
-      setTurns((all) => [...all, { user: q, answer: "", products: [], done: false, status: "Pensando…" }]);
-
-      const forced = new URLSearchParams(location.search).get("model") ?? undefined;
-      try {
-        const res = await fetch("/api/chat", {
+  /** One turn: push it, POST `endpoint`, fold the NDJSON events into it. */
+  const stream = useCallback(async (label: string, endpoint: string, payload: (id: string) => object) => {
+    abort.current?.abort();
+    const ctrl = (abort.current = new AbortController());
+    if (!chatId.current) chatId.current = newId();
+    setTurns((all) => [...all, { user: label, answer: "", products: [], done: false, status: "Pensando…" }]);
+    try {
+        const res = await fetch(endpoint, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ chatId: chatId.current, dept, store, model: forced, messages: [...history, { role: "user", content: q }] }),
+          body: JSON.stringify(payload(chatId.current)),
           signal: ctrl.signal,
         });
         if (res.status === 429) {
@@ -97,8 +88,31 @@ export function useShopChat() {
             return patchLast((t) => ({ ...t, ms: e.ms }));
         }
       }
+  }, []);
+
+  const send = useCallback(
+    (text: string, dept?: Dept, store?: string) => {
+      const q = text.trim();
+      if (!q) return;
+      const history: ChatTurn[] = turns.flatMap((t) => [
+        { role: "user" as const, content: t.user },
+        ...(t.answer ? [{ role: "assistant" as const, content: t.answer }] : []),
+      ]);
+      const forced = new URLSearchParams(location.search).get("model") ?? undefined;
+      return stream(q, "/api/chat", (id) => ({ chatId: id, dept, store, model: forced, messages: [...history, { role: "user", content: q }] }));
     },
-    [turns],
+    [turns, stream],
+  );
+
+  /** "Mais como este": category heuristics on the server, no model call. */
+  const similarTo = useCallback(
+    (t: Tile, dept?: Dept) =>
+      stream(`Mais como “${t.title}”`, "/api/similar", (id) => ({
+        chatId: id,
+        dept,
+        tile: { id: t.id, domain: t.domain, title: t.title, category: t.category, priceMinor: t.priceMinor },
+      })),
+    [stream],
   );
 
   const reset = () => {
@@ -107,7 +121,7 @@ export function useShopChat() {
     setTurns([]);
   };
 
-  return { turns, model, chatId: () => chatId.current, send, reset };
+  return { turns, model, chatId: () => chatId.current, send, similarTo, reset };
 }
 
 /** Fire-and-forget event to /api/event. */

@@ -14,6 +14,10 @@
           "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG9wQ2hhdC50c3g=",
           "namespace": "site"
         },
+        "site/sections/Showcase.tsx": {
+          "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG93Y2FzZS50c3g=",
+          "namespace": "site"
+        },
         "website/sections/Rendering/Lazy.tsx": {
           "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g=",
           "namespace": "website"
@@ -994,6 +998,10 @@
               {
                 "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG9wQ2hhdC50c3g=",
                 "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3BDaGF0LnRzeA==@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG93Y2FzZS50c3g=",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3djYXNlLnRzeA==@Props"
               }
             ]
           }
@@ -1276,6 +1284,10 @@
                     {
                       "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG9wQ2hhdC50c3g=",
                       "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3BDaGF0LnRzeA==@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG93Y2FzZS50c3g=",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3djYXNlLnRzeA==@Props"
                     }
                   ]
                 }
@@ -1321,6 +1333,10 @@
                 "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3BDaGF0LnRzeA==@Props"
               },
               {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG93Y2FzZS50c3g=",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3djYXNlLnRzeA==@Props"
+              },
+              {
                 "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g="
               },
               {
@@ -1358,6 +1374,10 @@
                     {
                       "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG9wQ2hhdC50c3g=",
                       "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3BDaGF0LnRzeA==@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG93Y2FzZS50c3g=",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3djYXNlLnRzeA==@Props"
                     },
                     {
                       "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g="
@@ -1427,6 +1447,10 @@
                               {
                                 "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG9wQ2hhdC50c3g=",
                                 "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3BDaGF0LnRzeA==@Props"
+                              },
+                              {
+                                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG93Y2FzZS50c3g=",
+                                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3djYXNlLnRzeA==@Props"
                               },
                               {
                                 "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g="
@@ -1683,6 +1707,278 @@
           }
         }
       },
+      "c3JjL3NlY3Rpb25zL1Nob3djYXNlLnRzeA==@Props": {
+        "type": "object",
+        "properties": {
+          "categoriesTitle": {
+            "type": "string",
+            "nullable": true,
+            "title": "Categories Title"
+          },
+          "cards": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "title": "Nome do card"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "vestido",
+                    "saia",
+                    "short",
+                    "bermuda",
+                    "calca",
+                    "camisa",
+                    "camiseta",
+                    "polo",
+                    "blusa",
+                    "top",
+                    "body",
+                    "macacao",
+                    "casaco",
+                    "moletom",
+                    "biquini",
+                    "maio",
+                    "praia",
+                    "lingerie",
+                    "tenis",
+                    "sandalia",
+                    "chinelo",
+                    "sapato",
+                    "bolsa",
+                    "mochila",
+                    "mala",
+                    "acessorio",
+                    "jeans"
+                  ],
+                  "title": "Tipo de peça (vestido, saia, tenis, biquini, bolsa…)"
+                },
+                "color": {
+                  "type": "string",
+                  "nullable": true,
+                  "title": "Cor de fundo",
+                  "format": "color"
+                },
+                "prompt": {
+                  "type": "string",
+                  "nullable": true,
+                  "title": "Mensagem enviada (vazio = \"{label}\")"
+                },
+                "dept": {
+                  "type": "string",
+                  "enum": [
+                    "feminino",
+                    "masculino"
+                  ],
+                  "nullable": true,
+                  "title": "Departamento (vazio = ambos)"
+                }
+              },
+              "required": [
+                "label",
+                "type"
+              ],
+              "titleBy": "label"
+            },
+            "nullable": true,
+            "title": "Cards"
+          },
+          "ideasTitle": {
+            "type": "string",
+            "nullable": true,
+            "title": "Ideas Title"
+          },
+          "ideasSubtitle": {
+            "type": "string",
+            "nullable": true,
+            "title": "Ideas Subtitle"
+          },
+          "ideas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kicker": {
+                  "type": "string",
+                  "title": "Rótulo, ex.: \"Por ocasião\""
+                },
+                "text": {
+                  "type": "string",
+                  "title": "A busca, como o cliente escreveria"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "vestido",
+                    "saia",
+                    "short",
+                    "bermuda",
+                    "calca",
+                    "camisa",
+                    "camiseta",
+                    "polo",
+                    "blusa",
+                    "top",
+                    "body",
+                    "macacao",
+                    "casaco",
+                    "moletom",
+                    "biquini",
+                    "maio",
+                    "praia",
+                    "lingerie",
+                    "tenis",
+                    "sandalia",
+                    "chinelo",
+                    "sapato",
+                    "bolsa",
+                    "mochila",
+                    "mala",
+                    "acessorio",
+                    "jeans"
+                  ],
+                  "nullable": true,
+                  "title": "Tipo de peça para a foto"
+                },
+                "terms": {
+                  "type": "string",
+                  "nullable": true,
+                  "title": "Atributos para a foto, ex.: \"estampado\""
+                },
+                "dept": {
+                  "type": "string",
+                  "enum": [
+                    "feminino",
+                    "masculino"
+                  ],
+                  "nullable": true,
+                  "title": "Dept"
+                }
+              },
+              "required": [
+                "kicker",
+                "text"
+              ],
+              "titleBy": "text"
+            },
+            "nullable": true,
+            "title": "Ideas"
+          },
+          "shelves": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kicker": {
+                  "type": "string",
+                  "nullable": true,
+                  "title": "Rótulo pequeno"
+                },
+                "title": {
+                  "type": "string",
+                  "title": "Title"
+                },
+                "domain": {
+                  "type": "string",
+                  "title": "Loja (domínio do roster)"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "vestido",
+                    "saia",
+                    "short",
+                    "bermuda",
+                    "calca",
+                    "camisa",
+                    "camiseta",
+                    "polo",
+                    "blusa",
+                    "top",
+                    "body",
+                    "macacao",
+                    "casaco",
+                    "moletom",
+                    "biquini",
+                    "maio",
+                    "praia",
+                    "lingerie",
+                    "tenis",
+                    "sandalia",
+                    "chinelo",
+                    "sapato",
+                    "bolsa",
+                    "mochila",
+                    "mala",
+                    "acessorio",
+                    "jeans"
+                  ],
+                  "nullable": true,
+                  "title": "Type"
+                },
+                "terms": {
+                  "type": "string",
+                  "nullable": true,
+                  "title": "Terms"
+                },
+                "sort": {
+                  "type": "string",
+                  "enum": [
+                    "relevance",
+                    "price_asc",
+                    "price_desc",
+                    "new",
+                    "discount"
+                  ],
+                  "nullable": true,
+                  "title": "Sort"
+                },
+                "dept": {
+                  "type": "string",
+                  "enum": [
+                    "feminino",
+                    "masculino"
+                  ],
+                  "nullable": true,
+                  "title": "Dept"
+                }
+              },
+              "required": [
+                "title",
+                "domain"
+              ],
+              "titleBy": "title"
+            },
+            "nullable": true,
+            "title": "Shelves"
+          }
+        }
+      },
+      "c2l0ZS9zZWN0aW9ucy9TaG93Y2FzZS50c3g=": {
+        "title": "site/sections/Showcase.tsx",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3djYXNlLnRzeA==@Props"
+          }
+        ],
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "site/sections/Showcase.tsx"
+            ],
+            "default": "site/sections/Showcase.tsx"
+          }
+        }
+      },
       "__SECTION_REF__": {
         "title": "Section",
         "anyOf": [
@@ -1696,6 +1992,10 @@
           {
             "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG9wQ2hhdC50c3g=",
             "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3BDaGF0LnRzeA==@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG93Y2FzZS50c3g=",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3djYXNlLnRzeA==@Props"
           },
           {
             "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g="
@@ -1731,6 +2031,10 @@
           {
             "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG9wQ2hhdC50c3g=",
             "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3BDaGF0LnRzeA==@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9TaG93Y2FzZS50c3g=",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1Nob3djYXNlLnRzeA==@Props"
           },
           {
             "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g="

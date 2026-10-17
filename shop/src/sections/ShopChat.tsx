@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Tile } from "~/types";
 import { ProductDrawer, ProductTile, TileSkeleton, outbound } from "~/components/Product";
 import { ShareButton, SiteHeader } from "~/components/Share";
+import { bus, useBus } from "~/sdk/bus";
 import { track, useShopChat, type Dept, type Turn } from "~/sdk/useShopChat";
 
 /** @titleBy label */
@@ -34,8 +35,9 @@ export default function ShopChat({
   suggestions = [],
   disclaimer = "Preços de catálogo. Estoque, frete e preço final são confirmados na loja.",
 }: Props) {
-  const { turns, model, chatId, send, reset } = useShopChat();
-  const [dept, setDept] = useState<Dept>("feminino");
+  const { turns, model, chatId, send, similarTo, reset } = useShopChat();
+  const { dept } = useBus();
+  const setDept = (d: Dept) => bus.set({ dept: d });
   const [open, setOpen] = useState<Tile | null>(null);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   /** Partner store the shopper came from (?store=, set by embed.js). */
@@ -67,31 +69,47 @@ export default function ShopChat({
     setOpen(null);
     send(text, dept, store);
   };
-  const more = (t: Tile) => ask(`Mais opções parecidas com "${t.title}" da ${t.brand}.`);
+  const more = (t: Tile) => {
+    setOpen(null);
+    similarTo(t, dept);
+  };
   const dismiss = (t: Tile) => {
     setHidden((h) => new Set(h).add(t.id));
     track("shop.dismiss", { chat: chatId(), model, id: t.id });
   };
 
+  // Cards in other sections (Showcase) ask through the bus; always run the latest `ask`.
+  const askRef = useRef(ask);
+  askRef.current = ask;
+  useEffect(() => bus.onAsk((t) => askRef.current(t)), []);
+  useEffect(() => {
+    bus.set({ started });
+  }, [started]);
+
   const chips = suggestions.filter((s) => !s.dept || s.dept === dept);
 
   return (
-    <section className="min-h-dvh">
+    <section className={`overflow-x-clip ${started ? "min-h-dvh" : ""}`}>
       <SiteHeader
         onHome={() => {
           reset();
           history.replaceState(null, "", location.pathname);
         }}
-        right={<DeptToggle value={dept} onChange={setDept} />}
+        right={started ? <DeptToggle value={dept} onChange={setDept} /> : undefined}
       />
 
       {!started ? (
-        <div className="mx-auto flex max-w-3xl flex-col items-center px-5 pb-16 pt-[12vh] text-center md:pt-[16vh]">
+        <div className="relative mx-auto flex max-w-3xl flex-col items-center px-5 pb-10 pt-[8vh] text-center md:pt-[11vh]">
+          {/* Soft halo behind the composer, the one bit of color on a monochrome page. */}
+          <div aria-hidden className="pointer-events-none absolute left-1/2 top-[52%] -z-10 h-[340px] w-[min(900px,100vw)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(217,249,157,0.45),rgba(196,181,253,0.18)_55%,transparent)] blur-2xl" />
           <h1 className="animate-rise font-medium tracking-tight text-[2.4rem] leading-[1.02] tracking-[-0.03em] text-balance md:text-7xl">{headline}</h1>
           <p className="mt-5 max-w-xl animate-rise text-base text-ink-soft text-pretty md:text-lg" style={{ animationDelay: "80ms" }}>
             {subheadline}
           </p>
-          <div className="mt-9 w-full animate-rise" style={{ animationDelay: "160ms" }}>
+          <div className="mt-8 animate-rise" style={{ animationDelay: "120ms" }}>
+            <DeptToggle value={dept} onChange={setDept} />
+          </div>
+          <div className="mt-5 w-full animate-rise" style={{ animationDelay: "160ms" }}>
             <Composer placeholder={placeholder} onSend={ask} autoFocus large />
           </div>
           {chips.length > 0 && (

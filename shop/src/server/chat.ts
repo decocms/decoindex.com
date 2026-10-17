@@ -1,15 +1,18 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { stepCountIs, streamText, tool } from "ai";
 import { z } from "zod";
-import type { ChatEvent, ChatRequest, Share, Tile } from "../types";
-import { BRANDS } from "./brands";
-import { searchBrand, tileLine } from "./catalog";
+import type { ChatEvent, ChatRequest, Share, SimilarRequest, Tile } from "../types";
+import { BRANDS, brandByDomain } from "./brands";
+import { tileLine } from "./catalog";
 import type { Env, ExecutionContext } from "./env";
 import { logEvent } from "./events";
+import { findProducts, similar } from "./find";
+import { TYPE_NAMES } from "./taxonomy";
 
 const MAX_SEARCHES = 6;
 const MAX_TURNS = 12;
 const SHARE_TTL = 60 * 60 * 24 * 365;
+const SORTS = ["relevance", "price_asc", "price_desc", "new", "discount"] as const;
 
 /** 8 chars of base62: short enough for a WhatsApp message, too many to guess. */
 function shareId(): string {
@@ -31,18 +34,59 @@ function systemPrompt(dept?: string, store?: string): string {
   const roster = BRANDS.map((b) => `- ${b.domain} — ${b.name} [${b.segments.join(", ")}]: ${b.blurb}`).join("\n");
   return `Você é o deco shop: um personal shopper que busca nos catálogos de marcas brasileiras de moda a partir de um único chat.
 
-Marcas disponíveis (use o domínio exato em search_catalogs):
+Marcas disponíveis (use o domínio exato em find_products):
 ${roster}
 ${dept ? `\nO cliente está navegando em: ${dept}. Prefira marcas e produtos desse departamento.\n` : ""}${home ? `\nO cliente chegou pela loja ${home.name} (${home.domain}). Busque nela primeiro e mostre os produtos dela no topo. Só traga outras marcas para completar quando ela não tiver o suficiente.\n` : ""}
 Como trabalhar:
-1. Sempre chame search_catalogs primeiro. Escolha de 3 a ${MAX_SEARCHES} marcas que realmente vendem o que foi pedido.
-2. A busca de cada loja é por palavra-chave, não semântica: use 1 a 3 palavras em português como aparecem num catálogo ("vestido linho", "tênis corrida", "camisa social"). Nada de frases, cores raras ou ocasiões na query. Você pode buscar a mesma marca com queries diferentes.
-3. Se vier pouco resultado, faça uma segunda rodada com termos mais amplos ou outras marcas.
+1. Sempre chame find_products primeiro. Escolha de 3 a ${MAX_SEARCHES} marcas que realmente vendem o que foi pedido.
+2. Para cada marca informe "type" (o tipo de peça, da lista fixa) e, em "terms", só os atributos que importam: material, cor, estampa, comprimento, uso ("linho", "azul", "estampado", "midi", "corrida"). Com type, a loja é navegada pela categoria daquele tipo e os terms ordenam o resultado — mais preciso que busca. Sem type (algo fora da lista, nome de coleção, personagem), mande só "terms" e vira busca por palavra-chave (1 a 3 palavras, como num catálogo).
+3. "sort": price_asc quando há orçamento ou pedem barato, discount para promoção, new para novidades; senão omita. Se vier pouco, faça outra rodada com outro type, menos terms ou outras marcas.
 4. Depois chame show_products com os ids que melhor atendem ao pedido, do mais para o menos relevante (8 a 24). Respeite orçamento, tamanho e estilo pedidos. Misture marcas. Junto, mande de 2 a 4 refinamentos: frases curtas (até 5 palavras) que o cliente clicaria a seguir, como "Só midi", "Até R$ 300", "Em tons de azul", "Ver sandálias para combinar".
 5. Por fim, responda em no máximo 2 frases curtas (até 220 caracteres), no idioma do cliente, com o critério da seleção. Não liste produtos nem preços: eles já aparecem na tela.
 
 Regras: preços são preços de catálogo observados, não o preço final. Nunca prometa estoque, frete, prazo ou desconto — isso é da loja. Não invente produtos nem ids.`;
 }
+
+/** An NDJSON response whose body is written by `work`, finished and logged no matter how `work` ends. */
+function ndjson(ctx: ExecutionContext, work: (send: (e: ChatEvent) => Promise<void>) => Promise<void>, onEnd: (ms: number, error: string) => Promise<void>) {
+  const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
+  const writer = writable.getWriter();
+  const enc = new TextEncoder();
+  const send = (e: ChatEvent) => writer.write(enc.encode(JSON.stringify(e) + "\n"));
+  const started = Date.now();
+  let error = "";
+  ctx.waitUntil(
+    work(send)
+      .catch(async (err) => {
+        error = String((err as Error)?.message ?? err).slice(0, 300);
+        console.error("stream failed", error);
+        await send({ type: "error", message: "Não consegui terminar essa busca. Tente de novo?" }).catch(() => {});
+      })
+      .finally(async () => {
+        const ms = Date.now() - started;
+        await send({ type: "done", ms }).catch(() => {});
+        await writer.close().catch(() => {});
+        await onEnd(ms, error);
+      }),
+  );
+  return new Response(readable, { headers: { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store" } });
+}
+
+/**
+ * Freeze a turn for /s/{id}. Only ever called with tiles the server fetched —
+ * never client input, or anyone could publish fake products under our domain.
+ */
+async function saveShare(env: Env, s: Omit<Share, "id" | "createdAt">): Promise<string | undefined> {
+  if (!s.tiles.length || !env.SHARES) return undefined;
+  const share: Share = { ...s, id: shareId(), createdAt: new Date().toISOString() };
+  await env.SHARES.put(`s:${share.id}`, JSON.stringify(share), { expirationTtl: SHARE_TTL });
+  return share.id;
+}
+
+async function limited(env: Env, ip: string) {
+  return !!env.CHAT_LIMIT && !(await env.CHAT_LIMIT.limit({ key: ip })).success;
+}
+const TOO_MANY = () => Response.json({ error: "Muitas buscas seguidas. Espera um minutinho?" }, { status: 429 });
 
 export async function handleChat(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const body = (await req.json().catch(() => null)) as ChatRequest | null;
@@ -54,21 +98,13 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
     .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
     .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
   const ip = req.headers.get("cf-connecting-ip") ?? "local";
-  if (env.CHAT_LIMIT && !(await env.CHAT_LIMIT.limit({ key: ip })).success) {
-    return Response.json({ error: "Muitas buscas seguidas. Espera um minutinho?" }, { status: 429 });
-  }
+  if (await limited(env, ip)) return TOO_MANY();
   const model = pickModel(env, body.chatId, body.model);
-  const started = Date.now();
-
-  const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
-  const writer = writable.getWriter();
-  const enc = new TextEncoder();
-  const send = (e: ChatEvent) => writer.write(enc.encode(JSON.stringify(e) + "\n"));
+  const store = BRANDS.some((b) => b.domain === body.store) ? body.store : undefined;
 
   const seen = new Map<string, Tile>();
-  const stats = { searches: 0, hits: 0, curated: 0, error: "" };
+  const stats = { searches: 0, viaCategory: 0, hits: 0, curated: 0 };
   const final = { answer: "", ids: [] as string[], refinements: [] as string[] };
-  const store = BRANDS.some((b) => b.domain === body.store) ? body.store : undefined;
 
   const openrouter = createOpenRouter({
     // The gateway carries BYOK for OpenRouter: with no key of our own, send no
@@ -88,114 +124,158 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
     },
   });
 
-  const run = async () => {
-    await send({ type: "meta", chatId: body.chatId, model });
-    const result = streamText({
-      model: openrouter(model),
-      system: systemPrompt(body.dept, store),
-      messages,
-      stopWhen: stepCountIs(5),
-      maxOutputTokens: 1200,
-      abortSignal: req.signal,
-      tools: {
-        search_catalogs: tool({
-          description: "Busca produtos em várias lojas em paralelo. Cada busca = uma loja + uma query curta em português.",
-          inputSchema: z.object({
-            searches: z
-              .array(z.object({ domain: z.string(), query: z.string() }))
-              .min(1)
-              .max(MAX_SEARCHES),
-            maxPriceBRL: z.number().optional().describe("Preço máximo em reais, se o cliente deu orçamento"),
+  return ndjson(
+    ctx,
+    async (send) => {
+      await send({ type: "meta", chatId: body.chatId, model });
+      const result = streamText({
+        model: openrouter(model),
+        system: systemPrompt(body.dept, store),
+        messages,
+        stopWhen: stepCountIs(5),
+        maxOutputTokens: 1200,
+        abortSignal: req.signal,
+        tools: {
+          find_products: tool({
+            description:
+              "Encontra produtos em várias lojas em paralelo. Com type, navega a categoria daquele tipo na loja e ordena pelos terms; sem type, busca pelos terms.",
+            inputSchema: z.object({
+              requests: z
+                .array(
+                  z.object({
+                    domain: z.string(),
+                    type: z.enum(TYPE_NAMES as [string, ...string[]]).optional().describe("Tipo de peça, da lista fixa"),
+                    terms: z.string().max(60).optional().describe("Atributos: material, cor, estampa, comprimento, uso"),
+                    sort: z.enum(SORTS).optional(),
+                  }),
+                )
+                .min(1)
+                .max(MAX_SEARCHES),
+              maxPriceBRL: z.number().optional().describe("Preço máximo em reais, se o cliente deu orçamento"),
+            }),
+            execute: async ({ requests, maxPriceBRL }) => {
+              const known = requests.filter((r) => BRANDS.some((b) => b.domain === r.domain)).slice(0, MAX_SEARCHES);
+              const names = [...new Set(known.map((r) => brandByDomain(r.domain)?.name))].join(", ");
+              await send({ type: "status", text: `Procurando em ${names}…` });
+              stats.searches += known.length;
+              const found = await Promise.all(
+                known.map((r) => findProducts({ env, ip, dept: body.dept }, r as Parameters<typeof findProducts>[1])),
+              );
+              stats.viaCategory += found.filter((f) => f.via.includes("›")).length;
+              const lists = found.map((f) => f.tiles);
+              const max = maxPriceBRL ? maxPriceBRL * 100 : Infinity;
+              const fresh = lists
+                .flat()
+                .filter((t) => !seen.has(t.id) && (t.priceMinor ?? 0) <= max)
+                .slice(0, 90);
+              for (const t of fresh) seen.set(t.id, t);
+              stats.hits += fresh.length;
+              if (fresh.length) await send({ type: "products", items: interleave(lists, fresh) });
+              const how = found.map((f) => `- ${f.via}: ${f.tiles.length}`).join("\n");
+              return fresh.length
+                ? `Como cada loja foi lida:\n${how}\n\nProdutos:\n${fresh.map(tileLine).join("\n")}`
+                : `Nenhum resultado.\n${how}\nTente outro type, menos terms ou outras marcas.`;
+            },
           }),
-          execute: async ({ searches, maxPriceBRL }) => {
-            const known = searches.filter((s) => BRANDS.some((b) => b.domain === s.domain)).slice(0, MAX_SEARCHES);
-            const names = [...new Set(known.map((s) => BRANDS.find((b) => b.domain === s.domain)?.name))].join(", ");
-            await send({ type: "status", text: `Buscando em ${names}…` });
-            stats.searches += known.length;
-            const lists = await Promise.all(known.map((s) => searchBrand(env, s.domain, s.query, ip)));
-            const max = maxPriceBRL ? maxPriceBRL * 100 : Infinity;
-            const fresh = lists
-              .flat()
-              .filter((t) => !seen.has(t.id) && (t.priceMinor ?? 0) <= max)
-              .slice(0, 80);
-            for (const t of fresh) seen.set(t.id, t);
-            stats.hits += fresh.length;
-            if (fresh.length) await send({ type: "products", items: interleave(lists, fresh) });
-            return fresh.length ? fresh.map(tileLine).join("\n") : "Nenhum resultado. Tente termos mais amplos ou outras marcas.";
-          },
-        }),
-        show_products: tool({
-          description: "Mostra ao cliente os produtos escolhidos, em ordem de relevância. Use apenas ids retornados por search_catalogs.",
-          inputSchema: z.object({
-            ids: z.array(z.string()).min(1).max(24),
-            refinements: z.array(z.string().max(60)).max(4).optional().describe("2 a 4 próximos passos curtos que o cliente clicaria"),
+          show_products: tool({
+            description: "Mostra ao cliente os produtos escolhidos, em ordem de relevância. Use apenas ids retornados por find_products.",
+            inputSchema: z.object({
+              ids: z.array(z.string()).min(1).max(24),
+              refinements: z.array(z.string().max(60)).max(4).optional().describe("2 a 4 próximos passos curtos que o cliente clicaria"),
+            }),
+            execute: async ({ ids, refinements = [] }) => {
+              const valid = ids.filter((id) => seen.has(id));
+              stats.curated = valid.length;
+              final.ids = valid;
+              final.refinements = refinements.slice(0, 4);
+              await send({ type: "curate", ids: valid, refinements: final.refinements });
+              return `Mostrando ${valid.length} produtos.`;
+            },
           }),
-          execute: async ({ ids, refinements = [] }) => {
-            const valid = ids.filter((id) => seen.has(id));
-            stats.curated = valid.length;
-            final.ids = valid;
-            final.refinements = refinements.slice(0, 4);
-            await send({ type: "curate", ids: valid, refinements: final.refinements });
-            return `Mostrando ${valid.length} produtos.`;
-          },
-        }),
-      },
-    });
+        },
+      });
 
-    for await (const part of result.fullStream) {
-      if (part.type === "text-delta") {
-        final.answer += part.text;
-        await send({ type: "text", text: part.text });
+      for await (const part of result.fullStream) {
+        if (part.type === "text-delta") {
+          final.answer += part.text;
+          await send({ type: "text", text: part.text });
+        } else if (part.type === "error") throw part.error;
       }
-      else if (part.type === "error") throw part.error;
-    }
 
-    // Snapshot the turn so it can be shared. Built here, from tiles the server
-    // itself fetched — never from client input, or anyone could publish fake
-    // products and links under our domain.
-    const tiles = final.ids.map((id) => seen.get(id)).filter((t): t is Tile => !!t);
-    if (tiles.length && env.SHARES) {
-      const q = messages.filter((m) => m.role === "user").at(-1)?.content ?? "";
-      const share: Share = {
-        id: shareId(),
-        q,
+      const id = await saveShare(env, {
+        q: messages.filter((m) => m.role === "user").at(-1)?.content ?? "",
         answer: final.answer.trim(),
         dept: body.dept,
         store,
         model,
-        createdAt: new Date().toISOString(),
-        tiles,
+        tiles: final.ids.map((i) => seen.get(i)).filter((t): t is Tile => !!t),
         refinements: final.refinements,
-      };
-      await env.SHARES.put(`s:${share.id}`, JSON.stringify(share), { expirationTtl: SHARE_TTL });
-      await send({ type: "share", id: share.id });
-    }
-  };
-
-  ctx.waitUntil(
-    run()
-      .catch(async (err) => {
-        stats.error = String((err as Error)?.message ?? err).slice(0, 300);
-        console.error("chat failed", model, stats.error);
-        await send({ type: "error", message: "Não consegui terminar essa busca. Tente de novo?" }).catch(() => {});
-      })
-      .finally(async () => {
-        const ms = Date.now() - started;
-        await send({ type: "done", ms }).catch(() => {});
-        await writer.close().catch(() => {});
-        await logEvent(env, "shop.chat", ms, {
-          chat: body.chatId,
-          model,
-          turn: messages.filter((m) => m.role === "user").length,
-          dept: body.dept,
-          ...stats,
-        });
+      });
+      if (id) await send({ type: "share", id });
+    },
+    (ms, error) =>
+      logEvent(env, "shop.chat", ms, {
+        chat: body.chatId,
+        model,
+        turn: messages.filter((m) => m.role === "user").length,
+        dept: body.dept,
+        store,
+        ...stats,
+        error,
       }),
   );
+}
 
-  return new Response(readable, {
-    headers: { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store" },
-  });
+/**
+ * "Mais como este": no model call. The seed only steers which category pages
+ * are read and how they are ranked — the tiles shown are always ones the server
+ * fetched itself, so a forged seed can't put anything on screen or in a share.
+ */
+export async function handleSimilar(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const body = (await req.json().catch(() => null)) as SimilarRequest | null;
+  const seed = body?.tile;
+  if (!body?.chatId || !seed || typeof seed.title !== "string" || !brandByDomain(seed.domain)) {
+    return Response.json({ error: "chatId and a roster tile required" }, { status: 400 });
+  }
+  const ip = req.headers.get("cf-connecting-ip") ?? "local";
+  if (await limited(env, ip)) return TOO_MANY();
+  const clean = {
+    id: String(seed.id).slice(0, 120),
+    domain: seed.domain,
+    title: seed.title.slice(0, 160),
+    category: typeof seed.category === "string" ? seed.category.slice(0, 80) : undefined,
+    priceMinor: Number.isFinite(seed.priceMinor) ? Number(seed.priceMinor) : undefined,
+  };
+  let hits = 0;
+
+  return ndjson(
+    ctx,
+    async (send) => {
+      await send({ type: "meta", chatId: body.chatId, model: "similar" });
+      await send({ type: "status", text: "Procurando parecidos…" });
+      const found = await similar({ env, ip, dept: body.dept }, clean);
+      hits = found.tiles.length;
+      if (!hits) {
+        await send({ type: "text", text: "Não achei nada parecido agora. Tente descrever o que você gostou nele." });
+        return;
+      }
+      await send({ type: "products", items: found.tiles });
+      await send({ type: "curate", ids: found.tiles.map((t) => t.id), refinements: [] });
+      const brands = [...new Set(found.tiles.map((t) => t.brand))].slice(0, 4).join(", ");
+      const answer = `Peças parecidas com “${clean.title}”, de ${brands}. Toque em uma para ver mais, ou me diga o que mudar.`;
+      await send({ type: "text", text: answer });
+      const id = await saveShare(env, {
+        q: `Mais como “${clean.title}”`,
+        answer,
+        dept: body.dept,
+        model: "similar",
+        tiles: found.tiles,
+        refinements: [],
+      });
+      if (id) await send({ type: "share", id });
+    },
+    (ms, error) => logEvent(env, "shop.similar", ms, { chat: body.chatId, seed: clean.id, hits, error }, clean.domain),
+  );
 }
 
 /** Round-robin across brands so the first tiles on screen aren't all one store. */

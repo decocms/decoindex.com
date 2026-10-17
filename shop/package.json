@@ -2,7 +2,7 @@
   "name": "decoindex-shop",
   "private": true,
   "type": "module",
-  "description": "deco shop — chat to browse Brazilian fashion catalogs, on top of decoindex",
+  "description": "deco shop \u2014 chat to browse Brazilian fashion catalogs, on top of decoindex",
   "scripts": {
     "dev": "npm run generate && vite dev",
     "generate": "npm run generate:blocks && npm run generate:sections && npm run generate:schema && tsr generate",
@@ -11,7 +11,8 @@
     "generate:schema": "bun node_modules/@decocms/blocks-cli/scripts/generate-schema.ts --site decoshop",
     "build": "npm run generate && vite build",
     "check": "tsc --noEmit",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "test": "bun test src"
   },
   "dependencies": {
     "@decocms/blocks": "7.80.1",

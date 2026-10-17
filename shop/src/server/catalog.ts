@@ -1,6 +1,7 @@
 import type { Tile } from "../types";
 import { brandByDomain } from "./brands";
 import type { Env } from "./env";
+import { toCategories, type Category } from "./taxonomy";
 
 const UA = "decoshop/0.1 (+https://shop.decoindex.com)";
 
@@ -26,23 +27,55 @@ interface IndexListing {
 }
 
 /**
- * One search on one storefront, through decoindex. decoindex owns the bound
- * (≤2 upstream calls, cache, per-domain limit); we only forward the shopper's
- * IP so its per-caller limit counts shoppers, not this Worker.
+ * One read of decoindex through the binding. decoindex owns the bound (≤2
+ * upstream calls, cache, per-domain limit); we only forward the shopper's IP so
+ * its per-caller limit counts shoppers, not this Worker.
  */
-export async function searchBrand(env: Env, domain: string, query: string, ip: string): Promise<Tile[]> {
-  const url = `https://decoindex.com/${domain}/search.json?q=${encodeURIComponent(query)}`;
+async function read<T>(env: Env, domain: string, pathAndQuery: string, ip: string): Promise<T | null> {
+  const url = `https://decoindex.com/${domain}${pathAndQuery}`;
   const init = { headers: { "user-agent": UA, "cf-connecting-ip": ip, accept: "application/json" } };
   try {
     const res = await (env.INDEX ? env.INDEX.fetch(url, init) : fetch(url, init));
-    if (!res.ok) return [];
-    const doc = (await res.json()) as IndexListing;
-    const origin = doc.shop?.origin ?? `https://${domain}`;
-    const brand = brandByDomain(domain)?.name ?? doc.shop?.name ?? domain;
-    return (doc.products ?? []).map((p) => toTile(env, domain, origin, brand, p));
+    return res.ok ? ((await res.json()) as T) : null;
   } catch {
-    return []; // one slow or blocked store must not sink the whole answer
+    return null; // one slow or blocked store must not sink the whole answer
   }
+}
+
+function tiles(env: Env, domain: string, doc: IndexListing | null): Tile[] {
+  if (!doc) return [];
+  const origin = doc.shop?.origin ?? `https://${domain}`;
+  const brand = brandByDomain(domain)?.name ?? doc.shop?.name ?? domain;
+  return (doc.products ?? []).map((p) => toTile(env, domain, origin, brand, p));
+}
+
+/** Free-text search through the merchant's own search, via decoindex. */
+export async function searchBrand(env: Env, domain: string, query: string, ip: string): Promise<Tile[]> {
+  return tiles(env, domain, await read<IndexListing>(env, domain, `/search.json?q=${encodeURIComponent(query)}`, ip));
+}
+
+/** One category page (page 1). The same URL for every shopper, so it is the warm path. */
+export async function browseCategory(env: Env, domain: string, path: string, ip: string, sort?: string): Promise<Tile[]> {
+  const q = sort && sort !== "relevance" ? `?sort=${sort}` : "";
+  return tiles(env, domain, await read<IndexListing>(env, domain, `${path}.json${q}`, ip));
+}
+
+type RawCategory = { path: string; name: string; depth?: number; count?: number; parent?: string };
+const treeMemo = new Map<string, { at: number; cats: Category[] }>();
+const TREE_TTL = 6 * 60 * 60 * 1000;
+
+/**
+ * A store's category tree (from its decoindex storefront doc), normalized.
+ * Memoized per isolate: trees change with collections, not per request.
+ */
+export async function categories(env: Env, domain: string, ip: string): Promise<Category[]> {
+  const hit = treeMemo.get(domain);
+  if (hit && Date.now() - hit.at < TREE_TTL) return hit.cats;
+  const doc = await read<{ categories?: RawCategory[] }>(env, domain, "/.json", ip);
+  const cats = toCategories(doc?.categories ?? []);
+  // An empty tree from a failed read is retried sooner than a real one.
+  treeMemo.set(domain, { at: doc ? Date.now() : Date.now() - TREE_TTL + 60_000, cats });
+  return cats;
 }
 
 function toTile(
