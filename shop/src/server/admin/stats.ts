@@ -23,6 +23,12 @@ export interface ModelRow {
   avgMs: number;
   avgHits: number;
   errors: number;
+  /** USD, as OpenRouter billed it. */
+  cost: number;
+  /** Turns that carry a cost (logged since Oct 17 2026; cache replays log 0): the denominator for cost per search. */
+  costed: number;
+  tokensIn: number;
+  tokensOut: number;
   chatsClicked: number;
   clicks: number;
   up: number;
@@ -45,13 +51,17 @@ export interface QueryRow {
 
 export async function overview(env: Env, days: number) {
   const from = since(days);
-  const [models, clicks, feedback, daily, brands, totals] = await Promise.all([
-    all<{ model: string; turns: number; chats: number; avgMs: number; avgHits: number; errors: number }>(
+  const [models, clicks, feedback, daily, brands, totals, spend] = await Promise.all([
+    all<{ model: string; turns: number; chats: number; avgMs: number; avgHits: number; errors: number; cost: number; costed: number; tokensIn: number; tokensOut: number }>(
       env,
       `SELECT json_extract(meta,'$.model') AS model, COUNT(*) AS turns,
               COUNT(DISTINCT json_extract(meta,'$.chat')) AS chats,
               ROUND(AVG(ms)) AS avgMs, ROUND(AVG(json_extract(meta,'$.hits')),1) AS avgHits,
-              SUM(CASE WHEN COALESCE(json_extract(meta,'$.error'),'') != '' THEN 1 ELSE 0 END) AS errors
+              SUM(CASE WHEN COALESCE(json_extract(meta,'$.error'),'') != '' THEN 1 ELSE 0 END) AS errors,
+              COALESCE(SUM(json_extract(meta,'$.cost')),0) AS cost,
+              COUNT(json_extract(meta,'$.cost')) AS costed,
+              COALESCE(SUM(json_extract(meta,'$.tokensIn')),0) AS tokensIn,
+              COALESCE(SUM(json_extract(meta,'$.tokensOut')),0) AS tokensOut
          FROM events WHERE name = 'shop.chat' AND ts > ? GROUP BY 1 ORDER BY turns DESC`,
       from,
     ),
@@ -70,10 +80,11 @@ export async function overview(env: Env, days: number) {
          FROM events WHERE name = 'shop.feedback' AND ts > ? GROUP BY 1`,
       from,
     ),
-    all<{ day: string; turns: number; clicks: number }>(
+    all<{ day: string; turns: number; clicks: number; cost: number }>(
       env,
       `SELECT substr(ts,1,10) AS day,
               SUM(CASE WHEN name = 'shop.chat' THEN 1 ELSE 0 END) AS turns,
+              COALESCE(SUM(CASE WHEN name = 'shop.chat' THEN json_extract(meta,'$.cost') END),0) AS cost,
               SUM(CASE WHEN name = 'shop.click' THEN 1 ELSE 0 END) AS clicks
          FROM events WHERE name IN ('shop.chat','shop.click') AND ts > ? GROUP BY 1 ORDER BY 1`,
       from,
@@ -89,6 +100,17 @@ export async function overview(env: Env, days: number) {
       `SELECT name, COUNT(*) AS n FROM events
         WHERE name IN ('shop.chat','shop.similar','shop.click','shop.open','shop.share','shop.feedback') AND ts > ? GROUP BY 1`,
       from,
+    ),
+    // Fixed windows, whatever period is selected: what the shop costs today, this week, this month.
+    all<{ d1: number; d7: number; d30: number }>(
+      env,
+      `SELECT COALESCE(SUM(CASE WHEN ts > ? THEN json_extract(meta,'$.cost') END),0) AS d1,
+              COALESCE(SUM(CASE WHEN ts > ? THEN json_extract(meta,'$.cost') END),0) AS d7,
+              COALESCE(SUM(json_extract(meta,'$.cost')),0) AS d30
+         FROM events WHERE name = 'shop.chat' AND ts > ?`,
+      since(1),
+      since(7),
+      since(30),
     ),
   ]);
 
@@ -116,6 +138,7 @@ export async function overview(env: Env, days: number) {
       feedback: count("shop.feedback"),
     },
     models: [...byModel.values()],
+    spend: spend[0] ?? { d1: 0, d7: 0, d30: 0 },
     daily,
     brands,
   };

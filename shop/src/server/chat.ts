@@ -137,7 +137,7 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
   const model = pickModel(env, body.chatId, body.model);
 
   const seen = new Map<string, Tile>();
-  const stats = { searches: 0, viaCategory: 0, hits: 0, curated: 0, brands: [] as string[], share: "", fallback: false };
+  const stats = { searches: 0, viaCategory: 0, hits: 0, curated: 0, brands: [] as string[], share: "", fallback: false, tokensIn: 0, tokensOut: 0, cost: 0 };
   const final = { answer: "", ids: [] as string[], refinements: [] as string[] };
   const health = newHealth();
   const UNREACHABLE = "As lojas não responderam agora — não é falta de produto. Tente de novo em instantes.";
@@ -165,7 +165,8 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
     async (send) => {
       await send({ type: "meta", chatId: body.chatId, model });
       const result = streamText({
-        model: openrouter(model),
+        // usage.include: OpenRouter reports tokens and USD cost per step, logged below for the admin's cost view.
+        model: openrouter(model, { usage: { include: true } }),
         system: systemPrompt(body.dept, store),
         messages,
         stopWhen: stepCountIs(5),
@@ -250,6 +251,14 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
         } else if (part.type === "error") throw part.error;
       }
 
+      // ponytail: cost is only summed for turns that finish; an aborted or failed stream's spend is not logged.
+      for (const step of await result.steps) {
+        const usage = (step.providerMetadata?.openrouter as { usage?: { cost?: number } } | undefined)?.usage;
+        stats.tokensIn += step.usage.inputTokens ?? 0;
+        stats.tokensOut += step.usage.outputTokens ?? 0;
+        stats.cost += usage?.cost ?? 0;
+      }
+
       // Some models stop after searching without curating or answering. Never leave the shopper
       // with a spinner or a silent grid: show what was found and say so in one line.
       const fallback = (stats.fallback = !final.ids.length || !final.answer.trim());
@@ -325,6 +334,7 @@ function replay(ctx: ExecutionContext, env: Env, body: ChatRequest, hit: CachedA
         dept: body.dept,
         store: body.store,
         cached: true,
+        cost: 0, // a replay spends nothing; counting it keeps "cost per search" honest
         curated: hit.tiles.length,
         share: hit.share,
         error,
