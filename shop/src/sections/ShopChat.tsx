@@ -3,7 +3,7 @@ import type { Tile } from "~/types";
 import { ProductDrawer, ProductTile, TileSkeleton, outbound, thumb } from "~/components/Product";
 import { ShareButton, SiteHeader } from "~/components/Share";
 import { bus, useBus } from "~/sdk/bus";
-import { track, useShopChat, type Dept, type Turn } from "~/sdk/useShopChat";
+import { myContext, track, useShopChat, type Dept, type Turn } from "~/sdk/useShopChat";
 
 /** @titleBy label */
 export interface Suggestion {
@@ -188,6 +188,7 @@ export default function ShopChat({
               ))}
             </div>
           )}
+          <MyContext />
           <p className="mt-6 text-xs text-ink-soft/80">
             {disclaimer}{" "}
             <a href="/como-funciona" className="underline decoration-ink/20 underline-offset-2 hover:text-ink">
@@ -441,3 +442,75 @@ function Results({
 
 export const eager = true;
 export const sync = true;
+
+const CONTEXT_MAX = 280;
+
+/** "Adicionar meu contexto": saved per device, sent with every search (see myContext). */
+function MyContext() {
+  const [value, setValue] = useState("");
+  const [open, setOpen] = useState(false);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => setValue(myContext.get()), []);
+  const save = (v: string) => {
+    setValue(v);
+    myContext.set(v);
+    setSaved(true);
+  };
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-5 text-sm text-ink-soft underline decoration-ink/20 underline-offset-4 transition hover:text-ink"
+      >
+        {value ? "✓ Seu contexto está ativo · editar" : "+ Adicionar meu contexto"}
+      </button>
+    );
+  }
+  return (
+    <div className="mt-5 w-full max-w-xl rounded-2xl border border-line bg-card p-4 text-left">
+      <label htmlFor="my-context" className="text-sm font-medium">
+        Meu contexto
+      </label>
+      <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+        O que você escrever aqui vai junto com cada busca, para ajudar na escolha. Ex.: “loira, 1,75 m, veste 40, não gosto de rosa,
+        prefiro tecidos naturais”. Fica salvo só neste aparelho e não aparece nos links que você compartilha.
+      </p>
+      <textarea
+        id="my-context"
+        value={value}
+        maxLength={CONTEXT_MAX}
+        rows={3}
+        onChange={(e) => {
+          setSaved(false);
+          setValue(e.target.value);
+        }}
+        onBlur={(e) => save(e.target.value)}
+        placeholder="Ex.: loira, alta, não gosto de rosa…"
+        className="mt-3 w-full resize-none rounded-xl border border-line bg-paper px-3 py-2.5 text-sm outline-none focus:border-ink/40"
+      />
+      <div className="mt-2 flex items-center justify-between text-xs text-ink-soft">
+        <span className="tabular-nums">
+          {value.length}/{CONTEXT_MAX}
+        </span>
+        <span className="flex gap-3">
+          {value && (
+            <button type="button" onClick={() => save("")} className="underline underline-offset-2 hover:text-ink">
+              Apagar
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              save(value);
+              setOpen(false);
+            }}
+            className="rounded-full bg-ink px-3.5 py-1.5 font-medium text-paper"
+          >
+            {saved ? "Salvo ✓" : "Salvar"}
+          </button>
+        </span>
+      </div>
+    </div>
+  );
+}

@@ -22,6 +22,29 @@ export interface Turn {
   ms?: number;
 }
 
+/**
+ * "Meu contexto": a few words the shopper writes about themselves, sent with every search.
+ * Lives only in this browser (localStorage), which can throw or be empty in private mode.
+ */
+const CONTEXT_KEY = "decoshop:context";
+export const myContext = {
+  get(): string {
+    try {
+      return localStorage.getItem(CONTEXT_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  },
+  set(v: string) {
+    try {
+      if (v.trim()) localStorage.setItem(CONTEXT_KEY, v);
+      else localStorage.removeItem(CONTEXT_KEY);
+    } catch {
+      /* private mode: it just won't persist */
+    }
+  },
+};
+
 const newId = () => (globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2));
 
 export function useShopChat() {
@@ -109,7 +132,8 @@ export function useShopChat() {
         ...(t.answer ? [{ role: "assistant" as const, content: t.answer }] : []),
       ]);
       const forced = new URLSearchParams(location.search).get("model") ?? undefined;
-      return stream(q, keep, "/api/chat", (id) => ({ chatId: id, dept, store, model: forced, messages: [...history, { role: "user", content: q }] }));
+      const profile = myContext.get() || undefined;
+      return stream(q, keep, "/api/chat", (id) => ({ chatId: id, dept, store, model: forced, profile, messages: [...history, { role: "user", content: q }] }));
     },
     [stream],
   );

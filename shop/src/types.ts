@@ -46,6 +46,8 @@ export interface ChatRequest {
   store?: string;
   /** Force a model from CHAT_MODELS (`?model=` for comparing by hand). */
   model?: string;
+  /** "Meu contexto": what the shopper wrote about themselves, kept in their browser only. */
+  profile?: string;
 }
 
 /** POST /api/similar: "mais como este", answered without a model. */
