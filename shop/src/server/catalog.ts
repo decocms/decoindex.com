@@ -17,6 +17,7 @@ interface IndexListing {
     categories?: string[];
     images?: string[];
     variants?: {
+      name?: string;
       priceMinor?: number;
       listPriceMinor?: number;
       currency?: string;
@@ -108,6 +109,25 @@ export async function categories(env: Env, domain: string, ip: string, health?: 
   return cats;
 }
 
+/**
+ * Stores that never set a "Cor" variation (Osklen, Animale, FARM) still name SKUs "… - cor - tamanho" and put
+ * the color in the URL ("/vestido-linho-desfiado-preto-77131-10/p"). Take the next-to-last " - "
+ * part of each SKU name, but only when the slug carries it too, so a size or fabric never passes as a color.
+ */
+export function colorsFromNames(slug: string, variants: { name?: string }[]): string[] {
+  const norm = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const s = norm(slug);
+  const out = new Set<string>();
+  for (const v of variants) {
+    const parts = (v.name ?? "").split(" - ").map((x) => x.trim());
+    // "Produto - cor - tam" (Osklen) or "cor - tam" (Animale "Marrom Grape - P", FARM "Estampa_Preto - PP").
+    const sizeLast = parts.length >= 2 && /^(\d{1,2}|[PMG]{1,3}|X{0,3}[SLP]|U|UN|ÚNICO|UNICO)$/i.test(parts[parts.length - 1]);
+    const c = parts.length >= 3 || sizeLast ? parts[parts.length - 2] : "";
+    if (c && c.length < 40 && s.includes(norm(c))) out.add(c.replace(/_/g, " / "));
+  }
+  return [...out].slice(0, 6);
+}
+
 function toTile(
   env: Env,
   domain: string,
@@ -136,6 +156,7 @@ function toTile(
         .filter((c): c is string => typeof c === "string" && c.length > 0 && c.length < 40),
     ),
   ].slice(0, 6);
+  if (!colors.length) colors.push(...colorsFromNames(p.slug, variants));
   return {
     id: `${domain}:${p.id}`,
     domain,
