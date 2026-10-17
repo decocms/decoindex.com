@@ -3,7 +3,6 @@ import { useRef } from "react";
 import type { Tile } from "~/types";
 import { money, thumb } from "~/components/Product";
 import { bus, useBus } from "~/sdk/bus";
-import type { Sort } from "~/server/find";
 import type { ProductType } from "~/server/taxonomy";
 import { getShowcase, type ShowcaseData } from "~/server/showcase";
 
@@ -36,16 +35,14 @@ export interface Idea {
 }
 
 /** @titleBy title */
-export interface Shelf {
-  /** @title Rótulo pequeno */
-  kicker?: string;
+/** A block of ideas, like "Buscas em alta": occasions, styles, seasons. Each one becomes a chat search. */
+export interface IdeaSection {
+  /** @title Título */
   title: string;
-  /** @title Loja (domínio do roster) */
-  domain: string;
-  type?: ProductType;
-  terms?: string;
-  sort?: Sort;
-  dept?: "feminino" | "masculino";
+  /** @title Subtítulo */
+  subtitle?: string;
+  /** @title Ideias (até 4 por departamento) */
+  ideas: Idea[];
 }
 
 export interface Props {
@@ -54,27 +51,31 @@ export interface Props {
   ideasTitle?: string;
   ideasSubtitle?: string;
   ideas?: Idea[];
-  shelves?: Shelf[];
+  /** @title Mais blocos de ideias */
+  ideaSections?: IdeaSection[];
 }
 
 const PALETTE = ["#b5533c", "#c4a184", "#a8862f", "#2c3e5c", "#2f4a3a", "#3f5f86", "#5a3550", "#6b6b3a"];
 const forDept = <T extends { dept?: string }>(xs: T[], dept: string) => xs.filter((x) => !x.dept || x.dept === dept);
 
-export default function Showcase({ categoriesTitle = "O que você procura?", cards = [], ideasTitle = "Buscas em alta.", ideasSubtitle = "O que as pessoas estão pedindo ao deco shop agora.", ideas = [], shelves = [] }: Props) {
+export default function Showcase({ categoriesTitle = "O que você procura?", cards = [], ideasTitle = "Buscas em alta.", ideasSubtitle = "O que as pessoas estão pedindo ao deco shop agora.", ideas = [], ideaSections = [] }: Props) {
   const { dept, started } = useBus();
   const c = forDept(cards, dept);
-  const i = forDept(ideas, dept).slice(0, 4);
-  const s = forDept(shelves, dept);
+  // Every block of ideas, in order: the first is "Buscas em alta". One flat list goes to the snapshot.
+  const blocks = [
+    { title: ideasTitle, subtitle: ideasSubtitle, ideas: forDept(ideas, dept).slice(0, 4) },
+    ...ideaSections.slice(0, 2).map((b) => ({ title: b.title, subtitle: b.subtitle, ideas: forDept(b.ideas ?? [], dept).slice(0, 4) })),
+  ].filter((b) => b.ideas.length);
+  const i = blocks.flatMap((b) => b.ideas);
 
   const { data } = useQuery({
-    queryKey: ["showcase", dept, c.map((x) => x.type), i.map((x) => [x.type, x.terms]), s.map((x) => [x.domain, x.type, x.terms, x.sort])],
+    queryKey: ["showcase", dept, c.map((x) => x.type), i.map((x) => [x.type, x.terms])],
     queryFn: () =>
       getShowcase({
         data: {
           dept,
           cards: c.map((x) => ({ type: x.type })),
           ideas: i.map((x) => ({ type: x.type, terms: x.terms })),
-          shelves: s.map((x) => ({ domain: x.domain, type: x.type, terms: x.terms, sort: x.sort })),
         },
       }),
     staleTime: 10 * 60_000,
@@ -107,27 +108,32 @@ export default function Showcase({ categoriesTitle = "O que você procura?", car
         </section>
       )}
 
-      {i.length > 0 && (
-        <section className="mx-auto mt-16 max-w-[1280px] px-4 md:px-8">
-          <h2 className="text-[2rem] font-medium leading-tight tracking-[-0.03em] md:text-5xl">{ideasTitle}</h2>
-          <p className="mt-2 text-ink-soft">{ideasSubtitle}</p>
-          <button type="button" onClick={() => document.querySelector<HTMLTextAreaElement>("textarea")?.focus()} className="tap-scale mt-5 inline-flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-sm font-medium text-white shadow-[0_10px_30px_-12px_rgba(0,0,0,0.5)]">
-            Começar a conversar <span aria-hidden>→</span>
-          </button>
-          <div className="mt-8 grid gap-8 md:grid-cols-[1.3fr_1fr] md:gap-12">
-            <IdeaFeature idea={i[0]} tile={data?.ideas[0]} />
-            <div className="flex flex-col">
-              {i.slice(1).map((idea, k) => (
-                <IdeaRow key={idea.text} idea={idea} tile={data?.ideas[k + 1]} />
-              ))}
+      {blocks.map((block, n) => {
+        const first = blocks.slice(0, n).reduce((sum, b) => sum + b.ideas.length, 0); // offset into data.ideas
+        const [lead, ...rest] = block.ideas;
+        return (
+          <section key={block.title} className="mx-auto mt-16 max-w-[1280px] px-4 md:px-8">
+            <h2 className="text-[2rem] font-medium leading-tight tracking-[-0.03em] md:text-5xl">{block.title}</h2>
+            {block.subtitle && <p className="mt-2 text-ink-soft">{block.subtitle}</p>}
+            {n === 0 && (
+              <button type="button" onClick={() => document.querySelector<HTMLTextAreaElement>("textarea")?.focus()} className="tap-scale mt-5 inline-flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-sm font-medium text-white shadow-[0_10px_30px_-12px_rgba(0,0,0,0.5)]">
+                Começar a conversar <span aria-hidden>→</span>
+              </button>
+            )}
+            {/* Blocks alternate sides, so the page doesn't read as the same block three times. */}
+            <div className={`mt-8 grid gap-8 md:gap-12 ${n % 2 ? "md:grid-cols-[1fr_1.3fr]" : "md:grid-cols-[1.3fr_1fr]"}`}>
+              <div className={n % 2 ? "md:order-2" : ""}>
+                <IdeaFeature idea={lead} tile={data?.ideas[first]} />
+              </div>
+              <div className="flex flex-col">
+                {rest.map((idea, k) => (
+                  <IdeaRow key={idea.text} idea={idea} tile={data?.ideas[first + k + 1]} />
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
-      )}
-
-      {s.map((shelf, k) => (
-        <ShelfRow key={shelf.title} shelf={shelf} tiles={data?.shelves[k]} />
-      ))}
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -187,45 +193,3 @@ function IdeaRow({ idea, tile }: { idea: Idea; tile?: Tile | null }) {
   );
 }
 
-function ShelfRow({ shelf, tiles }: { shelf: Shelf; tiles?: Tile[] }) {
-  const row = useRef<HTMLDivElement>(null);
-  const scroll = (dir: number) => row.current?.scrollBy({ left: dir * row.current.clientWidth * 0.8, behavior: "smooth" });
-  if (tiles && !tiles.length) return null;
-  return (
-    <section className="mt-16 border-t border-line pt-10">
-      <div className="mx-auto flex max-w-[1280px] items-end justify-between px-4 md:px-8">
-        <Heading kicker={shelf.kicker ?? "Vitrine"} title={shelf.title} />
-        <div className="hidden gap-2 md:flex">
-          {[-1, 1].map((d) => (
-            <button key={d} type="button" aria-label={d < 0 ? "Anterior" : "Próximo"} onClick={() => scroll(d)} className="tap-scale grid size-9 place-items-center rounded-full border border-line hover:border-ink">
-              {d < 0 ? "←" : "→"}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div ref={row} className="no-scrollbar mt-5 flex snap-x gap-3 overflow-x-auto px-4 md:px-8 xl:px-[calc((100vw_-_1280px)/2_+_2rem)]">
-        {(tiles ?? Array.from({ length: 6 }, () => null)).map((t, k) =>
-          t ? (
-            <a key={t.id} href={`/go?${new URLSearchParams({ u: t.url, c: "shelf", id: t.id })}`} target="_blank" rel="noopener" className="tap-scale group w-[46vw] max-w-[240px] shrink-0 snap-start">
-              <div className="aspect-[372/498] overflow-hidden rounded-sm bg-[#f0f0f0]">
-                <img src={thumb(t.images[0])} alt="" loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
-              </div>
-              <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-soft">{t.brand}</p>
-              <p className="line-clamp-1 text-sm">{t.title}</p>
-              <p className="text-sm tabular-nums">{money(t.priceMinor, t.currency)}</p>
-            </a>
-          ) : (
-            <div key={k} className="w-[46vw] max-w-[240px] shrink-0">
-              <div className="skeleton aspect-[372/498] rounded-sm" />
-            </div>
-          ),
-        )}
-      </div>
-    </section>
-  );
-}
-
-export type { ShowcaseData };
-
-export const eager = true;
-export const sync = true;

@@ -1,12 +1,12 @@
 import { env, waitUntil } from "cloudflare:workers";
 import type { Tile } from "../types";
 import { BRANDS, type Segment } from "./brands";
-import { findProducts, type Sort } from "./find";
 import { categories, newHealth } from "./catalog";
+import { findProducts } from "./find";
 import { TYPES, TYPE_NAMES, deptOf, detectType, overlap, pickCategory, words, type ProductType, FAMILY } from "./taxonomy";
 
 /**
- * Real product photos for the home's cards, ideas and shelves — a daily index,
+ * Real product photos for the home's cards and ideas — a daily index,
  * never computed on a visitor's request once it exists.
  *
  *   visit   → read the snapshot from KV and return it, always;
@@ -24,13 +24,11 @@ export interface ShowcaseSpec {
   dept: "feminino" | "masculino";
   cards: { type: ProductType }[];
   ideas: { type?: ProductType; terms?: string }[];
-  shelves: { domain: string; type?: ProductType; terms?: string; sort?: Sort }[];
 }
 
 export interface ShowcaseData {
   cards: Tile[][];
   ideas: (Tile | null)[];
-  shelves: Tile[][];
 }
 
 interface Snapshot {
@@ -40,7 +38,7 @@ interface Snapshot {
 }
 
 const DAY = 86_400_000;
-const SNAPSHOT = (h: string) => `showcase:v12:${h}`;
+const SNAPSHOT = (h: string) => `showcase:v13:${h}`; // v13: brand shelves gone, idea blocks instead
 const SPEC = (h: string) => `showcase-spec:${h}`;
 const LOCK = (h: string) => `showcase-lock:${h}`;
 // One shared caller key: showcase reads are few and must not eat a shopper's per-IP budget.
@@ -187,24 +185,13 @@ async function sample(
 
 async function build(spec: ShowcaseSpec, now = Date.now()): Promise<Snapshot> {
   const day = Math.floor(now / DAY);
-  const health = newHealth();
   const taken = new Set<string>();
   // Ideas first and sequential: they are the big photos and must be unique; then cards in parallel.
   const ideas: (Tile | null)[] = [];
   for (const [k, i] of spec.ideas.entries()) ideas.push(i.type ? ((await sample(spec, i.type, i.terms, 1, day, k, taken))[0] ?? null) : null);
-  const [cards, shelves] = await Promise.all([
-    Promise.all(spec.cards.map((c, k) => sample(spec, c.type, undefined, 3, day, k + 10, taken))),
-    Promise.all(
-      spec.shelves.map(async (s) =>
-        (await findProducts({ env, ip: IP, dept: spec.dept, health }, { domain: s.domain, type: s.type, terms: s.terms, sort: s.sort })).tiles
-          .filter((t) => t.images[0])
-          .slice(0, 12),
-      ),
-    ),
-  ]);
-  const complete =
-    cards.every((c) => c.length) && shelves.every((s) => s.length) && ideas.every((t, i) => t || !spec.ideas[i].type);
-  return { data: { cards, ideas, shelves }, builtAt: now, complete };
+  const cards = await Promise.all(spec.cards.map((c, k) => sample(spec, c.type, undefined, 3, day, k + 10, taken)));
+  const complete = cards.every((c) => c.length) && ideas.every((t, i) => t || !spec.ideas[i].type);
+  return { data: { cards, ideas }, builtAt: now, complete };
 }
 
 /** Rebuild and store, unless the new one is worse than what we have. */
@@ -225,11 +212,8 @@ function valid(spec: ShowcaseSpec): ShowcaseSpec {
   return {
     dept: spec.dept === "masculino" ? "masculino" : "feminino",
     cards: (spec.cards ?? []).filter((c) => isType(c.type)).slice(0, 10),
-    ideas: (spec.ideas ?? []).slice(0, 6).map((i) => ({ type: isType(i.type) ? i.type : undefined, terms: i.terms?.slice(0, 40) })),
-    shelves: (spec.shelves ?? [])
-      .filter((s) => BRANDS.some((b) => b.domain === s.domain))
-      .slice(0, 4)
-      .map((s) => ({ domain: s.domain, type: isType(s.type) ? s.type : undefined, terms: s.terms?.slice(0, 40), sort: s.sort })),
+    // Up to three blocks of four ideas each ("Buscas em alta", occasions, styles).
+    ideas: (spec.ideas ?? []).slice(0, 12).map((i) => ({ type: isType(i.type) ? i.type : undefined, terms: i.terms?.slice(0, 40) })),
   };
 }
 

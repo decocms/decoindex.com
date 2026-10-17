@@ -1809,93 +1809,100 @@
             "nullable": true,
             "title": "Ideas"
           },
-          "shelves": {
+          "ideaSections": {
             "type": "array",
             "items": {
               "type": "object",
               "properties": {
-                "kicker": {
-                  "type": "string",
-                  "nullable": true,
-                  "title": "Rótulo pequeno"
-                },
                 "title": {
                   "type": "string",
-                  "title": "Title"
+                  "title": "Título"
                 },
-                "domain": {
-                  "type": "string",
-                  "title": "Loja (domínio do roster)"
-                },
-                "type": {
-                  "type": "string",
-                  "enum": [
-                    "vestido",
-                    "saia",
-                    "short",
-                    "bermuda",
-                    "calca",
-                    "camisa",
-                    "camiseta",
-                    "polo",
-                    "blusa",
-                    "top",
-                    "body",
-                    "macacao",
-                    "casaco",
-                    "moletom",
-                    "biquini",
-                    "maio",
-                    "praia",
-                    "lingerie",
-                    "tenis",
-                    "sandalia",
-                    "chinelo",
-                    "sapato",
-                    "bolsa",
-                    "mochila",
-                    "mala",
-                    "acessorio",
-                    "jeans"
-                  ],
-                  "nullable": true,
-                  "title": "Type"
-                },
-                "terms": {
+                "subtitle": {
                   "type": "string",
                   "nullable": true,
-                  "title": "Terms"
+                  "title": "Subtítulo"
                 },
-                "sort": {
-                  "type": "string",
-                  "enum": [
-                    "relevance",
-                    "price_asc",
-                    "price_desc",
-                    "new",
-                    "discount"
-                  ],
-                  "nullable": true,
-                  "title": "Sort"
-                },
-                "dept": {
-                  "type": "string",
-                  "enum": [
-                    "feminino",
-                    "masculino"
-                  ],
-                  "nullable": true,
-                  "title": "Dept"
+                "ideas": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "kicker": {
+                        "type": "string",
+                        "title": "Rótulo, ex.: \"Por ocasião\""
+                      },
+                      "text": {
+                        "type": "string",
+                        "title": "A busca, como o cliente escreveria"
+                      },
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "vestido",
+                          "saia",
+                          "short",
+                          "bermuda",
+                          "calca",
+                          "camisa",
+                          "camiseta",
+                          "polo",
+                          "blusa",
+                          "top",
+                          "body",
+                          "macacao",
+                          "casaco",
+                          "moletom",
+                          "biquini",
+                          "maio",
+                          "praia",
+                          "lingerie",
+                          "tenis",
+                          "sandalia",
+                          "chinelo",
+                          "sapato",
+                          "bolsa",
+                          "mochila",
+                          "mala",
+                          "acessorio",
+                          "jeans"
+                        ],
+                        "nullable": true,
+                        "title": "Tipo de peça para a foto"
+                      },
+                      "terms": {
+                        "type": "string",
+                        "nullable": true,
+                        "title": "Atributos para a foto, ex.: \"estampado\""
+                      },
+                      "dept": {
+                        "type": "string",
+                        "enum": [
+                          "feminino",
+                          "masculino"
+                        ],
+                        "nullable": true,
+                        "title": "Dept"
+                      }
+                    },
+                    "required": [
+                      "kicker",
+                      "text"
+                    ],
+                    "titleBy": "text"
+                  },
+                  "title": "Ideias (até 4 por departamento)"
                 }
               },
               "required": [
                 "title",
-                "domain"
+                "ideas"
               ],
-              "titleBy": "title"
+              "titleBy": "title",
+              "description": "A block of ideas, like \"Buscas em alta\": occasions, styles, seasons. Each one becomes a chat search."
             },
             "nullable": true,
-            "title": "Shelves"
+            "title": "Mais blocos de ideias"
           }
         }
       },
