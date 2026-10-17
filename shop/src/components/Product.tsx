@@ -123,6 +123,8 @@ function useBackToClose(layer: number, onClose: () => void) {
   return () => (history.state?.layer === layer ? history.back() : closeRef.current());
 }
 
+const COLS = ["", "grid-cols-2", "grid-cols-2", "grid-cols-3", "grid-cols-4 [@media(min-width:640px)_and_(min-height:900px)]:grid-cols-2"];
+
 export function ProductDrawer({
   t,
   href,
@@ -154,8 +156,9 @@ export function ProductDrawer({
         </button>
         <div className="flex flex-col gap-4 p-6 pt-14">
           {t.images.length > 0 && (
-            // Fewer photos, bigger cards: they fill the row. One photo still gets half, never a full-bleed hero.
-            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(2, t.images.length)}, minmax(0, 1fr))` }}>
+            // Fewer photos, bigger cards: they fill the row; one photo still gets half, never a full-bleed hero.
+            // Four on a tall desktop screen: 2×2, the drawer has the room.
+            <div className={`grid gap-2 ${COLS[Math.min(t.images.length, 4)]}`}>
               {t.images.map((src, i) => (
                 <button
                   key={src}
@@ -164,7 +167,7 @@ export function ProductDrawer({
                   aria-label={`Foto ${i + 1} de ${t.images.length}`}
                   className="aspect-[3/4] overflow-hidden rounded-sm bg-[#f0f0f0] transition hover:opacity-80"
                 >
-                  <img src={thumb(src, 240)} alt="" className="h-full w-full object-cover" />
+                  <img src={thumb(src, 480)} alt="" className="h-full w-full object-cover" />
                 </button>
               ))}
             </div>
