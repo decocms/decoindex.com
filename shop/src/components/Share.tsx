@@ -14,9 +14,8 @@ export function ShareButton({ id, q, variant = "pill" }: { id: string; q: string
   const [copied, setCopied] = useState(false);
 
   const native = async () => {
-    // Copy first, inside the click: the link is on the clipboard even if the sheet is dismissed.
     // No `text` in the sheet: macOS "Copy" would paste the caption along with the link.
-    await navigator.clipboard?.writeText(shareUrl(id)).catch(() => {});
+    // Copying is the "🔗 Link" button's job; this one only opens the sheet.
     const data = { title: `deco shop: ${q}`, url: shareUrl(id) };
     if (typeof navigator.share === "function" && (!navigator.canShare || navigator.canShare(data))) {
       try {

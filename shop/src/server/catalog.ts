@@ -48,6 +48,12 @@ async function read<T>(env: Env, domain: string, pathAndQuery: string, ip: strin
   const init = { headers: { "user-agent": UA, "cf-connecting-ip": ip, accept: "application/json" } };
   try {
     const res = await (env.INDEX ? env.INDEX.fetch(url, init) : fetch(url, init));
+    // 404 is decoindex answering "no such page/category": a real, empty answer, not an outage.
+    // Counting it as a failure turned an empty category into "as lojas não responderam".
+    if (res.status === 404) {
+      if (health) health.ok++;
+      return null;
+    }
     if (!res.ok) {
       if (health) {
         health.failed++;
