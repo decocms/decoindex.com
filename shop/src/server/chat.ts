@@ -184,6 +184,8 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
               refinements: z.array(z.string().max(60)).max(4).optional().describe("2 a 4 próximos passos curtos que o cliente clicaria"),
             }),
             execute: async ({ ids, refinements = [] }) => {
+              // One curation per turn: a second call would swap the grid under the shopper.
+              if (final.ids.length) return "Os produtos já estão na tela. Agora só responda ao cliente.";
               const valid = ids.filter((id) => seen.has(id));
               stats.curated = valid.length;
               final.ids = valid;

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Tile } from "~/types";
-import { ProductDrawer, ProductTile, TileSkeleton, outbound } from "~/components/Product";
+import { ProductDrawer, ProductTile, TileSkeleton, outbound, thumb } from "~/components/Product";
 import { ShareButton, SiteHeader } from "~/components/Share";
 import { bus, useBus } from "~/sdk/bus";
 import { track, useShopChat, type Dept, type Turn } from "~/sdk/useShopChat";
@@ -42,7 +42,41 @@ export default function ShopChat({
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   /** Partner store the shopper came from (?store=, set by embed.js). */
   const [store, setStore] = useState<string>();
-  const started = turns.length > 0;
+  /**
+   * Which turn is on screen: an index into `turns`, or -1 for the home. Every
+   * question pushes a history entry, so Back steps through earlier answers
+   * (already in memory, no new model call) and finally back to the home.
+   */
+  const [view, setView] = useState(-1);
+  const started = view >= 0 && turns.length > 0;
+  const turnsRef = useRef(turns);
+  turnsRef.current = turns;
+
+  const pushTurn = (turn: number, q: string) => {
+    const p = new URLSearchParams(location.search);
+    p.set("q", q);
+    p.set("dept", dept);
+    history.pushState({ turn }, "", `?${p}`);
+    setView(turn);
+  };
+
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      const p = new URLSearchParams(location.search);
+      const q = p.get("q");
+      const turn: number = typeof e.state?.turn === "number" ? e.state.turn : q ? 0 : -1;
+      if (turn >= 0 && turn >= turnsRef.current.length && q) {
+        // Forward into a turn we no longer hold (the chat was reset): ask again.
+        setView(turnsRef.current.length);
+        send(q, (p.get("dept") as Dept) || dept, store);
+        return;
+      }
+      setOpen(null);
+      setView(turn);
+    };
+    addEventListener("popstate", onPop);
+    return () => removeEventListener("popstate", onPop);
+  });
 
   // ?q= makes a search shareable and lets the home page deep-link a prompt.
   const booted = useRef(false);
@@ -55,22 +89,22 @@ export default function ShopChat({
     const s = p.get("store") ?? undefined;
     setStore(s);
     const q = p.get("q");
-    if (q) send(q, (d as Dept) || "feminino", s);
+    if (q) {
+      history.replaceState({ turn: 0 }, "");
+      setView(0);
+      send(q, (d as Dept) || "feminino", s);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const ask = (text: string) => {
-    if (!started) {
-      const p = new URLSearchParams(location.search);
-      p.set("q", text);
-      p.set("dept", dept);
-      history.replaceState(null, "", `?${p}`);
-    }
     setOpen(null);
+    pushTurn(turns.length, text);
     send(text, dept, store);
   };
   const more = (t: Tile) => {
     setOpen(null);
+    pushTurn(turns.length, `Mais opções parecidas com "${t.title}" da ${t.brand}.`);
     similarTo(t, dept);
   };
   const dismiss = (t: Tile) => {
@@ -92,8 +126,10 @@ export default function ShopChat({
     <section className={`overflow-x-clip ${started ? "min-h-dvh" : ""}`}>
       <SiteHeader
         onHome={() => {
+          // The logo starts a new conversation; earlier entries re-ask if revisited.
           reset();
-          history.replaceState(null, "", location.pathname);
+          history.pushState({ turn: -1 }, "", location.pathname);
+          setView(-1);
         }}
         right={started ? <DeptToggle value={dept} onChange={setDept} /> : undefined}
       />
@@ -131,12 +167,12 @@ export default function ShopChat({
       ) : (
         <div className="mx-auto grid max-w-[1600px] gap-6 px-4 pb-28 pt-5 md:px-8 lg:grid-cols-[340px_1fr] lg:gap-10">
           <aside className="lg:sticky lg:top-20 lg:h-[calc(100dvh-6rem)] lg:overflow-y-auto">
-            <Thread turns={turns} model={model} chatId={chatId()} onAsk={(r) => { track("shop.refine", { chat: chatId(), model, text: r }); ask(r); }} />
+            <Thread turns={turns.slice(0, view + 1)} model={model} chatId={chatId()} onAsk={(r) => { track("shop.refine", { chat: chatId(), model, text: r }); ask(r); }} />
             <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line/70 frost p-3 lg:static lg:mt-5 lg:border-0 lg:bg-transparent lg:p-0">
               <Composer placeholder="Refine: mais barato, outra cor, só tênis…" onSend={ask} />
             </div>
           </aside>
-          <Results turn={turns[turns.length - 1]} hidden={hidden} onOpen={(t) => { setOpen(t); track("shop.open", { chat: chatId(), model, id: t.id }); }} onMore={more} onDismiss={dismiss} />
+          <Results turn={turns[Math.min(view, turns.length - 1)]} hidden={hidden} onOpen={(t) => { setOpen(t); track("shop.open", { chat: chatId(), model, id: t.id }); }} onMore={more} onDismiss={dismiss} />
         </div>
       )}
 
@@ -308,7 +344,9 @@ function Results({
   }, [turn.products, turn.curated, hidden]);
 
   const shown = showAll ? [...picked, ...rest] : picked;
-  const loading = !turn.done && shown.length === 0;
+  // Until the model has picked, show progress, not the raw search results:
+  // showing them and then swapping in the curated set reads as a glitch.
+  const choosing = !turn.done && !turn.curated;
 
   if (turn.done && !shown.length) {
     return (
@@ -319,14 +357,45 @@ function Results({
     );
   }
 
+  if (choosing) {
+    const found = turn.products.filter((p) => p.images[0]);
+    const brands = new Set(found.map((p) => p.brand)).size;
+    return (
+      <div aria-busy="true">
+        {found.length > 0 && (
+          <div className="mb-6 flex items-center gap-4">
+            <div className="flex -space-x-3">
+              {found.slice(0, 7).map((t, i) => (
+                <img
+                  key={t.id}
+                  src={thumb(t.images[0], 120)}
+                  alt=""
+                  onError={(e) => (e.currentTarget.style.display = "none")}
+                  className="h-14 w-10 animate-rise rounded-xs object-cover opacity-80 ring-2 ring-white"
+                  style={{ animationDelay: `${i * 60}ms` }}
+                />
+              ))}
+            </div>
+            <p className="text-sm text-ink-soft">
+              <span className="font-medium text-ink tabular-nums">{found.length} peças</span> em {brands} {brands === 1 ? "marca" : "marcas"} · escolhendo as melhores…
+            </p>
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          {Array.from({ length: 10 }, (_, i) => (
+            <TileSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-        {loading
-          ? Array.from({ length: 10 }, (_, i) => <TileSkeleton key={i} />)
-          : shown.map((t, i) => (
+        {shown.map((t, i) => (
               <ProductTile key={t.id} t={t} index={i} onOpen={() => onOpen(t)} onMore={() => onMore(t)} onDismiss={() => onDismiss(t)} />
-            ))}
+        ))}
       </div>
       {rest.length > 0 && !showAll && (
         <div className="mt-10 text-center">

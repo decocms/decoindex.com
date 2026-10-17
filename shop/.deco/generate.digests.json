@@ -3,6 +3,6 @@
   "version": 2,
   "generators": {
     "loaders": {"v":2,"args":["--loaders-dir","src/loaders","--actions-dir","src/actions"],"cli":"7.80.1","deco":"@decocms/blocks@7.80.1 @decocms/blocks-admin@7.80.1 @decocms/blocks-cli@7.80.1 @decocms/tanstack@7.80.1","inputs":"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"},
-    "sections": {"v":2,"args":["--sections-dir","src/sections"],"cli":"7.80.1","deco":"@decocms/blocks@7.80.1 @decocms/blocks-admin@7.80.1 @decocms/blocks-cli@7.80.1 @decocms/tanstack@7.80.1","inputs":"0b1efbfd46cc35200932b7fee752ea5698dad186d6dbf9653547b304d6c1c4aa"}
+    "sections": {"v":2,"args":["--sections-dir","src/sections"],"cli":"7.80.1","deco":"@decocms/blocks@7.80.1 @decocms/blocks-admin@7.80.1 @decocms/blocks-cli@7.80.1 @decocms/tanstack@7.80.1","inputs":"e11fdb4777905b054efa4e9f6a7cd2bc368802326cecd0581f8244b8e7ad4bb6"}
   }
 }
