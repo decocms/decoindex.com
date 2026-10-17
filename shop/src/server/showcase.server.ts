@@ -40,7 +40,7 @@ interface Snapshot {
 }
 
 const DAY = 86_400_000;
-const SNAPSHOT = (h: string) => `showcase:v5:${h}`;
+const SNAPSHOT = (h: string) => `showcase:v6:${h}`;
 const SPEC = (h: string) => `showcase-spec:${h}`;
 const LOCK = (h: string) => `showcase-lock:${h}`;
 // One shared caller key: showcase reads are few and must not eat a shopper's per-IP budget.
@@ -67,8 +67,9 @@ const BAGS: ProductType[] = ["bolsa", "mochila", "mala"];
 function deptBrands(dept: ShowcaseSpec["dept"], type: ProductType, day: number, item: number) {
   const has = (b: (typeof BRANDS)[number], seg: Segment) => b.segments.includes(seg);
   const list = BRANDS.filter((b) => {
-    if (SHOES.includes(type)) return has(b, "calcados") || (has(b, "esporte") && type === "tenis");
-    if (BAGS.includes(type)) return has(b, "bolsas") || has(b, dept);
+    // Shoes/bags still need the department (Capodarte is women's shoes) — sports brands sell to both.
+    if (SHOES.includes(type)) return (has(b, "calcados") || has(b, "esporte")) && (has(b, dept) || has(b, "esporte"));
+    if (BAGS.includes(type)) return has(b, dept) && (has(b, "bolsas") || type !== "mala");
     return has(b, dept);
   });
   // Rotate by day *and* by item: a different first store per day, and different
