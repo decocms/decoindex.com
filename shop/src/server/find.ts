@@ -60,7 +60,7 @@ export async function findProducts(ctx: Ctx, r: FindRequest): Promise<Found> {
   return { tiles: polish(dedupe([...ranked, ...searched])), via: `${label} + busca “${query}”` };
 }
 
-const text = (t: Tile) => `${t.title} ${t.description ?? ""} ${t.category ?? ""}`;
+const text = (t: Tile) => `${t.title} ${t.description ?? ""} ${t.category ?? ""} ${t.colors?.join(" ") ?? ""}`;
 
 /**
  * The last pass over any list, category or search: drop the other department,
@@ -124,7 +124,7 @@ export async function similar(ctx: Ctx, seed: Pick<Tile, "id" | "domain" | "titl
   const scored = fit(pages.flat(), { type, want: [], dept: ctx.dept })
     .filter((t) => t.id !== seed.id)
     .map((t) => {
-      const shared = overlap(attrs, `${t.title} ${t.description ?? ""}`);
+      const shared = overlap(attrs, text(t));
       const price = p0 && t.priceMinor ? Math.max(0, 1 - Math.abs(t.priceMinor - p0) / p0) : 0;
       const seen = detectType(`${t.title} ${t.category ?? ""}`);
       const sameType = !seen ? 0 : seen === type ? 2 : -10;

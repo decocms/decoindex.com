@@ -121,6 +121,15 @@ function toTile(
         .filter((s): s is string => !!s),
     ),
   ];
+  // VTEX "Cor" / Shopify "Color" variant option. Titles rarely name the color ("Tênis Olympikus
+  // Vibra" is blue only in its SKUs), so this is what lets "tênis verde" match across brands.
+  const colors = [
+    ...new Set(
+      variants
+        .flatMap((v) => Object.entries(v.attributes ?? {}).filter(([k]) => /^(cor|cores|color|colour)$/i.test(k)).map(([, c]) => c))
+        .filter((c): c is string => typeof c === "string" && c.length > 0 && c.length < 40),
+    ),
+  ].slice(0, 6);
   return {
     id: `${domain}:${p.id}`,
     domain,
@@ -132,6 +141,7 @@ function toTile(
     images: (p.images ?? []).slice(0, 4),
     url: url.toString(),
     sizes,
+    colors,
     category: p.categories?.at(-1),
     dept: deptOf((p.categories ?? []).join(" ")),
     description: p.description?.slice(0, 400),
@@ -142,5 +152,5 @@ function toTile(
 export function tileLine(t: Tile): string {
   const price = t.priceMinor ? `R$ ${(t.priceMinor / 100).toFixed(0)}` : "sem preço";
   const off = t.listPriceMinor && t.priceMinor && t.listPriceMinor > t.priceMinor ? " (promo)" : "";
-  return `${t.id} | ${t.brand} | ${t.title} | ${price}${off} | ${t.category ?? ""} | tam: ${t.sizes.join(",") || "?"}`;
+  return `${t.id} | ${t.brand} | ${t.title} | ${price}${off} | ${t.category ?? ""}${t.colors?.length ? ` | cor: ${t.colors.join(", ")}` : ""} | tam: ${t.sizes.join(",") || "?"}`;
 }

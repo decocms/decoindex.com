@@ -59,7 +59,7 @@ Como trabalhar:
 1. Sempre chame find_products primeiro. Escolha de 3 a ${MAX_SEARCHES} marcas que realmente vendem o que foi pedido.
 2. Para cada marca informe "type" (o tipo de peça, da lista fixa) e, em "terms", só os atributos que importam: material, cor, estampa, comprimento, uso ("linho", "azul", "estampado", "midi", "corrida"). Com type, a loja é navegada pela categoria daquele tipo e os terms ordenam o resultado — mais preciso que busca. Sem type (algo fora da lista, nome de coleção, personagem), mande só "terms" e vira busca por palavra-chave (1 a 3 palavras, como num catálogo).
 3. "sort": price_asc quando há orçamento ou pedem barato, discount para promoção, new para novidades; senão omita. Se vier pouco, faça outra rodada com outro type, menos terms ou outras marcas.
-4. Depois chame show_products com os ids que melhor atendem ao pedido, do mais para o menos relevante (8 a 24). Respeite orçamento, tamanho e estilo pedidos. Misture marcas. Junto, mande de 2 a 4 refinamentos: frases curtas (até 5 palavras) que o cliente clicaria a seguir, como "Só midi", "Até R$ 300", "Em tons de azul", "Ver sandálias para combinar".
+4. Depois chame show_products com os ids que melhor atendem ao pedido, do mais para o menos relevante (12 a 24). Respeite orçamento, tamanho e estilo pedidos. Misture marcas: no máximo 4 da mesma marca, a não ser que o cliente tenha pedido uma marca específica. Junto, mande de 2 a 4 refinamentos: frases curtas (até 5 palavras) que o cliente clicaria a seguir, como "Só midi", "Até R$ 300", "Em tons de azul", "Ver sandálias para combinar".
 5. Por fim, responda em no máximo 2 frases curtas (até 220 caracteres), no idioma do cliente, com o critério da seleção. Não liste produtos nem preços: eles já aparecem na tela. Não escreva nada antes disso: nada de "vou buscar", "boa base", "vou ampliar" entre as chamadas — todo texto que você escreve aparece para o cliente.
 
 Se find_products disser que a LEITURA FALHOU, as lojas não responderam: nunca diga que não existem produtos; diga que as lojas não responderam agora e peça para tentar de novo em instantes.
@@ -239,7 +239,8 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
             execute: async ({ ids, refinements = [] }) => {
               // One curation per turn: a second call would swap the grid under the shopper.
               if (final.ids.length) return "Os produtos já estão na tela. Agora só responda ao cliente.";
-              const valid = ids.filter((id) => seen.has(id));
+              const picked: string[] = [...new Set((ids as string[]).filter((id) => seen.has(id)))];
+              const valid = mixBrands(picked.map((id) => seen.get(id)!)).map((t) => t.id);
               stats.curated = valid.length;
               final.ids = valid;
               final.refinements = refinements.slice(0, 4);
@@ -420,6 +421,18 @@ export async function handleSimilar(req: Request, env: Env, ctx: ExecutionContex
     },
     (ms, error) => logEvent(env, "shop.similar", ms, { chat: body.chatId, seed: clean.id, hits, error }, clean.domain),
   );
+}
+
+/**
+ * The model's order, with brands taking turns: each round takes every brand's next pick, so the
+ * first rows show the mix while each brand keeps its own relevance order. One brand: unchanged.
+ */
+export function mixBrands(ts: Tile[]): Tile[] {
+  const queues = new Map<string, Tile[]>();
+  for (const t of ts) queues.set(t.brand, [...(queues.get(t.brand) ?? []), t]);
+  const out: Tile[] = [];
+  while (out.length < ts.length) for (const q of queues.values()) if (q.length) out.push(q.shift()!);
+  return out;
 }
 
 /** Round-robin across brands so the first tiles on screen aren't all one store. */

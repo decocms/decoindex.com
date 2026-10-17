@@ -14,6 +14,8 @@ export interface Tile {
   url: string;
   /** Sizes the catalog lists as available right now. A hint, not a stock promise. */
   sizes: string[];
+  /** Color names from the variants (VTEX "Cor", Shopify "Color"). Optional: old snapshots lack it. */
+  colors?: string[];
   category?: string;
   /** Department the store files it under, from the category breadcrumb ("Moda Feminina > …"). */
   dept?: "feminino" | "masculino";
