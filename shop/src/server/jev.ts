@@ -55,9 +55,14 @@ async function score(
 interface Ask {
   asks: string[];
   dept?: string;
+  profile?: string;
 }
 // Earlier asks give a follow-up ("e da Reserva?", "mais barato") its subject.
-const stateOf = (a: Ask) => ({ departamento: a.dept ?? "qualquer", pedido: a.asks.map((x) => x.slice(0, 400)).join(" → ") });
+const stateOf = (a: Ask) => ({
+  departamento: a.dept ?? "qualquer",
+  pedido: a.asks.map((x) => x.slice(0, 400)).join(" → "),
+  ...(a.profile ? { sobre_o_cliente: a.profile } : {}),
+});
 
 /** Before the chat model runs: the ten brands most likely to have it, so its prompt carries 10 lines, not 57. */
 export async function preselect(env: Env, input: Ask & { store?: string }): Promise<{ domains: string[]; ms: number; cost: number } | null> {
