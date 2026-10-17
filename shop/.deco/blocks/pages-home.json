@@ -320,6 +320,211 @@
             }
           ]
         }
+      ],
+      "cardSections": [
+        {
+          "kicker": "Materiais",
+          "title": "Pelo toque do tecido.",
+          "cards": [
+            {
+              "label": "Linho",
+              "type": "vestido",
+              "terms": "linho",
+              "dept": "feminino",
+              "color": "#a8957a",
+              "prompt": "Peças de linho"
+            },
+            {
+              "label": "Seda",
+              "type": "blusa",
+              "terms": "seda",
+              "dept": "feminino",
+              "color": "#8c6f8a",
+              "prompt": "Peças de seda"
+            },
+            {
+              "label": "Tricô",
+              "type": "casaco",
+              "terms": "trico",
+              "dept": "feminino",
+              "color": "#7b6a58",
+              "prompt": "Tricô e malha"
+            },
+            {
+              "label": "Couro",
+              "type": "bolsa",
+              "terms": "couro",
+              "dept": "feminino",
+              "color": "#5a3a2a",
+              "prompt": "Bolsas e peças de couro"
+            },
+            {
+              "label": "Jeans",
+              "type": "calca",
+              "dept": "feminino",
+              "color": "#3f5f86",
+              "prompt": "Jeans feminino",
+              "terms": "jeans"
+            },
+            {
+              "label": "Viscose",
+              "type": "vestido",
+              "terms": "viscose",
+              "dept": "feminino",
+              "color": "#b08a5a",
+              "prompt": "Peças de viscose"
+            },
+            {
+              "label": "Linho",
+              "type": "camisa",
+              "terms": "linho",
+              "dept": "masculino",
+              "color": "#a8957a",
+              "prompt": "Camisas e calças de linho"
+            },
+            {
+              "label": "Algodão",
+              "type": "camiseta",
+              "terms": "algodao",
+              "dept": "masculino",
+              "color": "#6b7a5a",
+              "prompt": "Camisetas de algodão"
+            },
+            {
+              "label": "Tricô",
+              "type": "casaco",
+              "terms": "trico",
+              "dept": "masculino",
+              "color": "#7b6a58",
+              "prompt": "Tricô masculino"
+            },
+            {
+              "label": "Couro",
+              "type": "sapato",
+              "terms": "couro",
+              "dept": "masculino",
+              "color": "#5a3a2a",
+              "prompt": "Sapatos e peças de couro"
+            },
+            {
+              "label": "Jeans",
+              "type": "calca",
+              "dept": "masculino",
+              "color": "#3f5f86",
+              "prompt": "Jeans masculino",
+              "terms": "jeans"
+            },
+            {
+              "label": "Moletom",
+              "type": "moletom",
+              "dept": "masculino",
+              "color": "#555b66",
+              "prompt": "Moletons"
+            }
+          ]
+        },
+        {
+          "kicker": "Cores",
+          "title": "Comece pela cor.",
+          "cards": [
+            {
+              "label": "Branco",
+              "type": "vestido",
+              "terms": "branco",
+              "dept": "feminino",
+              "color": "#cfc8bc",
+              "prompt": "Peças brancas"
+            },
+            {
+              "label": "Preto",
+              "type": "vestido",
+              "terms": "preto",
+              "dept": "feminino",
+              "color": "#1f1f1f",
+              "prompt": "Peças pretas"
+            },
+            {
+              "label": "Verde",
+              "type": "vestido",
+              "terms": "verde",
+              "dept": "feminino",
+              "color": "#3f6b4a",
+              "prompt": "Peças verdes"
+            },
+            {
+              "label": "Azul",
+              "type": "vestido",
+              "terms": "azul",
+              "dept": "feminino",
+              "color": "#2f4f86",
+              "prompt": "Peças azuis"
+            },
+            {
+              "label": "Vermelho",
+              "type": "vestido",
+              "terms": "vermelho",
+              "dept": "feminino",
+              "color": "#a8322b",
+              "prompt": "Peças vermelhas"
+            },
+            {
+              "label": "Rosa",
+              "type": "blusa",
+              "terms": "rosa",
+              "dept": "feminino",
+              "color": "#c77a92",
+              "prompt": "Peças rosa"
+            },
+            {
+              "label": "Branco",
+              "type": "camisa",
+              "terms": "branco",
+              "dept": "masculino",
+              "color": "#cfc8bc",
+              "prompt": "Camisas brancas"
+            },
+            {
+              "label": "Preto",
+              "type": "camiseta",
+              "terms": "preto",
+              "dept": "masculino",
+              "color": "#1f1f1f",
+              "prompt": "Peças pretas masculinas"
+            },
+            {
+              "label": "Azul",
+              "type": "camisa",
+              "terms": "azul",
+              "dept": "masculino",
+              "color": "#2f4f86",
+              "prompt": "Camisas azuis"
+            },
+            {
+              "label": "Verde",
+              "type": "camiseta",
+              "terms": "verde",
+              "dept": "masculino",
+              "color": "#3f6b4a",
+              "prompt": "Peças verdes masculinas"
+            },
+            {
+              "label": "Bege",
+              "type": "calca",
+              "terms": "bege",
+              "dept": "masculino",
+              "color": "#a8957a",
+              "prompt": "Calças bege"
+            },
+            {
+              "label": "Cinza",
+              "type": "moletom",
+              "terms": "cinza",
+              "dept": "masculino",
+              "color": "#6e7178",
+              "prompt": "Peças cinza"
+            }
+          ]
+        }
       ]
     },
     {

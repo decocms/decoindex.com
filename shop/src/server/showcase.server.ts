@@ -22,7 +22,7 @@ import { TYPES, TYPE_NAMES, colorConflict, colorsIn, deptOf, detectType, overlap
  */
 export interface ShowcaseSpec {
   dept: "feminino" | "masculino";
-  cards: { type: ProductType }[];
+  cards: { type: ProductType; terms?: string }[];
   ideas: { type?: ProductType; terms?: string }[];
 }
 
@@ -38,7 +38,7 @@ interface Snapshot {
 }
 
 const DAY = 86_400_000;
-const SNAPSHOT = (h: string) => `showcase:v14:${h}`; // v14: hero photos must match a color the idea names
+const SNAPSHOT = (h: string) => `showcase:v15:${h}`; // v15: card rows by material and color (cards take terms)
 const SPEC = (h: string) => `showcase-spec:${h}`;
 const LOCK = (h: string) => `showcase-lock:${h}`;
 // One shared caller key: showcase reads are few and must not eat a shopper's per-IP budget.
@@ -192,7 +192,7 @@ async function build(spec: ShowcaseSpec, now = Date.now()): Promise<Snapshot> {
   // Ideas first and sequential: they are the big photos and must be unique; then cards in parallel.
   const ideas: (Tile | null)[] = [];
   for (const [k, i] of spec.ideas.entries()) ideas.push(i.type ? ((await sample(spec, i.type, i.terms, 1, day, k, taken))[0] ?? null) : null);
-  const cards = await Promise.all(spec.cards.map((c, k) => sample(spec, c.type, undefined, 3, day, k + 10, taken)));
+  const cards = await Promise.all(spec.cards.map((c, k) => sample(spec, c.type, c.terms, 3, day, k + 10, taken)));
   const complete = cards.every((c) => c.length) && ideas.every((t, i) => t || !spec.ideas[i].type);
   return { data: { cards, ideas }, builtAt: now, complete };
 }
@@ -214,7 +214,11 @@ function valid(spec: ShowcaseSpec): ShowcaseSpec {
   const isType = (t: unknown): t is ProductType => TYPE_NAMES.includes(t as ProductType);
   return {
     dept: spec.dept === "masculino" ? "masculino" : "feminino",
-    cards: (spec.cards ?? []).filter((c) => isType(c.type)).slice(0, 10),
+    // Three rows: categories, then by material, then by color.
+    cards: (spec.cards ?? [])
+      .filter((c) => isType(c.type))
+      .slice(0, 30)
+      .map((c) => ({ type: c.type, ...(c.terms ? { terms: c.terms.slice(0, 40) } : {}) })),
     // Up to three blocks of four ideas each ("Buscas em alta", occasions, styles).
     ideas: (spec.ideas ?? []).slice(0, 12).map((i) => ({ type: isType(i.type) ? i.type : undefined, terms: i.terms?.slice(0, 40) })),
   };
