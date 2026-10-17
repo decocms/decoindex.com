@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Tile } from "~/types";
 
 export function money(minor: number | undefined, currency = "BRL") {
@@ -116,11 +116,12 @@ export function ProductDrawer({
   onChange: (what: string) => void;
 }) {
   const [change, setChange] = useState("");
+  const [shown, setShown] = useState<number | null>(null);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && shown == null && onClose();
     addEventListener("keydown", onKey);
     return () => removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, shown]);
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label={t.title}>
@@ -129,12 +130,22 @@ export function ProductDrawer({
         <button type="button" onClick={onClose} aria-label="Fechar" className="absolute right-3 top-3 z-10 grid size-9 place-items-center rounded-full bg-card/90 text-lg">
           ×
         </button>
-        <div className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto">
-          {t.images.map((src) => (
-            <img key={src} src={thumb(src, 800)} alt="" className="aspect-[3/4] w-full shrink-0 snap-center object-cover" />
-          ))}
-        </div>
-        <div className="flex flex-col gap-4 p-6">
+        <div className="flex flex-col gap-4 p-6 pt-14">
+          {t.images.length > 0 && (
+            <div className="grid grid-cols-4 gap-2">
+              {t.images.map((src, i) => (
+                <button
+                  key={src}
+                  type="button"
+                  onClick={() => setShown(i)}
+                  aria-label={`Foto ${i + 1} de ${t.images.length}`}
+                  className="aspect-[3/4] overflow-hidden rounded-sm bg-[#f0f0f0] transition hover:opacity-80"
+                >
+                  <img src={thumb(src, 240)} alt="" className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.1em] text-ink-soft">{t.brand}</p>
             <h2 className="mt-1 font-medium tracking-tight text-3xl leading-tight">{t.title}</h2>
@@ -181,6 +192,56 @@ export function ProductDrawer({
           </form>
         </div>
       </aside>
+      {shown != null && <Gallery images={t.images} start={shown} onClose={() => setShown(null)} />}
+    </div>
+  );
+}
+
+/** Full-screen photos of one product. Native snap scrolling does the swiping; arrows and keys page it. */
+function Gallery({ images, start, onClose }: { images: string[]; start: number; onClose: () => void }) {
+  const strip = useRef<HTMLDivElement>(null);
+  const [at, setAt] = useState(start);
+  const go = (d: number) => strip.current?.scrollBy({ left: d * strip.current.clientWidth, behavior: "smooth" });
+  useEffect(() => {
+    const el = strip.current;
+    if (el) el.scrollLeft = start * el.clientWidth;
+  }, [start]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowRight") go(1);
+      if (e.key === "ArrowLeft") go(-1);
+    };
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const arrow = "absolute top-1/2 hidden size-11 -translate-y-1/2 place-items-center rounded-full bg-paper/90 text-xl text-ink transition hover:bg-paper disabled:opacity-0 sm:grid";
+  return (
+    <div className="fixed inset-0 z-[60] bg-ink" role="dialog" aria-modal="true" aria-label="Fotos">
+      <div
+        ref={strip}
+        onScroll={(e) => setAt(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
+        className="no-scrollbar flex h-full snap-x snap-mandatory overflow-x-auto"
+      >
+        {images.map((src) => (
+          <div key={src} className="h-full w-full shrink-0 snap-center p-4 sm:p-12">
+            <img src={thumb(src, 1200)} alt="" className="h-full w-full object-contain" />
+          </div>
+        ))}
+      </div>
+      <button type="button" onClick={onClose} aria-label="Fechar" className="absolute right-3 top-3 grid size-10 place-items-center rounded-full bg-paper/90 text-lg text-ink">
+        ×
+      </button>
+      <button type="button" onClick={() => go(-1)} disabled={at === 0} aria-label="Foto anterior" className={`${arrow} left-4`}>
+        ‹
+      </button>
+      <button type="button" onClick={() => go(1)} disabled={at === images.length - 1} aria-label="Próxima foto" className={`${arrow} right-4`}>
+        ›
+      </button>
+      <p className="absolute inset-x-0 bottom-4 text-center text-xs tabular-nums text-paper/80">
+        {at + 1} / {images.length}
+      </p>
     </div>
   );
 }
