@@ -70,6 +70,17 @@ export async function detectPlatform(domain: string): Promise<Detection> {
       };
     }
 
+    // A headless storefront (its own Next.js front over VTEX — Azzas' Maria Filó, Cris Barros, Foxton)
+    // answers the catalog path with its HTML, so the probe above sees no JSON. That HTML names the
+    // account on every image (`{account}.vtexassets.com`); the catalog still answers on the
+    // account's canonical host, which is where reads go anyway (vtexApiOrigin). One more probe,
+    // detection only, once per domain ever.
+    const account = vtexAccountIn(vtex.html);
+    if (account) {
+      const direct = await probe(`https://${account}.vtexcommercestable.com.br/api/catalog_system/pub/products/search?_from=0&_to=0`);
+      if (Array.isArray(direct.json)) return { platform: "vtex", origin, account, currency: "BRL" };
+    }
+
     // Something answered on this origin and it is not a platform we read. Trying
     // the other host would only buy another pair of timeouts.
     if (vtex.reached || shopify.reached) {
@@ -91,6 +102,20 @@ interface Probe {
    * "unsupported platform" would tell a merchant the wrong thing.
    */
   refused: boolean;
+  /** The start of a non-JSON body (a headless storefront's HTML), for vtexAccountIn. */
+  html?: string;
+}
+
+/**
+ * The VTEX account a page's images come from, by count: the store's own account dominates, while
+ * another account can appear once (a shared banner from a sister store).
+ */
+export function vtexAccountIn(html: string | undefined): string | undefined {
+  if (!html) return undefined;
+  const counts = new Map<string, number>();
+  for (const m of html.matchAll(/\/\/([a-z0-9-]+)\.(?:vtexassets\.com|vteximg\.com\.br)\//g)) counts.set(m[1], (counts.get(m[1]) ?? 0) + 1);
+  const [top] = [...counts].sort((a, b) => b[1] - a[1]);
+  return top && top[1] >= 3 ? top[0] : undefined;
 }
 
 async function probe(url: string): Promise<Probe> {
@@ -102,7 +127,12 @@ async function probe(url: string): Promise<Probe> {
     const refused = res.status === 401 || res.status === 403 || res.status === 429 || res.status >= 500;
     // 206 is VTEX's normal answer to a ranged catalog query.
     const ok = res.ok || res.status === 206;
-    if (!ok || !(res.headers.get("content-type") ?? "").includes("json")) {
+    const type = res.headers.get("content-type") ?? "";
+    if (ok && type.includes("html")) {
+      // Kept for vtexAccountIn; a page's <head> and first images fit well inside this.
+      return { json: null, reached: true, refused, html: (await res.text().catch(() => "")).slice(0, 300_000) };
+    }
+    if (!ok || !type.includes("json")) {
       return { json: null, reached: true, refused };
     }
     return { json: await res.json().catch(() => null), reached: true, refused: false };
