@@ -1,6 +1,6 @@
 import type { Tile } from "../types";
 import { BRANDS, brandByDomain } from "./brands";
-import { browseCategory, categories, searchBrand } from "./catalog";
+import { browseCategory, categories, searchBrand, type Health } from "./catalog";
 import type { Env } from "./env";
 import { TYPES, attributes, detectType, otherDept, overlap, pickCategory, words, type ProductType } from "./taxonomy";
 
@@ -23,6 +23,7 @@ export interface Found {
 interface Ctx {
   env: Env;
   ip: string;
+  health?: Health;
   dept?: "feminino" | "masculino";
 }
 
@@ -42,20 +43,20 @@ export async function findProducts(ctx: Ctx, r: FindRequest): Promise<Found> {
   const typeWord = r.type ? TYPES[r.type][0] : "";
   const query = [typeWord, r.terms].filter(Boolean).join(" ").trim();
 
-  const pick = r.type ? pickCategory(await categories(ctx.env, r.domain, ctx.ip), r.type, { dept: ctx.dept, sale: r.sort === "discount" }) : undefined;
+  const pick = r.type ? pickCategory(await categories(ctx.env, r.domain, ctx.ip, ctx.health), r.type, { dept: ctx.dept, sale: r.sort === "discount" }) : undefined;
   const polish = (ts: Tile[]) => fit(ts, { type: r.type, want, dept: ctx.dept, keepOrder: !want.length && !!r.sort });
   if (!pick) {
-    return { tiles: query ? polish(await searchBrand(ctx.env, r.domain, query, ctx.ip)) : [], via: `${brand}: busca “${query}”` };
+    return { tiles: query ? polish(await searchBrand(ctx.env, r.domain, query, ctx.ip, ctx.health)) : [], via: `${brand}: busca “${query}”` };
   }
 
-  const page = await browseCategory(ctx.env, r.domain, pick.category.path, ctx.ip, r.sort);
+  const page = await browseCategory(ctx.env, r.domain, pick.category.path, ctx.ip, r.sort, ctx.health);
   const label = `${brand} › ${pick.category.name.replace(/^.*>\s*/, "")}`;
   if (!want.length) return { tiles: polish(page), via: label };
 
   const ranked = polish(page).filter((t) => overlap(want, text(t)) > 0);
   if (ranked.length >= MIN_AFTER_FILTER) return { tiles: ranked, via: `${label} + “${r.terms}”` };
 
-  const searched = await searchBrand(ctx.env, r.domain, query, ctx.ip);
+  const searched = await searchBrand(ctx.env, r.domain, query, ctx.ip, ctx.health);
   return { tiles: polish(dedupe([...ranked, ...searched])), via: `${label} + busca “${query}”` };
 }
 
@@ -90,7 +91,7 @@ export async function similar(ctx: Ctx, seed: Pick<Tile, "id" | "domain" | "titl
   const type = detectType(`${seed.title} ${seed.category ?? ""}`);
   const attrs = attributes(seed.title, type).slice(0, 5);
   if (!type) {
-    const tiles = await searchBrand(ctx.env, seed.domain, attrs.slice(0, 3).join(" "), ctx.ip);
+    const tiles = await searchBrand(ctx.env, seed.domain, attrs.slice(0, 3).join(" "), ctx.ip, ctx.health);
     return { tiles: tiles.filter((t) => t.id !== seed.id), via: "busca", attrs };
   }
 
@@ -105,14 +106,14 @@ export async function similar(ctx: Ctx, seed: Pick<Tile, "id" | "domain" | "titl
   const withType: { domain: string; path: string }[] = [];
   for (const domain of stores) {
     if (withType.length >= 5) break;
-    const pick = pickCategory(await categories(ctx.env, domain, ctx.ip), type, { dept: ctx.dept });
+    const pick = pickCategory(await categories(ctx.env, domain, ctx.ip, ctx.health), type, { dept: ctx.dept });
     if (pick) withType.push({ domain, path: pick.category.path });
   }
   if (!withType.length) {
-    return { tiles: (await searchBrand(ctx.env, seed.domain, [TYPES[type][0], ...attrs.slice(0, 2)].join(" "), ctx.ip)).filter((t) => t.id !== seed.id), via: "busca", type, attrs };
+    return { tiles: (await searchBrand(ctx.env, seed.domain, [TYPES[type][0], ...attrs.slice(0, 2)].join(" "), ctx.ip, ctx.health)).filter((t) => t.id !== seed.id), via: "busca", type, attrs };
   }
 
-  const pages = await Promise.all(withType.map((s) => browseCategory(ctx.env, s.domain, s.path, ctx.ip)));
+  const pages = await Promise.all(withType.map((s) => browseCategory(ctx.env, s.domain, s.path, ctx.ip, undefined, ctx.health)));
   const p0 = seed.priceMinor;
   const scored = fit(pages.flat(), { type, want: [], dept: ctx.dept })
     .filter((t) => t.id !== seed.id)

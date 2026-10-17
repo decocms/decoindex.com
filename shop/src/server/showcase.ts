@@ -85,10 +85,11 @@ export const getShowcase = createServerFn({ method: "POST" })
       ),
     ]);
     const data: ShowcaseData = { cards, ideas, shelves };
-    // Only cache a complete-looking answer, so a cold or rate-limited read doesn't stick for an hour.
-    if (env.SHARES && cards.every((c) => c.length) && shelves.every((s) => s.length)) {
-      await env.SHARES.put(key, JSON.stringify(data), { expirationTtl: TTL });
-    }
+    // A complete answer is cached for an hour; a partial one for 5 minutes. Never
+    // zero: uncached failures made every home visit re-run ~40 reads against a
+    // blocked upstream, which is how 15k refused requests piled up in two hours.
+    const complete = cards.every((c) => c.length) && shelves.every((s) => s.length);
+    if (env.SHARES) await env.SHARES.put(key, JSON.stringify(data), { expirationTtl: complete ? TTL : 300 });
     return data;
   });
 

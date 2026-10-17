@@ -1,3 +1,4 @@
+import { WorkerEntrypoint } from "cloudflare:workers";
 import { Hono } from "hono";
 import type { Env } from "./env";
 import { parsePath } from "./lib/url";
@@ -34,6 +35,11 @@ const app = new Hono<Ctx>();
 app.use("*", async (c, next) => {
   const ua = c.req.header("user-agent");
   if (c.req.path === "/robots.txt") return next();
+  // Our own shop, over the FirstParty entrypoint. The header cannot come from the
+  // internet: the default fetch strips it, only FirstParty sets it. Without this
+  // the sweep blocklisted the shop (531 reads/h is just shoppers) and every
+  // shop search came back empty for hours.
+  if (c.req.header(FIRST_PARTY) === "shop") return next();
   const rule = isBlockedCrawler(ua) ? "named" : await blockRuleFor(c.env, ua, c.req.raw.cf);
   if (rule === undefined) return next();
   track(c.env, c.executionCtx, {
@@ -418,6 +424,7 @@ function logRead(
     domain: o.domain,
     surface: o.surface,
     ua: req.headers.get("user-agent") ?? undefined,
+    firstParty: req.headers.get(FIRST_PARTY) === "shop",
     cf: req.cf,
     ms: Date.now() - o.started,
     // The query rides along with the path: ?page=/?sort= walks were the crawl.
@@ -425,8 +432,34 @@ function logRead(
   });
 }
 
+/**
+ * First-party callers: the deco shop Worker binds to this entrypoint
+ * (`"entrypoint": "FirstParty"` in its service binding). Only Workers on this
+ * account can bind it, so that *is* the trust boundary — no shared secret. It
+ * marks the request first-party: exempt from the blocklist, classified
+ * `first-party` so the scraper sweep never counts it. Invariant 1 still holds:
+ * the per-domain READ_THROUGH bound and the per-caller limit (keyed on the
+ * shopper IP the shop forwards) apply exactly as for anyone else.
+ */
+const FIRST_PARTY = "x-decoindex-first-party";
+
+export class FirstParty extends WorkerEntrypoint<Env> {
+  fetch(request: Request) {
+    const req = new Request(request);
+    req.headers.set(FIRST_PARTY, "shop");
+    return app.fetch(req, this.env, this.ctx);
+  }
+}
+
 export default {
-  fetch: app.fetch,
+  // From the internet the first-party marker is never trusted: strip it.
+  fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    if (request.headers.has(FIRST_PARTY)) {
+      request = new Request(request);
+      request.headers.delete(FIRST_PARTY);
+    }
+    return app.fetch(request, env, ctx);
+  },
   // Hourly (wrangler.jsonc triggers): find scraper-like traffic, block it.
   scheduled(_e: ScheduledController, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(sweepScrapers(env).then(() => {}, (err) => console.error("sweep failed", err)));

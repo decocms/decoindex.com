@@ -3,7 +3,7 @@ import { stepCountIs, streamText, tool } from "ai";
 import { z } from "zod";
 import type { ChatEvent, ChatRequest, Share, SimilarRequest, Tile } from "../types";
 import { BRANDS, brandByDomain } from "./brands";
-import { tileLine } from "./catalog";
+import { newHealth, tileLine } from "./catalog";
 import type { Env, ExecutionContext } from "./env";
 import { logEvent } from "./events";
 import { findProducts, similar } from "./find";
@@ -43,6 +43,8 @@ Como trabalhar:
 3. "sort": price_asc quando há orçamento ou pedem barato, discount para promoção, new para novidades; senão omita. Se vier pouco, faça outra rodada com outro type, menos terms ou outras marcas.
 4. Depois chame show_products com os ids que melhor atendem ao pedido, do mais para o menos relevante (8 a 24). Respeite orçamento, tamanho e estilo pedidos. Misture marcas. Junto, mande de 2 a 4 refinamentos: frases curtas (até 5 palavras) que o cliente clicaria a seguir, como "Só midi", "Até R$ 300", "Em tons de azul", "Ver sandálias para combinar".
 5. Por fim, responda em no máximo 2 frases curtas (até 220 caracteres), no idioma do cliente, com o critério da seleção. Não liste produtos nem preços: eles já aparecem na tela.
+
+Se find_products disser que a LEITURA FALHOU, as lojas não responderam: nunca diga que não existem produtos; diga que as lojas não responderam agora e peça para tentar de novo em instantes.
 
 Regras: preços são preços de catálogo observados, não o preço final. Nunca prometa estoque, frete, prazo ou desconto — isso é da loja. Não invente produtos nem ids.`;
 }
@@ -105,6 +107,8 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
   const seen = new Map<string, Tile>();
   const stats = { searches: 0, viaCategory: 0, hits: 0, curated: 0, brands: [] as string[], share: "" };
   const final = { answer: "", ids: [] as string[], refinements: [] as string[] };
+  const health = newHealth();
+  const UNREACHABLE = "As lojas não responderam agora — não é falta de produto. Tente de novo em instantes.";
 
   const openrouter = createOpenRouter({
     // The gateway carries BYOK for OpenRouter: with no key of our own, send no
@@ -160,7 +164,7 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
               stats.searches += known.length;
               stats.brands.push(...known.map((r) => r.domain).filter((d) => !stats.brands.includes(d)));
               const found = await Promise.all(
-                known.map((r) => findProducts({ env, ip, dept: body.dept }, r as Parameters<typeof findProducts>[1])),
+                known.map((r) => findProducts({ env, ip, dept: body.dept, health }, r as Parameters<typeof findProducts>[1])),
               );
               stats.viaCategory += found.filter((f) => f.via.includes("›")).length;
               const lists = found.map((f) => f.tiles);
@@ -173,6 +177,9 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
               stats.hits += fresh.length;
               if (fresh.length) await send({ type: "products", items: interleave(lists, fresh) });
               const how = found.map((f) => `- ${f.via}: ${f.tiles.length}`).join("\n");
+              if (!fresh.length && health.failed && !health.ok) {
+                return `LEITURA FALHOU: ${health.failed} leituras de catálogo não responderam (status ${[...new Set(health.statuses)].join(", ")}). Isso não significa que as lojas não tenham o produto.`;
+              }
               return fresh.length
                 ? `Como cada loja foi lida:\n${how}\n\nProdutos:\n${fresh.map(tileLine).join("\n")}`
                 : `Nenhum resultado.\n${how}\nTente outro type, menos terms ou outras marcas.`;
@@ -198,7 +205,13 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
         },
       });
 
+      let warned = false;
       for await (const part of result.fullStream) {
+        // Nothing could be read at all: say so plainly instead of letting the model guess.
+        if (!warned && health.failed && !health.ok && !seen.size && part.type === "text-delta") {
+          warned = true;
+          await send({ type: "error", message: UNREACHABLE });
+        }
         if (part.type === "text-delta") {
           final.answer += part.text;
           await send({ type: "text", text: part.text });
@@ -229,7 +242,8 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
         dept: body.dept,
         store,
         ...stats,
-        error,
+        reads: { ok: health.ok, failed: health.failed, statuses: [...new Set(health.statuses)] },
+        error: error || (health.failed && !health.ok ? `upstream: ${[...new Set(health.statuses)].join(",")}` : ""),
       }),
   );
 }
@@ -261,8 +275,13 @@ export async function handleSimilar(req: Request, env: Env, ctx: ExecutionContex
     async (send) => {
       await send({ type: "meta", chatId: body.chatId, model: "similar" });
       await send({ type: "status", text: "Procurando parecidos…" });
-      const found = await similar({ env, ip, dept: body.dept }, clean);
+      const health = newHealth();
+      const found = await similar({ env, ip, dept: body.dept, health }, clean);
       hits = found.tiles.length;
+      if (!hits && health.failed && !health.ok) {
+        await send({ type: "error", message: "As lojas não responderam agora — tente de novo em instantes." });
+        return;
+      }
       if (!hits) {
         await send({ type: "text", text: "Não achei nada parecido agora. Tente descrever o que você gostou nele." });
         return;

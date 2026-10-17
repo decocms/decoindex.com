@@ -4,6 +4,8 @@ import type { ChatEvent, ChatTurn, Tile } from "~/types";
 export type Dept = "feminino" | "masculino";
 
 export interface Turn {
+  /** Identity of this turn, so a stream only ever writes into its own turn. */
+  key: string;
   user: string;
   answer: string;
   status?: string;
@@ -28,15 +30,23 @@ export function useShopChat() {
   const chatId = useRef<string>("");
   const abort = useRef<AbortController | null>(null);
 
-  const patchLast = (fn: (t: Turn) => Turn) =>
-    setTurns((all) => (all.length ? [...all.slice(0, -1), fn(all[all.length - 1])] : all));
+  const turnsRef = useRef(turns);
+  turnsRef.current = turns;
 
-  /** One turn: push it, POST `endpoint`, fold the NDJSON events into it. */
-  const stream = useCallback(async (label: string, endpoint: string, payload: (id: string) => object) => {
+  /**
+   * One turn: keep the first `keep` turns (asking after going Back branches the
+   * conversation, like browser history; 0 = a new conversation), push the new
+   * turn, POST `endpoint`, fold the NDJSON events into *that* turn by key.
+   * Patching "the last turn" instead let an aborted stream finish the new one
+   * and leave itself spinning forever.
+   */
+  const stream = useCallback(async (label: string, keep: number, endpoint: string, payload: (id: string) => object) => {
     abort.current?.abort();
     const ctrl = (abort.current = new AbortController());
-    if (!chatId.current) chatId.current = newId();
-    setTurns((all) => [...all, { user: label, answer: "", products: [], done: false, status: "Pensando…" }]);
+    if (keep === 0 || !chatId.current) chatId.current = newId();
+    const key = newId();
+    const patchLast = (fn: (t: Turn) => Turn) => setTurns((all) => all.map((t) => (t.key === key ? fn(t) : t)));
+    setTurns((all) => [...all.slice(0, keep), { key, user: label, answer: "", products: [], done: false, status: "Pensando…" }]);
     try {
         const res = await fetch(endpoint, {
           method: "POST",
@@ -91,23 +101,23 @@ export function useShopChat() {
   }, []);
 
   const send = useCallback(
-    (text: string, dept?: Dept, store?: string) => {
+    (text: string, keep: number, dept?: Dept, store?: string) => {
       const q = text.trim();
       if (!q) return;
-      const history: ChatTurn[] = turns.flatMap((t) => [
+      const history: ChatTurn[] = turnsRef.current.slice(0, keep).flatMap((t) => [
         { role: "user" as const, content: t.user },
         ...(t.answer ? [{ role: "assistant" as const, content: t.answer }] : []),
       ]);
       const forced = new URLSearchParams(location.search).get("model") ?? undefined;
-      return stream(q, "/api/chat", (id) => ({ chatId: id, dept, store, model: forced, messages: [...history, { role: "user", content: q }] }));
+      return stream(q, keep, "/api/chat", (id) => ({ chatId: id, dept, store, model: forced, messages: [...history, { role: "user", content: q }] }));
     },
-    [turns, stream],
+    [stream],
   );
 
   /** "Mais como este": category heuristics on the server, no model call. */
   const similarTo = useCallback(
-    (t: Tile, dept?: Dept) =>
-      stream(`Mais como “${t.title}”`, "/api/similar", (id) => ({
+    (t: Tile, keep: number, dept?: Dept) =>
+      stream(`Mais como “${t.title}”`, keep, "/api/similar", (id) => ({
         chatId: id,
         dept,
         tile: { id: t.id, domain: t.domain, title: t.title, category: t.category, priceMinor: t.priceMinor },
