@@ -132,7 +132,8 @@ export function ProductDrawer({
         </button>
         <div className="flex flex-col gap-4 p-6 pt-14">
           {t.images.length > 0 && (
-            <div className="grid grid-cols-4 gap-2">
+            // Fewer photos, bigger cards: they fill the row. One photo still gets half, never a full-bleed hero.
+            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(2, t.images.length)}, minmax(0, 1fr))` }}>
               {t.images.map((src, i) => (
                 <button
                   key={src}
