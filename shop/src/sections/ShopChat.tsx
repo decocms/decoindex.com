@@ -168,7 +168,7 @@ export default function ShopChat({
         onHome={() => {
           // The logo starts a new conversation; earlier entries re-ask if revisited.
           reset();
-          history.pushState({ turn: -1 }, "", location.pathname);
+          history.pushState({ turn: -1 }, "", "/"); // home is "/", not the /c/{id} we were on
           setView(-1);
         }}
         right={started ? <DeptToggle value={dept} onChange={setDept} /> : undefined}

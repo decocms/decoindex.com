@@ -169,3 +169,19 @@ export function overlap(want: string[], text: string): number {
 
 /** Types that stand in for each other when a store files things under a sibling ("Praia" for biquíni). */
 export const FAMILY: ProductType[][] = [["biquini", "maio", "praia", "top"], ["camisa", "camiseta", "polo"], ["short", "bermuda"], ["casaco", "moletom"]];
+
+/** Color words, by stem: "branco" and "Branca" meet at "branc"; "off white" counts as white. */
+const COLOR_STEMS = new Set(["branc", "pret", "azul", "vermelh", "verde", "amarel", "rosa", "bege", "marrom", "cinza", "laranj", "rox", "lilas", "nude", "vinh", "dourad", "prata", "creme"]);
+const colorStem = (w: string) => (w === "off" || w === "white" ? "branc" : w.replace(/[ao]s?$/, ""));
+export const colorsIn = (text: string) => [...new Set(words(text).map(colorStem).filter((w) => COLOR_STEMS.has(w)))];
+
+/**
+ * The shopper named a color and the piece has a known color that isn't it: a black shirt in a
+ * "camisa branca" search. Unknown color (no variant, nothing in the title) is not a conflict.
+ */
+export function colorConflict(want: string[], t: { title: string; colors?: string[] }): boolean {
+  const asked = colorsIn(want.join(" "));
+  if (!asked.length) return false;
+  const has = colorsIn(`${t.title} ${t.colors?.join(" ") ?? ""}`);
+  return has.length > 0 && !has.some((c) => asked.includes(c));
+}

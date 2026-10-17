@@ -3,7 +3,7 @@ import type { Tile } from "../types";
 import { BRANDS, type Segment } from "./brands";
 import { categories, newHealth } from "./catalog";
 import { findProducts } from "./find";
-import { TYPES, TYPE_NAMES, deptOf, detectType, overlap, pickCategory, words, type ProductType, FAMILY } from "./taxonomy";
+import { TYPES, TYPE_NAMES, colorConflict, colorsIn, deptOf, detectType, overlap, pickCategory, words, type ProductType, FAMILY } from "./taxonomy";
 
 /**
  * Real product photos for the home's cards and ideas — a daily index,
@@ -38,7 +38,7 @@ interface Snapshot {
 }
 
 const DAY = 86_400_000;
-const SNAPSHOT = (h: string) => `showcase:v13:${h}`; // v13: brand shelves gone, idea blocks instead
+const SNAPSHOT = (h: string) => `showcase:v14:${h}`; // v14: hero photos must match a color the idea names
 const SPEC = (h: string) => `showcase-spec:${h}`;
 const LOCK = (h: string) => `showcase-lock:${h}`;
 // One shared caller key: showcase reads are few and must not eat a shopper's per-IP budget.
@@ -100,8 +100,11 @@ function heroScore(t: Tile, type: ProductType, want: string[], beachBrand = fals
   const catType = t.category ? detectType(t.category) : undefined;
   if (catType && !sameFamily(catType, type)) return 0;
   const first = words(t.title)[0] ?? "";
-  const hasTerms = !want.length || overlap(want, `${t.title} ${t.description ?? ""}`) > 0;
+  const hasTerms = !want.length || overlap(want, `${t.title} ${t.description ?? ""} ${t.colors?.join(" ") ?? ""}`) > 0;
   if (!hasTerms) return 0;
+  // A color in the idea is a promise the photo must keep: "camisa de linho branca" showed a black one,
+  // because "linho" alone matched. Here unknown color doesn't pass either: a hero photo must be sure.
+  if (colorsIn(want.join(" ")).length && (colorConflict(want, t) || !colorsIn(`${t.title} ${t.colors?.join(" ") ?? ""}`).length)) return 0;
   const syn = TYPES[type] as readonly string[];
   if (syn.includes(first)) return 2;
   // Any word, not "first type word wins": "Top Biquíni Lenny" is a bikini.
