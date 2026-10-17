@@ -242,7 +242,7 @@
     },
     {
       "__resolveType": "site/sections/BrandStrip.tsx",
-      "title": "Buscando em 56 marcas",
+      "title": "Buscando em 57 marcas",
       "brands": [
         {
           "name": "FARM Rio",
@@ -331,6 +331,10 @@
         {
           "name": "Gloria Coelho",
           "domain": "www.gloriacoelho.com.br"
+        },
+        {
+          "name": "Aviator",
+          "domain": "www.aviator.com.br"
         },
         {
           "name": "Ricardo Almeida",

@@ -15,6 +15,8 @@ export interface Env {
 
   OPENROUTER_API_KEY?: string;
   CF_AI_GATEWAY_TOKEN?: string;
+  /** Guards /mcp (the admin dashboard). Unset = /mcp answers 503, never open. */
+  MCP_AUTH_TOKEN?: string;
 }
 
 // Minimal binding shapes. The full @cloudflare/workers-types globals clash with
@@ -23,7 +25,9 @@ export interface Fetcher {
   fetch(input: string | Request | URL, init?: RequestInit): Promise<Response>;
 }
 export interface D1Database {
-  prepare(sql: string): { bind(...values: unknown[]): { run(): Promise<unknown> } };
+  prepare(sql: string): {
+    bind(...values: unknown[]): { run(): Promise<unknown>; all<T = Record<string, unknown>>(): Promise<{ results: T[] }> };
+  };
 }
 export interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void;

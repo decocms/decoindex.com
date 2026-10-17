@@ -68,7 +68,7 @@ export function words(s: string): string[] {
 const FEM = /\b(feminin[oa]|fem|mulher|women|woman|female|ela)\b/;
 const MASC = /\b(masculin[oa]|masc|homem|men|man|male|ele)\b/;
 const KIDS = /\b(infantil|kid|crianca|baby|bebe|menin[oa]|teen|mini)\b/;
-const JUNK = /\b(nao categorizado|vale presente|presente|gift|teste|test|casa|home|tok stok|clube|me leva)\b/;
+const JUNK = /\b(desativad[oa]|integracao|category|nao categorizado|vale presente|presente|gift|teste|test|casa|home|tok stok|clube|me leva)\b/;
 const SALE = /\b(bazar|outlet|sale|promo|liquida|black friday|off)\b/;
 
 export function toCategories(raw: { path: string; name: string; depth?: number; count?: number; parent?: string }[]): Category[] {

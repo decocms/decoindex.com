@@ -38,6 +38,7 @@ export const BRANDS: Brand[] = [
   { domain: "www.iodice.com.br", name: "Iódice", segments: ["feminino"], blurb: "moda feminina sofisticada, alfaiataria e vestidos" },
   { domain: "www.lelis.com.br", name: "Le Lis", segments: ["feminino"], blurb: "moda feminina elegante, alfaiataria e vestidos" },
   { domain: "www.gloriacoelho.com.br", name: "Gloria Coelho", segments: ["feminino"], blurb: "moda autoral de vanguarda, cortes arquitetônicos" },
+  { domain: "www.aviator.com.br", name: "Aviator", segments: ["masculino", "calcados"], blurb: "camisaria masculina desde 1987, alfaiataria, polos e calçados" },
   { domain: "www.ricardoalmeida.com.br", name: "Ricardo Almeida", segments: ["masculino"], blurb: "alfaiataria masculina premium, ternos e camisas" },
   { domain: "www.nkstore.com.br", name: "NK Store", segments: ["feminino", "masculino"], blurb: "multimarcas de luxo, curadoria nacional e internacional" },
   { domain: "www.bobo.com.br", name: "Bo.Bô", segments: ["feminino"], blurb: "moda feminina chic, vestidos e alfaiataria" },

@@ -52,6 +52,13 @@ describe("pickCategory", () => {
   test("leaf over root", () => {
     expect(pickCategory(nb, "tenis")?.category.path).toBe("/calcado/tenis");
   });
+  test("internal/disabled categories are skipped", () => {
+    const aviator = toCategories([
+      { path: "/camisas-desativado", name: "CAMISAS - DESATIVADO", depth: 0 },
+      { path: "/roupas-masculinas/camisa-masculina", name: "Camisa Masculina", depth: 1, parent: "Roupas Masculinas" },
+    ]);
+    expect(pickCategory(aviator, "camisa", { dept: "masculino" })?.category.path).toBe("/roupas-masculinas/camisa-masculina");
+  });
   test("gift cards are never a category", () => {
     expect(pickCategory(farm, "vestido")?.category.path).not.toContain("presente");
   });

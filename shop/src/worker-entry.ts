@@ -6,6 +6,7 @@
  *   POST /api/similar NDJSON stream: "mais como este" by category heuristics, no model (server/find.ts)
  *   POST /api/event  feedback + small client events, into decoindex's events table
  *   GET  /go         outbound click to a merchant PDP: logged, then 302
+ *   ALL  /mcp        admin MCP app: queries, models, CTR (server/admin/*), token-guarded
  *   GET  /embed.js   partner widget for empty-search pages (server/embed.ts)
  */
 import "./setup";
@@ -16,6 +17,7 @@ import { handleChat, handleSimilar } from "./server/chat";
 import { brandForUrl } from "./server/brands";
 import { logEvent } from "./server/events";
 import { EMBED_JS } from "./server/embed";
+import { handleMcp } from "./server/admin/mcp";
 import type { Env, ExecutionContext } from "./server/env";
 
 const decoWorker = createDecoWorkerEntry(createServerEntry({ fetch: handler.fetch }), {
@@ -49,6 +51,9 @@ export default {
       ctx.waitUntil(logEvent(env, e.name, null, e.meta ?? {}));
       return new Response(null, { status: 204 });
     }
+
+    // Admin as an MCP app (token-guarded): add https://shop.decoindex.com/mcp?token=… in deco Studio.
+    if (url.pathname === "/mcp" || url.pathname.startsWith("/mcp/")) return handleMcp(request, env);
 
     if (url.pathname === "/embed.js") {
       return new Response(EMBED_JS, {
