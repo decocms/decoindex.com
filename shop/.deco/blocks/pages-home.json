@@ -391,20 +391,20 @@
               "prompt": "Camisetas de algodão"
             },
             {
-              "label": "Tricô",
-              "type": "casaco",
-              "terms": "trico",
+              "label": "Sarja",
+              "type": "calca",
+              "terms": "sarja",
               "dept": "masculino",
               "color": "#7b6a58",
-              "prompt": "Tricô masculino"
+              "prompt": "Calças e bermudas de sarja"
             },
             {
               "label": "Couro",
-              "type": "sapato",
+              "type": "tenis",
               "terms": "couro",
               "dept": "masculino",
               "color": "#5a3a2a",
-              "prompt": "Sapatos e peças de couro"
+              "prompt": "Tênis e sapatos de couro"
             },
             {
               "label": "Jeans",
@@ -517,7 +517,7 @@
             },
             {
               "label": "Cinza",
-              "type": "moletom",
+              "type": "camiseta",
               "terms": "cinza",
               "dept": "masculino",
               "color": "#6e7178",
