@@ -137,7 +137,7 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
   const model = pickModel(env, body.chatId, body.model);
 
   const seen = new Map<string, Tile>();
-  const stats = { searches: 0, viaCategory: 0, hits: 0, curated: 0, brands: [] as string[], share: "" };
+  const stats = { searches: 0, viaCategory: 0, hits: 0, curated: 0, brands: [] as string[], share: "", fallback: false };
   const final = { answer: "", ids: [] as string[], refinements: [] as string[] };
   const health = newHealth();
   const UNREACHABLE = "As lojas não responderam agora — não é falta de produto. Tente de novo em instantes.";
@@ -250,6 +250,20 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
         } else if (part.type === "error") throw part.error;
       }
 
+      // Some models stop after searching without curating or answering. Never leave the shopper
+      // with a spinner or a silent grid: show what was found and say so in one line.
+      const fallback = (stats.fallback = !final.ids.length || !final.answer.trim());
+      if (!final.ids.length && seen.size) {
+        final.ids = [...seen.keys()].slice(0, 24);
+        stats.curated = final.ids.length;
+        await send({ type: "curate", ids: final.ids, refinements: [] });
+      }
+      if (!final.answer.trim() && final.ids.length) {
+        const brands = [...new Set(final.ids.map((i) => seen.get(i)?.brand))].slice(0, 4).join(", ");
+        final.answer = `Separei estas opções de ${brands}. Toque em uma para ver mais, ou me diga o que mudar.`;
+        await send({ type: "text", text: final.answer });
+      }
+
       const id = await saveShare(env, {
         q: messages.filter((m) => m.role === "user").at(-1)?.content ?? "",
         answer: final.answer.trim(),
@@ -264,7 +278,7 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
         await send({ type: "share", id });
       }
       // Cache only a clean, complete answer: never a failed read or an empty grid.
-      if (key && final.ids.length && final.answer.trim() && !health.failed) {
+      if (key && !fallback && !health.failed) {
         const cached: CachedAnswer = {
           model,
           tiles: final.ids.map((i) => seen.get(i)).filter((t): t is Tile => !!t),
