@@ -7,7 +7,7 @@ import { newHealth, tileLine } from "./catalog";
 import type { Env, ExecutionContext } from "./env";
 import { logEvent } from "./events";
 import { findProducts, similar } from "./find";
-import { preselect, rosterLine } from "./preselect";
+import { preselect, rankTiles, rosterLine } from "./jev";
 import { TYPE_NAMES } from "./taxonomy";
 
 const MAX_SEARCHES = 6;
@@ -134,7 +134,7 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
   const model = pickModel(env, body.chatId, body.model);
 
   const seen = new Map<string, Tile>();
-  const stats = { searches: 0, viaCategory: 0, hits: 0, curated: 0, brands: [] as string[], share: "", fallback: false, tokensIn: 0, tokensOut: 0, cost: 0, lateError: "", preselect: null as { ms: number; n: number } | null };
+  const stats = { searches: 0, viaCategory: 0, hits: 0, curated: 0, brands: [] as string[], share: "", fallback: false, tokensIn: 0, tokensOut: 0, cost: 0, lateError: "", preselect: null as { ms: number; n: number } | null, rank: [] as { ms: number; from: number; to: number }[] };
   const final = { answer: "", ids: [] as string[], refinements: [] as string[] };
   const health = newHealth();
   const UNREACHABLE = "As lojas não responderam agora — não é falta de produto. Tente de novo em instantes.";
@@ -215,11 +215,18 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
               stats.hits += fresh.length;
               if (fresh.length) await send({ type: "products", items: interleave(lists, fresh) });
               const how = found.map((f) => `- ${f.via}: ${f.tiles.length}`).join("\n");
+              const asks = messages.filter((m) => m.role === "user").slice(-3).map((m) => m.content);
+              const ranked = await rankTiles(env, { asks, dept: body.dept }, fresh, tileLine);
+              if (ranked) {
+                stats.rank.push({ ms: ranked.ms, from: fresh.length, to: ranked.tiles.length });
+                stats.cost += ranked.cost;
+              }
+              const shown = ranked?.tiles ?? fresh;
               if (!fresh.length && health.failed && !health.ok) {
                 return `LEITURA FALHOU: ${health.failed} leituras de catálogo não responderam (status ${[...new Set(health.statuses)].join(", ")}). Isso não significa que as lojas não tenham o produto.`;
               }
               return fresh.length
-                ? `Como cada loja foi lida:\n${how}\n\nProdutos:\n${fresh.map(tileLine).join("\n")}`
+                ? `Como cada loja foi lida:\n${how}\n\nProdutos${ranked ? ` (os ${shown.length} mais relevantes de ${fresh.length})` : ""}:\n${shown.map(tileLine).join("\n")}`
                 : `Nenhum resultado.\n${how}\nTente outro type, menos terms ou outras marcas.`;
             },
           }),
