@@ -37,7 +37,8 @@ export const TYPES = {
   bolsa: ["bolsa", "clutch", "tote"],
   mochila: ["mochila"],
   mala: ["mala", "bagagem", "frasqueira"],
-  acessorio: ["acessorio", "cinto", "oculo", "bone", "chapeu", "brinco", "colar", "lenco"],
+  acessorio: ["acessorio", "cinto", "oculo", "bone", "chapeu", "lenco"],
+  joia: ["joia", "anel", "colar", "brinco", "pulseira", "pingente", "corrente", "gargantilha", "bracelete", "relogio", "argola", "choker"],
 } as const;
 
 export type ProductType = keyof typeof TYPES;

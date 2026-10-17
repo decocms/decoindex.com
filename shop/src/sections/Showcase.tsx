@@ -12,6 +12,8 @@ export interface CategoryCard {
   label: string;
   /** @title Tipo de peça (vestido, saia, tenis, biquini, bolsa…) */
   type: ProductType;
+  /** @title Termos para a foto (ex.: linho, verde) */
+  terms?: string;
   /** @title Cor de fundo */
   /** @format color */
   color?: string;
@@ -19,6 +21,16 @@ export interface CategoryCard {
   prompt?: string;
   /** @title Departamento (vazio = ambos) */
   dept?: "feminino" | "masculino";
+}
+
+/** Another carousel of cards with its own angle: by material, by color… */
+export interface CardSection {
+  /** @title Rótulo acima do título */
+  kicker: string;
+  /** @title Título */
+  title: string;
+  /** @title Cards */
+  cards: CategoryCard[];
 }
 
 /** @titleBy text */
@@ -48,6 +60,8 @@ export interface IdeaSection {
 export interface Props {
   categoriesTitle?: string;
   cards?: CategoryCard[];
+  /** @title Mais carrosséis de cards */
+  cardSections?: CardSection[];
   ideasTitle?: string;
   ideasSubtitle?: string;
   ideas?: Idea[];
@@ -58,9 +72,14 @@ export interface Props {
 const PALETTE = ["#b5533c", "#c4a184", "#a8862f", "#2c3e5c", "#2f4a3a", "#3f5f86", "#5a3550", "#6b6b3a"];
 const forDept = <T extends { dept?: string }>(xs: T[], dept: string) => xs.filter((x) => !x.dept || x.dept === dept);
 
-export default function Showcase({ categoriesTitle = "O que você procura?", cards = [], ideasTitle = "Buscas em alta.", ideasSubtitle = "O que as pessoas estão pedindo ao deco shop agora.", ideas = [], ideaSections = [] }: Props) {
+export default function Showcase({ categoriesTitle = "O que você procura?", cards = [], ideasTitle = "Buscas em alta.", ideasSubtitle = "O que as pessoas estão pedindo ao deco shop agora.", ideas = [], ideaSections = [], cardSections = [] }: Props) {
   const { dept, started } = useBus();
-  const c = forDept(cards, dept);
+  // Card carousels in order (categories, then by material, by color…); one flat list goes to the snapshot.
+  const rows = [
+    { kicker: "Categorias", title: categoriesTitle, cards: forDept(cards, dept) },
+    ...cardSections.slice(0, 2).map((r) => ({ kicker: r.kicker, title: r.title, cards: forDept(r.cards ?? [], dept).slice(0, 10) })),
+  ].filter((r) => r.cards.length);
+  const c = rows.flatMap((r) => r.cards);
   // Every block of ideas, in order: the first is "Buscas em alta". One flat list goes to the snapshot.
   const blocks = [
     { title: ideasTitle, subtitle: ideasSubtitle, ideas: forDept(ideas, dept).slice(0, 4) },
@@ -69,12 +88,12 @@ export default function Showcase({ categoriesTitle = "O que você procura?", car
   const i = blocks.flatMap((b) => b.ideas);
 
   const { data } = useQuery({
-    queryKey: ["showcase", dept, c.map((x) => x.type), i.map((x) => [x.type, x.terms])],
+    queryKey: ["showcase", dept, c.map((x) => [x.type, x.terms]), i.map((x) => [x.type, x.terms])],
     queryFn: () =>
       getShowcase({
         data: {
           dept,
-          cards: c.map((x) => ({ type: x.type })),
+          cards: c.map((x) => ({ type: x.type, terms: x.terms })),
           ideas: i.map((x) => ({ type: x.type, terms: x.terms })),
         },
       }),
@@ -83,58 +102,69 @@ export default function Showcase({ categoriesTitle = "O que você procura?", car
 
   if (started) return null;
   const kicker = dept === "masculino" ? "Masculino" : "Feminino";
+  const offset = (xs: { length: number }[], n: number) => xs.slice(0, n).reduce((sum, x) => sum + x.length, 0);
 
+  // Card rows and idea blocks take turns down the page: categories, ideas, materials, occasions, colors, styles.
+  const sections: React.ReactNode[] = [];
+  for (let n = 0; n < Math.max(rows.length, blocks.length); n++) {
+    if (rows[n]) sections.push(<CardRow key={`r${n}`} row={rows[n]} first={offset(rows.map((r) => r.cards), n)} kicker={kicker} cards={data?.cards} top={n === 0} />);
+    if (blocks[n]) sections.push(<IdeaBlock key={`b${n}`} block={blocks[n]} n={n} first={offset(blocks.map((b) => b.ideas), n)} tiles={data?.ideas} />);
+  }
+  return <div className="pb-8">{sections}</div>;
+}
+
+function CardRow({ row, first, kicker, cards, top }: { row: { kicker: string; title: string; cards: CategoryCard[] }; first: number; kicker: string; cards?: Tile[][]; top: boolean }) {
   return (
-    <div className="pb-8">
-      {c.length > 0 && (
-        <section className="mx-auto max-w-[1280px] px-4 pt-10 md:px-8">
-          <Heading kicker="Categorias" title={categoriesTitle} />
-          <div className="no-scrollbar -mx-4 mt-5 flex snap-x gap-2.5 overflow-x-auto px-4 pb-2 md:-mx-8 md:px-8">
-            {/* A card whose photos came back empty is skipped, never shown as blank placeholders. */}
-            {c.map((card, k) => (data && !data.cards[k]?.length ? null : (
-              <button
-                key={card.label}
-                type="button"
-                onClick={() => bus.ask(card.prompt || card.label)}
-                className="tap-scale group relative flex h-[264px] w-[200px] shrink-0 snap-start flex-col items-center justify-start overflow-hidden rounded-md text-white md:w-[220px]"
-                style={{ background: `linear-gradient(180deg, ${card.color || PALETTE[k % PALETTE.length]} 0%, color-mix(in oklab, ${card.color || PALETTE[k % PALETTE.length]} 78%, black) 100%)` }}
-              >
-                <p className="pt-7 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/60">{kicker}</p>
-                <p className="mt-1.5 text-[22px] font-medium tracking-tight">{card.label}</p>
-                <Fan tiles={data?.cards[c.indexOf(card)]} />
-              </button>
-            )))}
-          </div>
-        </section>
-      )}
+    <section className={`mx-auto max-w-[1280px] px-4 md:px-8 ${top ? "pt-10" : "mt-16"}`}>
+      <Heading kicker={row.kicker} title={row.title} />
+      <div className="no-scrollbar -mx-4 mt-5 flex snap-x gap-2.5 overflow-x-auto px-4 pb-2 md:-mx-8 md:px-8">
+        {/* A card whose photos came back empty is skipped, never shown as blank placeholders. */}
+        {row.cards.map((card, k) => {
+          const tiles = cards?.[first + k];
+          if (cards && !tiles?.length) return null;
+          const bg = card.color || PALETTE[k % PALETTE.length];
+          return (
+            <button
+              key={card.label}
+              type="button"
+              onClick={() => bus.ask(card.prompt || card.label)}
+              className="tap-scale group relative flex h-[264px] w-[200px] shrink-0 snap-start flex-col items-center justify-start overflow-hidden rounded-md text-white md:w-[220px]"
+              style={{ background: `linear-gradient(180deg, ${bg} 0%, color-mix(in oklab, ${bg} 78%, black) 100%)` }}
+            >
+              <p className="pt-7 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/60">{kicker}</p>
+              <p className="mt-1.5 text-[22px] font-medium tracking-tight">{card.label}</p>
+              <Fan tiles={tiles} />
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 
-      {blocks.map((block, n) => {
-        const first = blocks.slice(0, n).reduce((sum, b) => sum + b.ideas.length, 0); // offset into data.ideas
-        const [lead, ...rest] = block.ideas;
-        return (
-          <section key={block.title} className="mx-auto mt-16 max-w-[1280px] px-4 md:px-8">
-            <h2 className="text-[2rem] font-medium leading-tight tracking-[-0.03em] md:text-5xl">{block.title}</h2>
-            {block.subtitle && <p className="mt-2 text-ink-soft">{block.subtitle}</p>}
-            {n === 0 && (
-              <button type="button" onClick={() => document.querySelector<HTMLTextAreaElement>("textarea")?.focus()} className="tap-scale mt-5 inline-flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-sm font-medium text-white shadow-[0_10px_30px_-12px_rgba(0,0,0,0.5)]">
-                Começar a conversar <span aria-hidden>→</span>
-              </button>
-            )}
-            {/* Blocks alternate sides, so the page doesn't read as the same block three times. */}
-            <div className={`mt-8 grid gap-8 md:gap-12 ${n % 2 ? "md:grid-cols-[1fr_1.3fr]" : "md:grid-cols-[1.3fr_1fr]"}`}>
-              <div className={n % 2 ? "md:order-2" : ""}>
-                <IdeaFeature idea={lead} tile={data?.ideas[first]} />
-              </div>
-              <div className="flex flex-col">
-                {rest.map((idea, k) => (
-                  <IdeaRow key={idea.text} idea={idea} tile={data?.ideas[first + k + 1]} />
-                ))}
-              </div>
-            </div>
-          </section>
-        );
-      })}
-    </div>
+function IdeaBlock({ block, n, first, tiles }: { block: { title: string; subtitle?: string; ideas: Idea[] }; n: number; first: number; tiles?: (Tile | null)[] }) {
+  const [lead, ...rest] = block.ideas;
+  return (
+    <section className="mx-auto mt-16 max-w-[1280px] px-4 md:px-8">
+      <h2 className="text-[2rem] font-medium leading-tight tracking-[-0.03em] md:text-5xl">{block.title}</h2>
+      {block.subtitle && <p className="mt-2 text-ink-soft">{block.subtitle}</p>}
+      {n === 0 && (
+        <button type="button" onClick={() => document.querySelector<HTMLTextAreaElement>("textarea")?.focus()} className="tap-scale mt-5 inline-flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-sm font-medium text-white shadow-[0_10px_30px_-12px_rgba(0,0,0,0.5)]">
+          Começar a conversar <span aria-hidden>→</span>
+        </button>
+      )}
+      {/* Blocks alternate sides, so the page doesn't read as the same block three times. */}
+      <div className={`mt-8 grid gap-8 md:gap-12 ${n % 2 ? "md:grid-cols-[1fr_1.3fr]" : "md:grid-cols-[1.3fr_1fr]"}`}>
+        <div className={n % 2 ? "md:order-2" : ""}>
+          <IdeaFeature idea={lead} tile={tiles?.[first]} />
+        </div>
+        <div className="flex flex-col">
+          {rest.map((idea, k) => (
+            <IdeaRow key={idea.text} idea={idea} tile={tiles?.[first + k + 1]} />
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 

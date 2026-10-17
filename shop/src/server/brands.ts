@@ -5,7 +5,7 @@
  *
  * ponytail: hardcoded roster; move to a CMS block once brands get added weekly.
  */
-export type Segment = "feminino" | "masculino" | "infantil" | "esporte" | "calcados" | "bolsas" | "praia" | "lingerie";
+export type Segment = "feminino" | "masculino" | "infantil" | "esporte" | "calcados" | "bolsas" | "praia" | "lingerie" | "joias";
 
 export interface Brand {
   domain: string;

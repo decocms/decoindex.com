@@ -1694,9 +1694,15 @@
                     "mochila",
                     "mala",
                     "acessorio",
+                    "joia",
                     "jeans"
                   ],
                   "title": "Tipo de peça (vestido, saia, tenis, biquini, bolsa…)"
+                },
+                "terms": {
+                  "type": "string",
+                  "nullable": true,
+                  "title": "Termos para a foto (ex.: linho, verde)"
                 },
                 "color": {
                   "type": "string",
@@ -1727,6 +1733,107 @@
             },
             "nullable": true,
             "title": "Cards"
+          },
+          "cardSections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kicker": {
+                  "type": "string",
+                  "title": "Rótulo acima do título"
+                },
+                "title": {
+                  "type": "string",
+                  "title": "Título"
+                },
+                "cards": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string",
+                        "title": "Nome do card"
+                      },
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "vestido",
+                          "saia",
+                          "short",
+                          "bermuda",
+                          "calca",
+                          "camisa",
+                          "camiseta",
+                          "polo",
+                          "blusa",
+                          "top",
+                          "body",
+                          "macacao",
+                          "casaco",
+                          "moletom",
+                          "biquini",
+                          "maio",
+                          "praia",
+                          "lingerie",
+                          "tenis",
+                          "sandalia",
+                          "chinelo",
+                          "sapato",
+                          "bolsa",
+                          "mochila",
+                          "mala",
+                          "acessorio",
+                          "joia",
+                          "jeans"
+                        ],
+                        "title": "Tipo de peça (vestido, saia, tenis, biquini, bolsa…)"
+                      },
+                      "terms": {
+                        "type": "string",
+                        "nullable": true,
+                        "title": "Termos para a foto (ex.: linho, verde)"
+                      },
+                      "color": {
+                        "type": "string",
+                        "nullable": true,
+                        "title": "Cor de fundo",
+                        "format": "color"
+                      },
+                      "prompt": {
+                        "type": "string",
+                        "nullable": true,
+                        "title": "Mensagem enviada (vazio = \"{label}\")"
+                      },
+                      "dept": {
+                        "type": "string",
+                        "enum": [
+                          "feminino",
+                          "masculino"
+                        ],
+                        "nullable": true,
+                        "title": "Departamento (vazio = ambos)"
+                      }
+                    },
+                    "required": [
+                      "label",
+                      "type"
+                    ],
+                    "titleBy": "label"
+                  },
+                  "title": "Cards"
+                }
+              },
+              "required": [
+                "kicker",
+                "title",
+                "cards"
+              ],
+              "description": "Another carousel of cards with its own angle: by material, by color…"
+            },
+            "nullable": true,
+            "title": "Mais carrosséis de cards"
           },
           "ideasTitle": {
             "type": "string",
@@ -1780,6 +1887,7 @@
                     "mochila",
                     "mala",
                     "acessorio",
+                    "joia",
                     "jeans"
                   ],
                   "nullable": true,
@@ -1865,6 +1973,7 @@
                           "mochila",
                           "mala",
                           "acessorio",
+                          "joia",
                           "jeans"
                         ],
                         "nullable": true,
