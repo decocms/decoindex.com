@@ -77,7 +77,7 @@ export function useShopChat() {
           case "products":
             return patchLast((t) => ({ ...t, products: [...t.products, ...e.items], status: "Escolhendo os melhores…" }));
           case "curate":
-            return patchLast((t) => ({ ...t, curated: e.ids, refinements: e.refinements }));
+            return patchLast((t) => ({ ...t, curated: e.ids, refinements: e.refinements, status: t.answer ? undefined : "Escrevendo…" }));
           case "share":
             return patchLast((t) => ({ ...t, shareId: e.id }));
           case "text":
