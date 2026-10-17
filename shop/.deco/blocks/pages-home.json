@@ -1,0 +1,119 @@
+{
+  "name": "Home",
+  "__resolveType": "website/pages/Page.tsx",
+  "path": "/",
+  "seo": {
+    "__resolveType": "website/sections/Seo/SeoV2.tsx",
+    "title": "deco shop — moda brasileira num chat só",
+    "description": "Converse para comprar nas marcas brasileiras que você ama, num lugar só.",
+    "type": "website"
+  },
+  "sections": [
+    {
+      "__resolveType": "site/sections/ShopChat.tsx",
+      "headline": "Todas as marcas brasileiras que você ama. Um chat.",
+      "subheadline": "Diga o que procura e eu busco nos catálogos de FARM, Animale, Osklen, Reserva, FILA, New Balance e mais.",
+      "placeholder": "O que você está procurando?",
+      "suggestions": [
+        {
+          "label": "Vestido de linho para um casamento de dia",
+          "dept": "feminino"
+        },
+        {
+          "label": "Look de praia estampado até R$ 400",
+          "dept": "feminino"
+        },
+        {
+          "label": "Alfaiataria para o trabalho",
+          "dept": "feminino"
+        },
+        {
+          "label": "Camisa de linho para o verão",
+          "dept": "masculino"
+        },
+        {
+          "label": "Bermuda e polo para o fim de semana",
+          "dept": "masculino"
+        },
+        {
+          "label": "Tênis de corrida para iniciante"
+        },
+        {
+          "label": "Mala de bordo leve"
+        }
+      ],
+      "disclaimer": "Preços de catálogo. Estoque, frete e preço final são confirmados na loja."
+    },
+    {
+      "__resolveType": "site/sections/BrandStrip.tsx",
+      "title": "Buscando em",
+      "brands": [
+        {
+          "name": "FARM Rio",
+          "domain": "www.farmrio.com.br"
+        },
+        {
+          "name": "Animale",
+          "domain": "www.animale.com.br"
+        },
+        {
+          "name": "Osklen",
+          "domain": "www.osklen.com.br"
+        },
+        {
+          "name": "John John",
+          "domain": "www.johnjohndenim.com.br"
+        },
+        {
+          "name": "Zinzane",
+          "domain": "www.zinzane.com.br"
+        },
+        {
+          "name": "Reserva",
+          "domain": "www.usereserva.com"
+        },
+        {
+          "name": "Insider",
+          "domain": "www.insiderstore.com.br"
+        },
+        {
+          "name": "Hering",
+          "domain": "www.hering.com.br"
+        },
+        {
+          "name": "C&A",
+          "domain": "www.cea.com.br"
+        },
+        {
+          "name": "FILA",
+          "domain": "www.fila.com.br"
+        },
+        {
+          "name": "New Balance",
+          "domain": "www.newbalance.com.br"
+        },
+        {
+          "name": "ASICS",
+          "domain": "www.asics.com.br"
+        },
+        {
+          "name": "Mizuno",
+          "domain": "www.mizuno.com.br"
+        },
+        {
+          "name": "Olympikus",
+          "domain": "www.olympikus.com.br"
+        },
+        {
+          "name": "Havaianas",
+          "domain": "www.havaianas.com.br"
+        },
+        {
+          "name": "Bagaggio",
+          "domain": "www.bagaggio.com.br"
+        }
+      ],
+      "footnote": "deco shop é um experimento da deco.cx sobre o decoindex. Você compra direto na loja de cada marca — a gente só ajuda a achar."
+    }
+  ]
+}

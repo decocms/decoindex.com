@@ -1,0 +1,5 @@
+# Copy to .dev.vars (never committed). Type the values yourself.
+# The "default" AI Gateway is authenticated: create a token in the dashboard (AI > AI Gateway > default > Settings).
+CF_AI_GATEWAY_TOKEN=
+# Optional if the gateway has an OpenRouter key stored (BYOK).
+OPENROUTER_API_KEY=
