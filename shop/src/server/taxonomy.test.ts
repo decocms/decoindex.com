@@ -118,3 +118,13 @@ test("mixBrands interleaves brands and keeps each brand's order", async () => {
   const out = mixBrands([t("A", "a1"), t("A", "a2"), t("A", "a3"), t("B", "b1"), t("C", "c1"), t("B", "b2")]) as { id: string }[];
   expect(out.map((x) => x.id)).toEqual(["a1", "b1", "c1", "a2", "b2", "a3"]);
 });
+
+test("colorsFromNames reads the color out of SKU names when the slug agrees", async () => {
+  const { colorsFromNames } = await import("./catalog");
+  expect(colorsFromNames("/vestido-linho-desfiado-preto-77131-10/p", [{ name: "Vestido linho desfiado - preto - G" }, { name: "Vestido linho desfiado - preto - M" }])).toEqual(["preto"]);
+  expect(colorsFromNames("/vestido-curto-desfiado-ggt-off-white-75320-18/p", [{ name: "Vestido curto desfiado ggt - off white - G" }])).toEqual(["off white"]);
+  expect(colorsFromNames("/vestido-de-crepe-midi-marrom-grape-07-16/p", [{ name: "Marrom Grape - P" }])).toEqual(["Marrom Grape"]);
+  expect(colorsFromNames("/vestido-cropped-jardim-maravilhoso_preto-341401/p", [{ name: "Jardim Maravilhoso_Preto - PP" }])).toEqual(["Jardim Maravilhoso / Preto"]);
+  // Not in the slug → not trusted as a color.
+  expect(colorsFromNames("/calca-agata/p", [{ name: "Calça Agata - Linho - 38" }])).toEqual([]);
+});
