@@ -12,7 +12,7 @@
     {
       "__resolveType": "site/sections/ShopChat.tsx",
       "headline": "Todas as marcas brasileiras que você ama. Um chat.",
-      "subheadline": "Diga o que procura e eu busco nos catálogos de FARM, Animale, Osklen, Reserva, FILA, New Balance e mais.",
+      "subheadline": "Diga o que procura e eu busco nos catálogos de FARM, Animale, Lenny Niemeyer, Osklen, Dress To, Reserva e mais de 50 marcas.",
       "placeholder": "O que você está procurando?",
       "suggestions": [
         {
@@ -242,7 +242,7 @@
     },
     {
       "__resolveType": "site/sections/BrandStrip.tsx",
-      "title": "Buscando em",
+      "title": "Buscando em 56 marcas",
       "brands": [
         {
           "name": "FARM Rio",
@@ -307,6 +307,166 @@
         {
           "name": "Bagaggio",
           "domain": "www.bagaggio.com.br"
+        },
+        {
+          "name": "Lenny Niemeyer",
+          "domain": "www.lennyniemeyer.com.br"
+        },
+        {
+          "name": "Adriana Degreas",
+          "domain": "www.adrianadegreas.com"
+        },
+        {
+          "name": "PatBO",
+          "domain": "www.patbo.com.br"
+        },
+        {
+          "name": "Iódice",
+          "domain": "www.iodice.com.br"
+        },
+        {
+          "name": "Le Lis",
+          "domain": "www.lelis.com.br"
+        },
+        {
+          "name": "Gloria Coelho",
+          "domain": "www.gloriacoelho.com.br"
+        },
+        {
+          "name": "Ricardo Almeida",
+          "domain": "www.ricardoalmeida.com.br"
+        },
+        {
+          "name": "NK Store",
+          "domain": "www.nkstore.com.br"
+        },
+        {
+          "name": "Bo.Bô",
+          "domain": "www.bobo.com.br"
+        },
+        {
+          "name": "Dress To",
+          "domain": "www.dressto.com.br"
+        },
+        {
+          "name": "Água de Coco",
+          "domain": "www.aguadecoco.com.br"
+        },
+        {
+          "name": "Cia. Marítima",
+          "domain": "www.ciamaritima.com.br"
+        },
+        {
+          "name": "Blue Man",
+          "domain": "www.blueman.com.br"
+        },
+        {
+          "name": "Lança Perfume",
+          "domain": "www.lancaperfume.com.br"
+        },
+        {
+          "name": "Cantão",
+          "domain": "www.cantao.com.br"
+        },
+        {
+          "name": "Maria Valentina",
+          "domain": "www.mariavalentina.com.br"
+        },
+        {
+          "name": "Iorane",
+          "domain": "www.iorane.com.br"
+        },
+        {
+          "name": "Sacada",
+          "domain": "www.sacada.com"
+        },
+        {
+          "name": "Lez a Lez",
+          "domain": "www.lezalez.com.br"
+        },
+        {
+          "name": "Morena Rosa",
+          "domain": "www.morenarosa.com.br"
+        },
+        {
+          "name": "Track & Field",
+          "domain": "www.tf.com.br"
+        },
+        {
+          "name": "Alto Giro",
+          "domain": "www.altogiro.com.br"
+        },
+        {
+          "name": "Handred",
+          "domain": "www.handred.com.br"
+        },
+        {
+          "name": "Dudalina",
+          "domain": "www.dudalina.com.br"
+        },
+        {
+          "name": "Aramis",
+          "domain": "www.aramis.com.br"
+        },
+        {
+          "name": "Sergio K",
+          "domain": "www.sergiok.com.br"
+        },
+        {
+          "name": "Redley",
+          "domain": "www.redley.com.br"
+        },
+        {
+          "name": "Jorge Bischoff",
+          "domain": "www.jorgebischoff.com.br"
+        },
+        {
+          "name": "Santa Lolla",
+          "domain": "www.santalolla.com.br"
+        },
+        {
+          "name": "Capodarte",
+          "domain": "www.capodarte.com.br"
+        },
+        {
+          "name": "Constance",
+          "domain": "www.constance.com.br"
+        },
+        {
+          "name": "Mr. Cat",
+          "domain": "www.mrcat.com.br"
+        },
+        {
+          "name": "Luz da Lua",
+          "domain": "www.luzdalua.com.br"
+        },
+        {
+          "name": "Ferracini",
+          "domain": "www.ferracini.com.br"
+        },
+        {
+          "name": "Usaflex",
+          "domain": "www.usaflex.com.br"
+        },
+        {
+          "name": "Loungerie",
+          "domain": "www.loungerie.com.br"
+        },
+        {
+          "name": "Valisère",
+          "domain": "www.valisere.com.br"
+        },
+        {
+          "name": "Recco",
+          "domain": "www.recco.com.br"
+        },
+        {
+          "name": "Lupo",
+          "domain": "www.lupo.com.br"
+        },
+        {
+          "name": "Pituchinhus",
+          "domain": "www.pituchinhus.com.br"
         }
       ],
       "footnote": "deco shop é um experimento da deco.cx sobre o decoindex. Você compra direto na loja de cada marca — a gente só ajuda a achar."
