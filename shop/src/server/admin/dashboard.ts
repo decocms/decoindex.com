@@ -72,6 +72,8 @@ export const DASHBOARD_HTML = `<!doctype html>
     return n;
   }
   function fmtMs(ms) { return ms == null ? "–" : (ms / 1000).toFixed(1) + "s"; }
+  function kfmt(n) { n = n || 0; return n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "k" : String(n); }
+  function usd(v) { v = v || 0; return "US$ " + (v >= 10 ? v.toFixed(0) : v >= 1 ? v.toFixed(2) : v >= 0.01 ? v.toFixed(3) : v.toFixed(4)); }
   function pct(a, b) { return b ? Math.round((a / b) * 100) + "%" : "–"; }
   function short(m) { return m ? String(m).split("/").pop() : "–"; }
   function when(ts) { try { return new Date(ts).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch (e) { return ts; } }
@@ -108,6 +110,16 @@ export const DASHBOARD_HTML = `<!doctype html>
       ["Cliques p/ lojas", t.clicks || 0], ["Mais como este", t.similar || 0], ["Compartilhados", t.shares || 0], ["👍", pct(up, fb)],
     ].map(function (k) { return el("div", { class: "kpi" }, [el("div", { class: "v", text: String(k[1]) }), el("div", { class: "l", text: k[0] })]); })));
 
+    // Spend: fixed windows plus the selected period's cost per search, as OpenRouter billed it.
+    var sp = d.spend || {};
+    var periodCost = models.reduce(function (s, m) { return s + (m.cost || 0); }, 0);
+    var costed = models.reduce(function (s, m) { return s + (m.costed || 0); }, 0);
+    wrap.appendChild(el("h2", { text: "Custo de modelos" }));
+    wrap.appendChild(el("div", { class: "kpis" }, [
+      ["Últimas 24h", usd(sp.d1)], ["Últimos 7d", usd(sp.d7)], ["Últimos 30d", usd(sp.d30)],
+      ["No período", usd(periodCost)], ["Por busca", costed ? usd(periodCost / costed) : "–"],
+    ].map(function (k) { return el("div", { class: "kpi" }, [el("div", { class: "v", text: String(k[1]) }), el("div", { class: "l", text: k[0] })]); })));
+
     // Traffic: people vs link previews vs bots, and where people come from.
     var tr = d.traffic;
     if (tr) {
@@ -135,10 +147,11 @@ export const DASHBOARD_HTML = `<!doctype html>
     else {
       var best = models.slice().sort(function (a, b) { return (b.chatsClicked / (b.chats || 1)) - (a.chatsClicked / (a.chats || 1)); })[0];
       wrap.appendChild(el("table", null, [
-        el("thead", null, [el("tr", null, ["Modelo", "Buscas", "Conversas", "Latência", "Resultados", "CTR", "👍 / 👎", "Erros"].map(function (h) { return el("th", { text: h }); }))]),
+        el("thead", null, [el("tr", null, ["Modelo", "Buscas", "Conversas", "Latência", "Resultados", "CTR", "👍 / 👎", "Erros", "Custo", "Por busca", "Tokens in / out"].map(function (h) { return el("th", { text: h }); }))]),
         el("tbody", null, models.map(function (m) {
           return el("tr", { class: models.length > 1 && m === best && m.chatsClicked ? "best" : "" }, [
             short(m.model), m.turns, m.chats, fmtMs(m.avgMs), m.avgHits == null ? "–" : m.avgHits, pct(m.chatsClicked, m.chats), (m.up || 0) + " / " + (m.down || 0), m.errors || 0,
+            usd(m.cost), m.costed ? usd(m.cost / m.costed) : "–", kfmt(m.tokensIn) + " / " + kfmt(m.tokensOut),
           ].map(function (v) { return el("td", { text: String(v) }); }));
         })),
       ]));
@@ -150,7 +163,7 @@ export const DASHBOARD_HTML = `<!doctype html>
       wrap.appendChild(el("h2", { text: "Por dia" }));
       var max = Math.max.apply(null, daily.map(function (x) { return x.turns || 0; }).concat([1]));
       wrap.appendChild(el("div", { class: "bars" }, daily.map(function (x) {
-        var b = el("div", { class: "bar", title: x.day + ": " + x.turns + " buscas, " + x.clicks + " cliques", style: "height:" + Math.max(4, (x.turns / max) * 100) + "%" });
+        var b = el("div", { class: "bar", title: x.day + ": " + x.turns + " buscas, " + x.clicks + " cliques, " + usd(x.cost), style: "height:" + Math.max(4, (x.turns / max) * 100) + "%" });
         b.appendChild(el("i", { style: "height:" + (x.turns ? Math.min(100, (x.clicks / x.turns) * 100) : 0) + "%" }));
         b.appendChild(el("span", { text: x.day.slice(5) }));
         return b;

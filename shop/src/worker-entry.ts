@@ -25,6 +25,10 @@ import type { Env, ExecutionContext } from "./server/env";
 const decoWorker = createDecoWorkerEntry(createServerEntry({ fetch: handler.fetch }), {
   admin: { handleMeta, handleDecofileRead, handleDecofileReload, handleRender, corsHeaders },
   securityHeaders: {
+    // Share links open from the admin panel inside Studio's sandboxed iframe, and Chrome refuses
+    // (ERR_BLOCKED_BY_RESPONSE) any page with a COOP header in a popup a sandbox opened.
+    // The shop opens no cross-origin windows it needs isolating from, so the default COOP goes.
+    "Cross-Origin-Opener-Policy": "unsafe-none",
     // Product images are hotlinked from each merchant's own CDN (never rehosted), so img-src is https: wide.
     "Content-Security-Policy": [
       "default-src 'self' https: data: blob:",
