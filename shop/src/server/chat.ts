@@ -8,6 +8,7 @@ import type { Env, ExecutionContext } from "./env";
 import { logEvent } from "./events";
 import { findProducts, similar } from "./find";
 import { preselect, rankTiles, rosterLine } from "./jev";
+import { MERCHANT_IMAGE, describe } from "./vision";
 import { TYPE_NAMES } from "./taxonomy";
 
 const MAX_SEARCHES = 6;
@@ -104,6 +105,26 @@ async function saveShare(env: Env, s: Omit<Share, "id" | "createdAt">): Promise<
   return share.id;
 }
 
+/** OpenRouter through our AI Gateway. The gateway carries BYOK: with no key of our own, send no
+ * Authorization header at all and let it inject the stored one. */
+export function gateway(env: Env, meta: Record<string, string>) {
+  return createOpenRouter({
+    apiKey: env.OPENROUTER_API_KEY || "byok",
+    fetch: env.OPENROUTER_API_KEY
+      ? undefined
+      : (input, init) => {
+          const headers = new Headers(init?.headers);
+          headers.delete("authorization");
+          return fetch(input, { ...init, headers });
+        },
+    baseURL: `https://gateway.ai.cloudflare.com/v1/${env.AI_GATEWAY_ACCOUNT_ID}/${env.AI_GATEWAY_NAME}/openrouter/v1`,
+    headers: {
+      "cf-aig-metadata": JSON.stringify({ app: "decoshop", ...meta }),
+      ...(env.CF_AI_GATEWAY_TOKEN ? { "cf-aig-authorization": `Bearer ${env.CF_AI_GATEWAY_TOKEN}` } : {}),
+    },
+  });
+}
+
 async function limited(env: Env, ip: string) {
   return !!env.CHAT_LIMIT && !(await env.CHAT_LIMIT.limit({ key: ip })).success;
 }
@@ -143,23 +164,7 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
   const health = newHealth();
   const UNREACHABLE = "As lojas não responderam agora — não é falta de produto. Tente de novo em instantes.";
 
-  const openrouter = createOpenRouter({
-    // The gateway carries BYOK for OpenRouter: with no key of our own, send no
-    // Authorization header at all and let it inject the stored one.
-    apiKey: env.OPENROUTER_API_KEY || "byok",
-    fetch: env.OPENROUTER_API_KEY
-      ? undefined
-      : (input, init) => {
-          const headers = new Headers(init?.headers);
-          headers.delete("authorization");
-          return fetch(input, { ...init, headers });
-        },
-    baseURL: `https://gateway.ai.cloudflare.com/v1/${env.AI_GATEWAY_ACCOUNT_ID}/${env.AI_GATEWAY_NAME}/openrouter/v1`,
-    headers: {
-      "cf-aig-metadata": JSON.stringify({ app: "decoshop", chat: body.chatId, model }),
-      ...(env.CF_AI_GATEWAY_TOKEN ? { "cf-aig-authorization": `Bearer ${env.CF_AI_GATEWAY_TOKEN}` } : {}),
-    },
-  });
+  const openrouter = gateway(env, { chat: body.chatId, model });
 
   return ndjson(
     ctx,
@@ -391,16 +396,32 @@ export async function handleSimilar(req: Request, env: Env, ctx: ExecutionContex
     title: seed.title.slice(0, 160),
     category: typeof seed.category === "string" ? seed.category.slice(0, 80) : undefined,
     priceMinor: Number.isFinite(seed.priceMinor) ? Number(seed.priceMinor) : undefined,
+    // Only a merchant CDN photo: the URL goes to a vision model, so nothing arbitrary.
+    image: typeof seed.image === "string" && MERCHANT_IMAGE.test(seed.image) ? seed.image : undefined,
   };
   let hits = 0;
+  const rank = { jevMs: 0, visionMs: 0, cost: 0, vision: "", look: [] as string[] };
 
   return ndjson(
     ctx,
     async (send) => {
       await send({ type: "meta", chatId: body.chatId, model: "similar" });
-      await send({ type: "status", text: "Procurando parecidos…" });
+      // One look at the seed's photo (only that one image) gives the words its title lacks: color,
+      // print, length. They steer which products get fetched and how Jev ranks them.
+      let look: string[] = [];
+      if (clean.image) {
+        await send({ type: "status", text: "Olhando a peça…" });
+        const seen = await describe(env, clean.image, clean.title, { chat: body.chatId, model: "similar" });
+        if ("error" in seen) rank.vision = `error: ${seen.error}`;
+        else {
+          look = seen.look;
+          Object.assign(rank, { look, visionMs: seen.ms, vision: seen.model });
+          rank.cost += seen.cost;
+        }
+      }
+      await send({ type: "status", text: look.length ? `Procurando parecidos: ${look.slice(0, 3).join(", ")}…` : "Procurando parecidos…" });
       const health = newHealth();
-      const found = await similar({ env, ip, dept: body.dept, health }, clean);
+      const found = await similar({ env, ip, dept: body.dept, health }, clean, look);
       hits = found.tiles.length;
       if (!hits && health.failed && !health.ok) {
         await send({ type: "error", message: "As lojas não responderam agora — tente de novo em instantes." });
@@ -410,7 +431,17 @@ export async function handleSimilar(req: Request, env: Env, ctx: ExecutionContex
         await send({ type: "text", text: "Não achei nada parecido agora. Tente descrever o que você gostou nele." });
         return;
       }
-      found.tiles = mixBrands(found.tiles);
+      // Heuristics found up to 60 candidates; Jev scores each against the seed and its look.
+      let tiles = found.tiles;
+      const seedLine = `${brandByDomain(clean.domain)?.name} | ${clean.title} | ${clean.category ?? ""}${clean.priceMinor ? ` | R$ ${Math.round(clean.priceMinor / 100)}` : ""}${look.length ? ` | aparência: ${look.join(", ")}` : ""}`;
+      const byJev = await rankTiles(env, { asks: [`Peças parecidas com: ${seedLine}`], dept: body.dept }, tiles, tileLine, 24, 8);
+      if (byJev) {
+        tiles = byJev.tiles;
+        rank.jevMs = byJev.ms;
+        rank.cost += byJev.cost;
+      }
+      found.tiles = mixBrands(tiles.slice(0, 24));
+      hits = found.tiles.length;
       await send({ type: "products", items: found.tiles });
       await send({ type: "curate", ids: found.tiles.map((t) => t.id), refinements: [] });
       const brands = [...new Set(found.tiles.map((t) => t.brand))].slice(0, 4).join(", ");
@@ -426,7 +457,7 @@ export async function handleSimilar(req: Request, env: Env, ctx: ExecutionContex
       });
       if (id) await send({ type: "share", id });
     },
-    (ms, error) => logEvent(env, "shop.similar", ms, { chat: body.chatId, seed: clean.id, hits, error }, clean.domain),
+    (ms, error) => logEvent(env, "shop.similar", ms, { chat: body.chatId, seed: clean.id, hits, error, ...rank }, clean.domain),
   );
 }
 

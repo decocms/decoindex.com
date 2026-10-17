@@ -41,6 +41,7 @@
     "AI_GATEWAY_ACCOUNT_ID": "55dd6d847f366735ef6e0f860c7bdc51",
     "AI_GATEWAY_NAME": "default",
     "PRESELECT_MODEL": "~typesafe/jev-latest",
+    "VISION_MODEL": "openai/gpt-6-luna",
     "ATTRIBUTION_PARAM": "ref",
     "ATTRIBUTION_VALUE": "decoshop"
   }

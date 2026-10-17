@@ -10,6 +10,8 @@ export interface Env {
   CHAT_MODELS: string;
   /** Jev decision model that scores brands before the chat model runs (preselect.ts). */
   PRESELECT_MODEL?: string;
+  /** Multimodal model that orders "Mais como este" candidates by photo (vision.ts). */
+  VISION_MODEL?: string;
   AI_GATEWAY_ACCOUNT_ID: string;
   AI_GATEWAY_NAME: string;
   ATTRIBUTION_PARAM: string;
