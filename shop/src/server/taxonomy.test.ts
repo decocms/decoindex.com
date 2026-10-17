@@ -111,3 +111,10 @@ test("every roster brand has context, and nothing orphaned", () => {
   expect(BRANDS.filter((b) => !BRAND_CONTEXT[b.domain]).map((b) => b.domain)).toEqual([]);
   expect(Object.keys(BRAND_CONTEXT).filter((d) => !BRANDS.some((b) => b.domain === d))).toEqual([]);
 });
+
+test("mixBrands interleaves brands and keeps each brand's order", async () => {
+  const { mixBrands } = await import("./chat");
+  const t = (brand: string, id: string) => ({ brand, id }) as never;
+  const out = mixBrands([t("A", "a1"), t("A", "a2"), t("A", "a3"), t("B", "b1"), t("C", "c1"), t("B", "b2")]) as { id: string }[];
+  expect(out.map((x) => x.id)).toEqual(["a1", "b1", "c1", "a2", "b2", "a3"]);
+});
