@@ -40,7 +40,7 @@ interface Snapshot {
 }
 
 const DAY = 86_400_000;
-const SNAPSHOT = (h: string) => `showcase:v7:${h}`;
+const SNAPSHOT = (h: string) => `showcase:v8:${h}`;
 const SPEC = (h: string) => `showcase-spec:${h}`;
 const LOCK = (h: string) => `showcase-lock:${h}`;
 // One shared caller key: showcase reads are few and must not eat a shopper's per-IP budget.
@@ -116,7 +116,10 @@ async function sample(
     if (pickCategory(await categories(env, b.domain, IP, trees), type, { dept: spec.dept })) carry.push(b);
   }
   // For fashion types, sports and shoe brands are a fallback, not the lead (ASICS and Havaianas fronting "Calças").
-  const sporty = (b: (typeof rotated)[number]) => !SHOES.includes(type) && (b.segments.includes("esporte") || b.segments.includes("calcados"));
+  // Same for lingerie brands outside lingerie: their "biquíni" is a panty cut, not swimwear.
+  const sporty = (b: (typeof rotated)[number]) =>
+    (!SHOES.includes(type) && (b.segments.includes("esporte") || b.segments.includes("calcados"))) ||
+    (type !== "lingerie" && b.segments.includes("lingerie"));
   const all = [...carry, ...rotated.filter((b) => !carry.includes(b))];
   const ordered = [...all.filter((b) => !sporty(b)), ...all.filter(sporty)];
   // Prefer stores with a real category for the type; fall back to their search
