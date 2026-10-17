@@ -12,6 +12,22 @@ import { TYPE_NAMES } from "./taxonomy";
 const MAX_SEARCHES = 6;
 const MAX_TURNS = 12;
 const SHARE_TTL = 60 * 60 * 24 * 365;
+/** A first question's answer is reused for a day: same words, same dept, same store, same grid. */
+const ANSWER_TTL = 60 * 60 * 24;
+
+interface CachedAnswer {
+  model: string;
+  tiles: Tile[];
+  refinements: string[];
+  answer: string;
+  share?: string;
+}
+
+async function answerKey(q: string, dept?: string, store?: string) {
+  const norm = q.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9$]+/g, " ").trim();
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${norm}|${dept ?? ""}|${store ?? ""}`));
+  return `answer:v1:${[...new Uint8Array(buf)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("")}`;
+}
 const SORTS = ["relevance", "price_asc", "price_desc", "new", "discount"] as const;
 
 /** 8 chars of base62: short enough for a WhatsApp message, too many to guess. */
@@ -100,9 +116,20 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
     .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
     .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
   const ip = req.headers.get("cf-connecting-ip") ?? "local";
+  const store = BRANDS.some((b) => b.domain === body.store) ? body.store : undefined;
+
+  // Only an opening question is cacheable: later turns depend on the whole thread.
+  // A forced ?model= is someone comparing models by hand, so it always runs live.
+  const opening = messages.length === 1 && messages[0].role === "user" && !body.model && env.SHARES;
+  const key = opening ? await answerKey(messages[0].content, body.dept, store) : "";
+  if (key) {
+    const raw = await env.SHARES!.get(key).catch(() => null);
+    const hit = raw ? (JSON.parse(raw) as CachedAnswer) : null;
+    if (hit) return replay(ctx, env, body, hit);
+  }
+
   if (await limited(env, ip)) return TOO_MANY();
   const model = pickModel(env, body.chatId, body.model);
-  const store = BRANDS.some((b) => b.domain === body.store) ? body.store : undefined;
 
   const seen = new Map<string, Tile>();
   const stats = { searches: 0, viaCategory: 0, hits: 0, curated: 0, brands: [] as string[], share: "" };
@@ -231,6 +258,17 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
         stats.share = id;
         await send({ type: "share", id });
       }
+      // Cache only a clean, complete answer: never a failed read or an empty grid.
+      if (key && final.ids.length && final.answer.trim() && !health.failed) {
+        const cached: CachedAnswer = {
+          model,
+          tiles: final.ids.map((i) => seen.get(i)).filter((t): t is Tile => !!t),
+          refinements: final.refinements,
+          answer: final.answer.trim(),
+          share: id,
+        };
+        await env.SHARES!.put(key, JSON.stringify(cached), { expirationTtl: ANSWER_TTL });
+      }
     },
     (ms, error) =>
       logEvent(env, "shop.chat", ms, {
@@ -244,6 +282,33 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
         ...stats,
         reads: { ok: health.ok, failed: health.failed, statuses: [...new Set(health.statuses)] },
         error: error || (health.failed && !health.ok ? `upstream: ${[...new Set(health.statuses)].join(",")}` : ""),
+      }),
+  );
+}
+
+/** A cached opening answer, streamed in the same events a live one uses. No model call, no catalog read. */
+function replay(ctx: ExecutionContext, env: Env, body: ChatRequest, hit: CachedAnswer) {
+  return ndjson(
+    ctx,
+    async (send) => {
+      await send({ type: "meta", chatId: body.chatId, model: hit.model });
+      await send({ type: "products", items: hit.tiles });
+      await send({ type: "curate", ids: hit.tiles.map((t) => t.id), refinements: hit.refinements });
+      await send({ type: "text", text: hit.answer });
+      if (hit.share) await send({ type: "share", id: hit.share });
+    },
+    (ms, error) =>
+      logEvent(env, "shop.chat", ms, {
+        q: body.messages[0].content.slice(0, 300),
+        chat: body.chatId,
+        model: hit.model,
+        turn: 1,
+        dept: body.dept,
+        store: body.store,
+        cached: true,
+        curated: hit.tiles.length,
+        share: hit.share,
+        error,
       }),
   );
 }
