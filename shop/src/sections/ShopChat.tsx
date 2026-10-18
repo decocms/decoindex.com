@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import type { RefineDim, Share, Tile } from "~/types";
 import { ProductDrawer, ProductTile, outbound, thumb } from "~/components/Product";
-import { FavoritesButton, FavoritesDrawer } from "~/components/Favorites";
-import { HistoryButton, HistoryDrawer } from "~/components/History";
+import { LibraryButton, LibraryDrawer, type LibraryTab } from "~/components/Library";
 import { favorites, useFavorites } from "~/sdk/favorites";
 import { ShareButton, SiteHeader } from "~/components/Share";
 import { pastSearches, type Past } from "~/sdk/history";
@@ -130,8 +129,7 @@ export default function ShopChat({
     }
   }, [turns]);
 
-  const [showHistory, setShowHistory] = useState(false);
-  const [showFavs, setShowFavs] = useState(false);
+  const [library, setLibrary] = useState<LibraryTab | null>(null);
   const favLists = useFavorites();
   const favIds = useMemo(() => new Set(favLists.flatMap((l) => l.items.map((t) => t.id))), [favLists]);
   /** A piece goes into the list of the conversation it came from, named after its first question. */
@@ -145,7 +143,7 @@ export default function ShopChat({
    */
   const openPast = (p: Past) => {
     history.replaceState({ turn: 0 }, "", `/c/${p.id}`);
-    setShowHistory(false);
+    setLibrary(null);
     setOpen(null);
     setView(0);
     if (p.dept === "feminino" || p.dept === "masculino") setDept(p.dept);
@@ -267,8 +265,7 @@ export default function ShopChat({
         }}
         right={
           <span className="flex items-center gap-1">
-            <FavoritesButton onClick={() => setShowFavs(true)} />
-            <HistoryButton onClick={() => setShowHistory(true)} />
+            <LibraryButton onClick={() => setLibrary("historico")} />
             {started && <DeptToggle value={dept} onChange={switchDept} />}
           </span>
         }
@@ -322,14 +319,15 @@ export default function ShopChat({
         </div>
       )}
 
-      {showHistory && <HistoryDrawer onOpen={openPast} onClose={() => setShowHistory(false)} />}
-      {showFavs && (
-        <FavoritesDrawer
-          onClose={() => setShowFavs(false)}
+      {library && (
+        <LibraryDrawer
+          initial={library}
+          onOpen={openPast}
+          onClose={() => setLibrary(null)}
           onOpenTile={(t) => {
             // Hand the drawer's history entry over to the product view (same layer), so one Back closes it.
             history.replaceState({ turn: history.state?.turn }, "");
-            setShowFavs(false);
+            setLibrary(null);
             setOpen(t);
           }}
         />
