@@ -334,8 +334,9 @@ function Composer({
       setTimeout(() => setHint(false), 3_000);
       return;
     }
+    // The text stays while the sheet is open: clearing it made the button "short" under the mouse
+    // and popped the hint. A search from the sheet leaves the home anyway.
     onRefine(text.trim());
-    setText("");
   };
   return (
     <form
