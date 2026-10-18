@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { RefineDim, Tile } from "~/types";
 import { ProductDrawer, ProductTile, outbound, thumb } from "~/components/Product";
+import { HistoryButton, HistoryDrawer } from "~/components/History";
 import { ShareButton, SiteHeader } from "~/components/Share";
+import { pastSearches, type Past } from "~/sdk/history";
 import { bus, useBus } from "~/sdk/bus";
 import { fetchRefine, myContext, track, useShopChat, type Dept, type Turn } from "~/sdk/useShopChat";
 
@@ -112,6 +114,30 @@ export default function ShopChat({
   // When the turn on screen is frozen, its URL becomes /c/{id}: copying the address bar shares
   // exactly these picks, like the Share button, instead of re-running the search.
   const onScreen = view >= 0 ? turns[view] : undefined;
+
+  // Every search that finishes goes into this device's history (deduped by snapshot id).
+  const saved = useRef(new Set<string>());
+  useEffect(() => {
+    for (const t of turns) {
+      if (!t.live || !t.done || !t.shareId || saved.current.has(t.shareId)) continue;
+      saved.current.add(t.shareId);
+      pastSearches.add(t, dept);
+    }
+  }, [turns]);
+
+  const [showHistory, setShowHistory] = useState(false);
+  /**
+   * Reopen a past search as a new conversation. The drawer's own history entry is replaced (not
+   * popped), so Back from the reopened search goes to wherever the shopper was before the drawer.
+   */
+  const openPast = (p: Past) => {
+    history.replaceState({ turn: 0 }, "", `/c/${p.id}`);
+    setShowHistory(false);
+    setOpen(null);
+    setView(0);
+    if (p.dept === "feminino" || p.dept === "masculino") setDept(p.dept);
+    void restore(p.id, 0);
+  };
   useEffect(() => {
     const id = onScreen?.shareId;
     if (!id || location.pathname === `/c/${id}`) return;
@@ -203,7 +229,12 @@ export default function ShopChat({
           history.pushState({ turn: -1 }, "", "/"); // home is "/", not the /c/{id} we were on
           setView(-1);
         }}
-        right={started ? <DeptToggle value={dept} onChange={setDept} /> : undefined}
+        right={
+          <span className="flex items-center gap-1">
+            <HistoryButton onClick={() => setShowHistory(true)} />
+            {started && <DeptToggle value={dept} onChange={setDept} />}
+          </span>
+        }
       />
 
       {!started ? (
@@ -254,6 +285,7 @@ export default function ShopChat({
         </div>
       )}
 
+      {showHistory && <HistoryDrawer onOpen={openPast} onClose={() => setShowHistory(false)} />}
       {refining && (
         <RefineSheet
           text={refining.text}
