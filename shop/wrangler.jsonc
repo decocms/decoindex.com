@@ -44,6 +44,26 @@
     "VISION_MODEL": "openai/gpt-6-luna",
     "ATTRIBUTION_PARAM": "ref",
     "ATTRIBUTION_VALUE": "decoshop"
+  },
+  // PR previews (Workers Builds runs `wrangler preview`). Deliberately the production KV, D1,
+  // rate limit and catalog binding: a preview is the real shop on new code, and its test traffic
+  // is tagged like any other. Secrets are separate: `wrangler preview secret put CF_AI_GATEWAY_TOKEN`.
+  "previews": {
+    "vars": {
+      "DECO_SITE_NAME": "decoshop",
+      "DECO_ENV_NAME": "preview",
+      "CHAT_MODELS": "anthropic/claude-haiku-5.5,deepseek/deepseek-v4.1-flash",
+      "AI_GATEWAY_ACCOUNT_ID": "55dd6d847f366735ef6e0f860c7bdc51",
+      "AI_GATEWAY_NAME": "default",
+      "PRESELECT_MODEL": "~typesafe/jev-latest",
+      "VISION_MODEL": "openai/gpt-6-luna",
+      "ATTRIBUTION_PARAM": "ref",
+      "ATTRIBUTION_VALUE": "decoshop"
+    },
+    "services": [{ "binding": "INDEX", "service": "decoindex", "entrypoint": "FirstParty" }],
+    "kv_namespaces": [{ "binding": "SHARES", "id": "56ff82663dd749efb3b4c653cbfa3fbf" }],
+    "d1_databases": [{ "binding": "DB", "database_name": "decoindex", "database_id": "82dbbe9a-f533-44ca-bd4f-03d2c6a6ee0c" }],
+    "ratelimits": [{ "name": "CHAT_LIMIT", "namespace_id": "2001", "simple": { "limit": 12, "period": 60 } }]
   }
   // Secrets: wrangler secret put OPENROUTER_API_KEY   (optional with gateway BYOK)
   //          wrangler secret put CF_AI_GATEWAY_TOKEN  (only if the gateway is authenticated)

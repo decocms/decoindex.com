@@ -159,10 +159,10 @@ Workers Build on the `decoindex-shop` Worker: repo `decocms/decoindex.com`, root
 `main` deploys. Secrets: `CF_AI_GATEWAY_TOKEN`, `OPENROUTER_API_KEY` (`wrangler secret put …`,
 typed by a human).
 
-**Previews come from the PR.** Every PR gets a preview version of `decoindex-shop` from the same
-build (Cloudflare posts the URL on the PR). It shares production's bindings (KV, D1, rate
-limits), so tag test traffic. To preview something before it is a PR: `npm run build && npx
-wrangler versions upload --var BUILD_HASH:p$(date +%s)`, which prints a `Version Preview URL` and
-sends it no traffic. The `BUILD_HASH` matters for uncommitted builds: the edge HTML cache is
-versioned by the git commit, so two uploads of one commit would share HTML pointing at deleted JS
-chunks. Then `git checkout -- .deco`. There is no separate preview Worker any more.
+**Previews come from the PR.** Workers Builds runs `npx wrangler preview` for every branch: a
+Worker Preview named after the branch, URL posted on the PR. Its config is the `previews` block in
+`wrangler.jsonc`, deliberately on production's KV, D1, rate limit and catalog binding (tag test
+traffic). Preview secrets are separate from production's: `wrangler preview base-config secret put
+CF_AI_GATEWAY_TOKEN` (piped, never typed into a transcript) — without it Jev and the chat fail.
+By hand: `npm run build && npx wrangler preview --name <name>`, then `git checkout -- .deco`.
+There is no separate preview Worker any more.
