@@ -177,10 +177,16 @@ export function ProductDrawer({
   const wide = () => matchMedia("(min-width: 1024px)").matches;
   const close = useBackToClose(1, onClose);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && shown == null && close();
+    const onKey = (e: KeyboardEvent) => {
+      if (shown != null) return; // the full-screen gallery handles its own keys
+      if (e.key === "Escape") close();
+      // Desktop stage: arrows page the photos.
+      const n = t.images.length;
+      if (n > 1 && (e.key === "ArrowRight" || e.key === "ArrowLeft")) setStage((i) => (i + (e.key === "ArrowRight" ? 1 : -1) + n) % n);
+    };
     addEventListener("keydown", onKey);
     return () => removeEventListener("keydown", onKey);
-  }, [close, shown]);
+  }, [close, shown, t.images.length]);
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label={t.title}>
@@ -188,9 +194,10 @@ export function ProductDrawer({
       {t.images.length > 0 && (
         // The space the drawer leaves on a desktop is the product's photo, not a blurred grid.
         <div className="pointer-events-none relative hidden min-w-0 flex-1 items-center justify-center p-10 lg:flex">
-          <button type="button" onClick={() => setShown(stage)} aria-label="Ver fotos em tela cheia" className="pointer-events-auto h-full max-h-[min(100%,1100px)] animate-rise">
+          {/* The stage is the desktop gallery: thumbs and arrows switch it; full screen is for phones. */}
+          <div className="pointer-events-auto h-full max-h-[min(100%,1100px)]">
             <img key={stage} src={thumb(t.images[stage], 1200)} alt={t.title} className="h-full w-auto max-w-full animate-rise rounded-sm object-contain shadow-2xl" />
-          </button>
+          </div>
           {t.images.length > 1 &&
             ([-1, 1] as const).map((d) => (
               <button

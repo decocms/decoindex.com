@@ -38,7 +38,7 @@ interface Snapshot {
 }
 
 const DAY = 86_400_000;
-const SNAPSHOT = (h: string) => `showcase:v15:${h}`; // v15: card rows by material and color (cards take terms)
+const SNAPSHOT = (h: string) => `showcase:v16:${h}`; // v16: category grid with jewelry/lingerie, editorial photos
 const SPEC = (h: string) => `showcase-spec:${h}`;
 const LOCK = (h: string) => `showcase-lock:${h}`;
 // One shared caller key: showcase reads are few and must not eat a shopper's per-IP budget.
@@ -68,6 +68,9 @@ function deptBrands(dept: ShowcaseSpec["dept"], type: ProductType, day: number, 
     // Shoes/bags still need the department (Capodarte is women's shoes) — sports brands sell to both.
     if (SHOES.includes(type)) return (has(b, "calcados") || has(b, "esporte")) && (has(b, dept) || has(b, "esporte"));
     if (BAGS.includes(type)) return has(b, dept) && (has(b, "bolsas") || type !== "mala");
+    // Jewelers sell to everyone and carry no department of their own; lingerie brands mostly to women.
+    if (type === "joia") return has(b, "joias");
+    if (type === "lingerie") return has(b, "lingerie") && (has(b, dept) || dept === "feminino");
     return has(b, dept);
   });
   // Rotate by day *and* by item: a different first store per day, and different
@@ -217,10 +220,11 @@ function valid(spec: ShowcaseSpec): ShowcaseSpec {
     // Three rows: categories, then by material, then by color.
     cards: (spec.cards ?? [])
       .filter((c) => isType(c.type))
-      .slice(0, 30)
+      .slice(0, 36) // 12 categories + two carousels of 10, with room
       .map((c) => ({ type: c.type, ...(c.terms ? { terms: c.terms.slice(0, 40) } : {}) })),
     // Up to three blocks of four ideas each ("Buscas em alta", occasions, styles).
-    ideas: (spec.ideas ?? []).slice(0, 12).map((i) => ({ type: isType(i.type) ? i.type : undefined, terms: i.terms?.slice(0, 40) })),
+    // Three blocks of four ideas plus the three-photo editorial.
+    ideas: (spec.ideas ?? []).slice(0, 16).map((i) => ({ type: isType(i.type) ? i.type : undefined, terms: i.terms?.slice(0, 40) })),
   };
 }
 
