@@ -155,10 +155,17 @@ function CardRow({ row, first, kicker, cards, top }: { row: { kicker: string; ti
       <Heading kicker={row.kicker} title={row.title} />
       {/* Categories are a grid (everything we carry, jewelry included, at a glance); the other rows scroll. */}
       <div className={top ? "mt-5 grid grid-cols-2 gap-2.5 md:grid-cols-4" : "no-scrollbar -mx-4 mt-5 flex snap-x gap-2.5 overflow-x-auto px-4 pb-2 md:-mx-8 md:px-8"}>
-        {/* A card whose photos came back empty is skipped, never shown as blank placeholders. */}
+        {/* A card whose photos came back empty is skipped, never shown as blank placeholders; the grid
+            then keeps whole rows of four (a missing Biquínis left a hole in the last row). */}
         {row.cards.map((card, k) => {
           const tiles = cards?.[first + k];
           if (cards && !tiles?.length) return null;
+          if (top && cards) {
+            const ok = row.cards.map((_, j) => !!cards[first + j]?.length);
+            const rank = ok.slice(0, k).filter(Boolean).length;
+            const keep = Math.floor(ok.filter(Boolean).length / 4) * 4;
+            if (keep >= 4 && rank >= keep) return null;
+          }
           const bg = card.color || PALETTE[k % PALETTE.length];
           return (
             <button
