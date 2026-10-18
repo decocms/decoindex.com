@@ -33,7 +33,9 @@ const EVENTS_WITH_ROLES: Record<string, string[]> = {
   "jantar de gala": ["convidada(o)", "anfitriã(ão)"],
 };
 const OCCASIONS = [
-  ...Object.entries(EVENTS_WITH_ROLES).flatMap(([e, roles]) => roles.map((r) => `${e} — ${r}`)),
+  // The bare event first: "vestido de casamento" says nothing about who is wearing it, and with only
+  // role options Jev picked "noiva" at 100%. The bare event is how it says "role unknown".
+  ...Object.entries(EVENTS_WITH_ROLES).flatMap(([e, roles]) => [e, ...roles.map((r) => `${e} — ${r}`)]),
   "bodas", "cerimônia religiosa", "missa ou culto", "velório ou missa de sétimo dia", "réveillon", "réveillon na praia", "natal em família",
   "carnaval", "bloco de carnaval", "festa junina", "páscoa", "dia das mães", "dia dos namorados", "halloween",
   "jantar romântico", "primeiro encontro", "jantar com amigos", "jantar de negócios", "almoço de família", "brunch", "happy hour", "churrasco",
@@ -69,7 +71,7 @@ interface Dim {
 }
 
 export const DIMS: Dim[] = [
-  { key: "ocasiao", name: "ocasião", label: "Para qual ocasião?", question: "Para qual ocasião, e com qual papel nela, o cliente procura?", relevance: "Saber a ocasião ajuda a escolher a peça certa para este pedido", options: OCCASIONS },
+  { key: "ocasiao", name: "ocasião", label: "Para qual ocasião?", question: "Para qual ocasião o cliente procura, e com qual papel nela? Escolha uma opção com papel (noiva, madrinha, convidada…) só se o pedido disser quem a pessoa é; se não disser, escolha o evento sem papel.", relevance: "Saber a ocasião ajuda a escolher a peça certa para este pedido", options: OCCASIONS },
   { key: "periodo", name: "horário", label: "Que horas?", question: "Em que período do dia a peça vai ser usada?", relevance: "O período do dia (manhã, tarde, noite) muda a escolha da peça para este pedido", options: ["manhã", "tarde", "fim de tarde", "noite", "o dia todo"] },
   { key: "traje", name: "traje", label: "Qual o traje?", question: "Qual o nível de formalidade esperado?", relevance: "O nível de formalidade muda a escolha da peça para este pedido", options: ["casual", "esporte fino", "passeio completo", "black tie / gala", "esportivo"] },
   { key: "clima", name: "clima", label: "Como vai estar o clima?", question: "Qual o clima provável no lugar e na época em que a peça vai ser usada?", relevance: "O clima muda a escolha da peça (tecido, manga, comprimento) para este pedido", options: ["calor forte", "quente", "ameno", "fresco", "frio", "frio intenso"] },
@@ -110,13 +112,32 @@ export async function refine(env: Env, text: string, dept?: string): Promise<{ d
     const probs = res.answers[d.key]?.probabilities ?? {};
     const unknown = probs[`o${d.options.length}`] ?? 0;
     // Stable sort: when the request says nothing, the list's own order (manhã, tarde, noite) stands.
-    const ranked = d.options.map((label, i) => ({ label, p: probs[`o${i}`] ?? 0 })).sort((a, b) => b.p - a.p);
+    let ranked = d.options.map((label, i) => ({ label, p: probs[`o${i}`] ?? 0 })).sort((a, b) => b.p - a.p);
     const relevant = (res.answers[`${d.key}_importa`]?.noul ?? 0) >= 0.6;
-    const picked = ranked.filter((o) => o.p >= SURE).map((o) => o.label);
-    const ask = relevant && !picked.length && (unknown >= 0.4 || (ranked[0]?.p ?? 0) < 0.5);
-    // A question shows its best six even when Jev has no clue; otherwise only what it found plausible.
-    const options = (ask ? ranked : ranked.filter((o) => o.p >= 0.02)).slice(0, 6);
-    return { key: d.key, name: d.name, label: d.label, options, picked, ask };
+    let picked = ranked.filter((o) => o.p >= SURE).map((o) => o.label);
+    let ask = relevant && !picked.length && (unknown >= 0.4 || (ranked[0]?.p ?? 0) < 0.5);
+    // The event is known but not the role ("vestido de casamento"): ask the role, among that event's.
+    const roles = d.key === "ocasiao" && EVENTS_WITH_ROLES[ranked[0]?.label] && ranked[0].p >= 0.5 ? EVENTS_WITH_ROLES[ranked[0].label] : null;
+    if (roles) {
+      const event = ranked[0].label;
+      ranked = roles.map((r) => ({ label: `${event} — ${r}`, p: probs[`o${d.options.indexOf(`${event} — ${r}`)}`] ?? 0 })).sort((a, b) => b.p - a.p);
+      picked = [];
+      ask = true;
+    }
+    // Always alternatives, picked or not: an inference the shopper can't change is a guess imposed on
+    // them. Occasions only where Jev sees a chance (the list is long; "casamento" is no alternative
+    // to a half marathon); the short lists show their best six.
+    const shown = d.key === "ocasiao" && !roles ? ranked.filter((o, i) => i === 0 || o.p >= 0.002) : ranked;
+    return { key: d.key, name: d.name, label: roles ? "Qual o seu papel?" : d.label, options: shown.slice(0, 6), picked, ask };
   });
+  // Without the role, what Jev inferred from an assumed one (white and black tie: the bride) is not
+  // known either. Still offered, nothing pre-selected.
+  if (dims[0].ask && dims[0].label === "Qual o seu papel?") {
+    for (const d of dims)
+      if (["traje", "cor", "estilo"].includes(d.key) && d.picked.length) {
+        d.picked = [];
+        d.ask = true; // it mattered enough to infer, so it's worth asking
+      }
+  }
   return { dims, cost: res.cost };
 }
