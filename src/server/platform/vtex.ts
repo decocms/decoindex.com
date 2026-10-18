@@ -60,7 +60,7 @@ export async function resolveVtex(
   }
 
   const term = searchTerm(path, query);
-  if (term !== undefined) return search(shop, term, query);
+  if (term !== undefined) return search(env, shop, term, query);
 
   return listing(env, shop, path, query);
 }
@@ -103,29 +103,120 @@ function ordered(rows: VtexProduct[], shop: Storefront, sort: Sort | undefined) 
   return products;
 }
 
-async function search(shop: Storefront, term: string, query: URLSearchParams): Promise<Doc> {
+async function search(env: Env, shop: Storefront, term: string, query: URLSearchParams): Promise<Doc> {
   const page = Math.max(1, Number(query.get("page") ?? 1) || 1);
   const from = (page - 1) * PER_PAGE;
   const sort = parseSort(query.get("sort"));
   const order = sort ? `&O=${VTEX_ORDER[sort]}` : "";
-  // encodeURIComponent, not a `+`: VTEX answers 400 to a plus-encoded space.
-  const res = await getWithHeaders<VtexProduct[]>(
-    `${api(shop)}/api/catalog_system/pub/products/search?ft=${encodeURIComponent(term)}` +
-      `&_from=${from}&_to=${from + PER_PAGE - 1}${order}`,
-  );
-  if (res.failed) return { kind: "upstream_error" };
-  if (!res.body?.length) {
+  // Intelligent Search first (relevance, synonyms, every word counts); the legacy full-text
+  // search only when IS is not there or finds nothing. Two upstream calls at most.
+  let rows = await intelligentSearch(env, shop, "", term, page, sort);
+  let total = rows?.total;
+  if (!rows?.products.length) {
+    // encodeURIComponent, not a `+`: VTEX answers 400 to a plus-encoded space.
+    const res = await getWithHeaders<VtexProduct[]>(
+      `${api(shop)}/api/catalog_system/pub/products/search?ft=${encodeURIComponent(term)}` +
+        `&_from=${from}&_to=${from + PER_PAGE - 1}${order}`,
+    );
+    if (res.failed && !rows) return { kind: "upstream_error" };
+    rows = { products: res.body ?? [], total: totalFromResources(res.resources) };
+    total = rows.total;
+  }
+  if (!rows.products.length) {
     return { kind: "listing", title: `Search: ${term}`, total: 0, page, products: [], query: term };
   }
   return {
     kind: "listing",
     title: `Search: ${term}`,
-    total: totalFromResources(res.resources),
+    total,
     page,
     sort,
     query: term,
-    products: ordered(res.body, shop, sort),
+    products: ordered(rows.products, shop, sort),
   };
+}
+
+/**
+ * VTEX Intelligent Search: the search the storefront itself uses. The legacy `ft=` search
+ * matches any word, so "vestido midi verde" came back as every midi dress; IS returned only
+ * green ones. Not every account runs it, and where it answers differs: some only on the
+ * merchant's domain (another binding on `vtexcommercestable` has a different catalog), headless
+ * fronts only on `vtexcommercestable` (their domain is a Next.js app). So the host is learned
+ * once per domain and remembered for a week: origin, then stable, then none. Each read still
+ * makes one IS call at most, and returns null when IS is unavailable so the caller falls back.
+ */
+const IS_SORT: Partial<Record<Sort, string>> = {
+  price_asc: "price:asc",
+  price_desc: "price:desc",
+  new: "release:desc",
+  discount: "discount:desc",
+  name_asc: "name:asc",
+  name_desc: "name:desc",
+};
+const IS_HOST_TTL = 7 * 86_400;
+type IsHost = "origin" | "stable" | "try-stable" | "none";
+
+async function intelligentSearch(
+  env: Env,
+  shop: Storefront,
+  /** Facet path, e.g. "category-1/feminino/category-2/vestido"; "" for the whole catalog. */
+  facets: string,
+  term: string,
+  page: number,
+  sort: Sort | undefined,
+): Promise<{ products: VtexProduct[]; total?: number } | null> {
+  const key = `ishost:${shop.domain}`;
+  const known = ((await env.CACHE.get(key).catch(() => null)) ?? undefined) as IsHost | undefined;
+  if (known === "none") return null;
+  const stable = api(shop);
+  const host = known === "stable" || known === "try-stable" ? stable : shop.origin;
+  const order = sort && IS_SORT[sort] ? `&sort=${IS_SORT[sort]}` : "";
+  const res = await getWithHeaders<{ products?: IsProduct[]; recordsFiltered?: number }>(
+    `${host}/api/io/_v/api/intelligent-search/product_search/${facets}?query=${encodeURIComponent(term)}` +
+      `&page=${page}&count=${PER_PAGE}&hideUnavailableItems=false${order}`,
+  );
+  const ok = !res.failed && Array.isArray(res.body?.products);
+  // Learn only while unconfirmed; a confirmed host that fails once is a blip, not a verdict.
+  const next: IsHost | undefined = ok
+    ? known === "origin" || known === "stable" ? undefined : host === stable ? "stable" : "origin"
+    : !known ? (stable !== shop.origin ? "try-stable" : "none") : known === "try-stable" ? "none" : undefined;
+  if (next) await env.CACHE.put(key, next, { expirationTtl: IS_HOST_TTL }).catch(() => {});
+  if (!ok) return null;
+  return { products: res.body!.products!.map(fromIntelligentSearch), total: res.body!.recordsFiltered };
+}
+
+/**
+ * IS returns the legacy product shape with two differences toProduct() cares about: variations
+ * are `{name, values}` objects, and specifications live in `properties`. Fold both back.
+ */
+function fromIntelligentSearch(p: IsProduct): VtexProduct {
+  const skuSpecs = new Set((p.skuSpecifications ?? []).map((s) => s.field?.name));
+  const props = (p.properties ?? []).filter((x) => x.name && !skuSpecs.has(x.name) && x.name !== "sellerId");
+  return {
+    ...Object.fromEntries(props.map((x) => [x.name, x.values])),
+    productId: p.productId,
+    productName: p.productName,
+    brand: p.brand,
+    linkText: p.linkText,
+    description: p.description,
+    metaTagDescription: p.metaTagDescription,
+    categories: p.categories,
+    allSpecifications: props.map((x) => x.name),
+    items: (p.items ?? []).map((it) => ({
+      ...it,
+      ...Object.fromEntries((it.variations ?? []).map((v) => [v.name, v.values])),
+      variations: (it.variations ?? []).map((v) => v.name),
+    })),
+  } as VtexProduct;
+}
+
+/** A category path as IS facets: /feminino/vestido -> category-1/feminino/category-2/vestido. */
+function categoryFacets(path: string): string {
+  return path
+    .split("/")
+    .filter(Boolean)
+    .map((s, i) => `category-${i + 1}/${encodeURIComponent(s)}`)
+    .join("/");
 }
 
 const TOP_PRODUCTS = 20;
@@ -196,6 +287,35 @@ async function listing(
   const segments = path.split("/").filter(Boolean).map(encodeURIComponent).join("/");
   const sort = parseSort(query.get("sort"));
   const order = sort ? `&O=${VTEX_ORDER[sort]}` : "";
+
+  // `?q=` on a category: the category's products that match the words, in one read instead of
+  // "page 1 in the store's order, then a search". IS with the path as facets; if IS is missing
+  // or finds nothing, the legacy search scoped to the path. Still two calls at most.
+  const q = query.get("q")?.trim();
+  if (q) {
+    const found = await intelligentSearch(env, shop, categoryFacets(path), q, page, sort);
+    let rows = found?.products ?? [];
+    let total = found?.total;
+    if (!rows.length) {
+      const res = await getWithHeaders<VtexProduct[]>(
+        `${api(shop)}/api/catalog_system/pub/products/search/${segments}?ft=${encodeURIComponent(q)}&_from=${from}&_to=${from + PER_PAGE - 1}${order}`,
+      );
+      if (res.failed && !found) return { kind: "upstream_error" };
+      rows = res.body ?? [];
+      total = totalFromResources(res.resources);
+    }
+    const subcategories = childrenOf(await getTree(env, shop), path);
+    return {
+      kind: "listing",
+      title: `${titleFromPath(path)}: ${q}`,
+      total: rows.length ? total : 0,
+      page,
+      sort,
+      query: q,
+      products: ordered(rows, shop, sort),
+      ...(subcategories.length ? { subcategories } : {}),
+    };
+  }
 
   let res = await getWithHeaders<VtexProduct[]>(
     `${api(shop)}/api/catalog_system/pub/products/search/${segments}?_from=${from}&_to=${from + PER_PAGE - 1}${order}`,
@@ -419,4 +539,21 @@ interface VtexProduct {
       };
     }[];
   }[];
+}
+
+/** Intelligent Search's product: the legacy shape, except where noted. */
+interface IsProduct {
+  productId: string;
+  productName: string;
+  brand?: string;
+  linkText: string;
+  description?: string;
+  metaTagDescription?: string;
+  categories?: string[];
+  /** Product specifications, as name/values (legacy: `allSpecifications` + top-level keys). */
+  properties?: { name: string; values: string[] }[];
+  skuSpecifications?: { field?: { name?: string } }[];
+  items?: (Omit<NonNullable<VtexProduct["items"]>[number], "variations"> & {
+    variations?: { name: string; values: string[] }[];
+  })[];
 }

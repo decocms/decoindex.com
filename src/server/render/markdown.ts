@@ -54,7 +54,7 @@ function renderCategories(all: CategoryRef[], total: number | undefined, base: s
   const droppedRoots = allRoots.length - roots.length;
   const childrenOf = new Map<string, CategoryRef[]>();
   for (const c of all) {
-    if (c.depth === 0 || !c.parent) continue;
+    if (c.depth !== 1 || !c.parent) continue; // the third level is in .json only
     const bucket = childrenOf.get(c.parent) ?? [];
     bucket.push(c);
     childrenOf.set(c.parent, bucket);

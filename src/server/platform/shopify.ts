@@ -133,7 +133,7 @@ interface ShopifySuggestion {
  */
 async function home(shop: Storefront): Promise<Doc> {
   const [res, featured] = await Promise.all([
-    getJson<{ collections?: ShopifyCollection[] }>(`${shop.origin}/collections.json?limit=50`),
+    getJson<{ collections?: ShopifyCollection[] }>(`${shop.origin}/collections.json?limit=250`),
     getJson<{ products?: ShopifyProduct[] }>(
       `${shop.origin}/collections/frontpage/products.json?limit=20`,
     ),
