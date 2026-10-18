@@ -1,3 +1,4 @@
+import { useRouterState } from "@tanstack/react-router";
 import { useSyncExternalStore } from "react";
 import type { Dept } from "./useShopChat";
 
@@ -35,5 +36,9 @@ const subscribe = (f: () => void) => {
 const SERVER: State = { dept: "feminino", started: false };
 
 export function useBus(): State {
-  return useSyncExternalStore(subscribe, bus.get, () => SERVER);
+  const st = useSyncExternalStore(subscribe, bus.get, () => SERVER);
+  // A /c/{id} page renders its turn on the server: the home's sections are already hidden there,
+  // before ShopChat's effect gets to say "started".
+  const turnPage = useRouterState({ select: (r) => !!(r.matches.find((m) => m.routeId === "/")?.loaderData as { share?: unknown } | undefined)?.share });
+  return turnPage && !st.started ? { ...st, started: true } : st;
 }
