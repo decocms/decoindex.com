@@ -33,7 +33,8 @@ const decoWorker = createDecoWorkerEntry(createServerEntry({ fetch: handler.fetc
     // Product images are hotlinked from each merchant's own CDN (never rehosted), so img-src is https: wide.
     "Content-Security-Policy": [
       "default-src 'self' https: data: blob:",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      // Cloudflare Web Analytics injects its beacon from here; blocked, it counted nothing.
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com",
       "img-src 'self' https: data: blob:",
       "style-src 'self' 'unsafe-inline' api.fontshare.com",
       "font-src 'self' data: cdn.fontshare.com api.fontshare.com",

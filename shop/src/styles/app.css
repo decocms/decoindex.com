@@ -34,7 +34,10 @@
   --duration-base: 220ms;
   --duration-reveal: 500ms;
 
-  --animate-rise: rise var(--duration-reveal) var(--ease-out-soft) both;
+  /* backwards, not both: a finished rise must let go. Held forever, every card kept filter + transform
+     as its own composited layer, and real Chrome's hit-testing on those went stale: the cursor flickered
+     between arrow and pointer and hover never landed until the mouse left the window. */
+  --animate-rise: rise var(--duration-reveal) var(--ease-out-soft) backwards;
   --animate-shimmer: shimmer 1.4s linear infinite;
 }
 

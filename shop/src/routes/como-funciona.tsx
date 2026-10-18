@@ -36,7 +36,7 @@ html, body { background:#0a0a0a; color-scheme: dark; }
 .hw { background:#0a0a0a; color:#e7e5e4; }
 .hw ::selection { background:${LIME}; color:#07401A; }
 @keyframes hw-up { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:none } }
-.hw-up { animation: hw-up .9s cubic-bezier(.16,1,.3,1) both; }
+.hw-up { animation: hw-up .9s cubic-bezier(.16,1,.3,1) backwards; }
 @keyframes hw-rise { from { opacity:0; transform:translateY(28px) } to { opacity:1; transform:none } }
 @supports (animation-timeline: view()) {
   .hw-rise { animation: hw-rise linear both; animation-timeline: view(); animation-range: entry 0% entry 45%; }
