@@ -245,7 +245,7 @@ export default function ShopChat({
           <aside className="lg:sticky lg:top-20 lg:h-[calc(100dvh-6rem)] lg:overflow-y-auto">
             <Thread turns={turns.slice(0, view + 1)} model={model} chatId={chatId()} onAsk={(r) => { track("shop.refine", { chat: chatId(), model, text: r }); ask(r); }} />
             <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line/70 frost p-3 lg:static lg:mt-5 lg:border-0 lg:bg-transparent lg:p-0">
-              <Composer placeholder="Refine: mais barato, outra cor, só tênis…" onSend={ask} onRefine={(t) => askOrRefine(t, true)} busy={thinking} />
+              <Composer placeholder="Refine: mais barato, outra cor, só tênis…" onSend={ask} />
             </div>
           </aside>
           <Results turn={turns[Math.min(view, turns.length - 1)]} hidden={hidden} onOpen={(t) => { setOpen(t); track("shop.open", { chat: chatId(), model, id: t.id }); }} onMore={more} onDismiss={dismiss} />
@@ -317,7 +317,7 @@ function Composer({
     onSend(text.trim());
     setText("");
   };
-  const canRefine = !!onRefine && text.trim().length >= REFINE_MIN;
+  const short = text.trim().length < REFINE_MIN;
   return (
     <form
       onSubmit={(e) => { e.preventDefault(); submit(); }}
@@ -336,15 +336,28 @@ function Composer({
         aria-label={placeholder}
         className={`max-h-40 min-w-0 flex-1 resize-none bg-transparent outline-none placeholder:text-ink-soft/70 field-sizing-content ${large ? "py-3 text-lg" : "py-2.5 text-sm"}`}
       />
-      {canRefine && (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => { onRefine!(text.trim()); setText(""); }}
-          className={`tap-scale shrink-0 animate-rise self-center rounded-full border border-line px-3 font-medium text-ink transition hover:border-ink disabled:opacity-40 ${large ? "py-2 text-sm" : "py-1.5 text-xs"}`}
-        >
-          Refinar ✨
-        </button>
+      {onRefine && (
+        // Always there, so people learn it exists; until the request is a sentence it explains itself.
+        <span className="group relative shrink-0 self-center">
+          <button
+            type="button"
+            aria-disabled={short || busy}
+            aria-describedby={short ? "refine-hint" : undefined}
+            onClick={() => { if (short || busy) return; onRefine(text.trim()); setText(""); }}
+            className={`rounded-full border border-line px-3 font-medium transition ${large ? "py-2 text-sm" : "py-1.5 text-xs"} ${short || busy ? "cursor-default text-ink-soft/50" : "tap-scale text-ink hover:border-ink"}`}
+          >
+            Refinar ✨
+          </button>
+          {short && (
+            <span
+              id="refine-hint"
+              role="tooltip"
+              className="pointer-events-none absolute bottom-full right-0 mb-2 w-56 rounded-xl bg-ink px-3 py-2 text-left text-xs leading-snug text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-within:opacity-100"
+            >
+              Escreva um pouco mais (a ocasião, pra quem é, onde) e eu te ajudo a refinar antes de buscar.
+            </span>
+          )}
+        </span>
       )}
       <button
         type="submit"
