@@ -43,7 +43,7 @@ const decoWorker = createDecoWorkerEntry(createServerEntry({ fetch: handler.fetc
   },
 });
 
-const EVENT_NAMES = new Set(["shop.feedback", "shop.dismiss", "shop.open", "shop.share", "shop.refine", "shop.enrich.shown", "shop.enrich.search"]);
+const EVENT_NAMES = new Set(["shop.feedback", "shop.dismiss", "shop.open", "shop.share", "shop.refine", "shop.enrich.shown", "shop.enrich.search", "shop.fav"]);
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {

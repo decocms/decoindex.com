@@ -153,13 +153,14 @@ describe("Jev grid", () => {
   test("best first, one brand capped, brands take turns", () => {
     const scores = new Map(tiles.map((t, i) => [t.id, t.brand === "cea" ? 2 - i * 0.01 : 1.5]));
     const grid = curate(tiles, scores);
-    expect(grid.filter((t) => t.brand === "cea").length).toBe(8); // cap = ceil(24 / 3 brands)
+    expect(grid.filter((t) => t.brand === "cea").length).toBe(10); // cap = ceil(36 / 3 brands) = 12; cea has 10
     expect(grid.slice(0, 3).map((t) => t.brand)).toEqual(["cea", "hering", "bobo"]);
   });
 
-  test("unrelated tiles stay off the grid once there are 12 good ones", () => {
+  test("short of 24 good ones, the next best top the grid up", () => {
     const scores = new Map(tiles.map((t) => [t.id, t.brand === "bobo" ? 0.1 : 1.8]));
-    expect(curate(tiles, scores).some((t) => t.brand === "bobo")).toBe(false);
+    expect(curate(tiles, scores).length).toBe(tiles.length); // 15 found: all of them, best first
+    expect(curate(tiles, scores).some((t) => t.brand === "bobo")).toBe(true);
   });
 
   test("without scores, the stores' order", () => {
