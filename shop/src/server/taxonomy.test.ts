@@ -97,6 +97,8 @@ describe("isKids", () => {
     expect(isKids("biquíni infantil listrado")).toBe(true);
     expect(isKids("Jardineira Infantil de Moletom")).toBe(true);
     expect(isKids("Vestido Longo Estampado")).toBe(false);
+    expect(isKids("Primeira Calcinha de Tule Recco Calcinha > Primeira Calcinha")).toBe(true);
+    expect(isKids("Calcinha Fio de Renda")).toBe(false);
   });
 });
 
