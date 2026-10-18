@@ -314,7 +314,7 @@ export default function ShopChat({
         <div className="mx-auto grid max-w-[1600px] grid-cols-[minmax(0,1fr)] gap-6 px-4 pb-28 pt-5 md:px-8 lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-10">
           <aside className="lg:sticky lg:top-20 lg:h-[calc(100dvh-6rem)] lg:overflow-y-auto">
             <Thread turns={turns.slice(0, view + 1)} model={model} chatId={chatId()} onAsk={(r) => { track("shop.refine", { chat: chatId(), model, text: r }); ask(r); }} />
-            <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line/70 frost p-3 lg:static lg:mt-5 lg:border-0 lg:bg-transparent lg:p-0">
+            <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line/70 frost p-3 lg:static lg:mt-5 lg:border-0 lg:bg-transparent lg:p-0 lg:[backdrop-filter:none]">
               <Composer placeholder="Refine: mais barato, outra cor, só tênis…" onSend={ask} />
             </div>
           </aside>

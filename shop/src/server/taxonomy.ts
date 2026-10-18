@@ -68,7 +68,8 @@ export function words(s: string): string[] {
 
 const FEM = /\b(feminin[oa]|fem|mulher|women|woman|female|ela)\b/;
 const MASC = /\b(masculin[oa]|masc|homem|men|man|male|ele)\b/;
-const KIDS = /\b(infantil|inf|kid|crianca|baby|bebe|menin[oa]|teen|mini)\b/;
+// "Primeira calcinha/cueca" is the toddler line (Recco): nothing else in its title or category says so.
+const KIDS = /\b(infantil|inf|kid|crianca|baby|bebe|menin[oa]|teen|mini|primeira (calcinha|cueca))\b/;
 const JUNK = /\b(desativad[oa]|inativ[oa]|integracao|category|nao categorizado|vale presente|presente|gift|teste|test|casa|home|tok stok|clube|me leva)\b/;
 const SALE = /\b(bazar|outlet|sale|promo|liquida|black friday|off)\b/;
 

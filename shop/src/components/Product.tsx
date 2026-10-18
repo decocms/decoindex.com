@@ -45,7 +45,7 @@ export function Heart({ on, onClick, className = "" }: { on: boolean; onClick: (
       }}
       aria-pressed={on}
       aria-label={on ? "Remover dos favoritos" : "Favoritar"}
-      className={`grid place-items-center rounded-full glass-white transition ${on ? "text-sale" : "text-ink"} ${className}`}
+      className={`grid place-items-center rounded-full bg-white/90 shadow-sm transition ${on ? "text-sale" : "text-ink"} ${className}`}
     >
       <svg viewBox="0 0 24 24" className="size-4" fill={on ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} strokeLinejoin="round">
         <path d="M12 20s-7-4.4-9.2-8.6C1.3 8.5 3 5 6.4 5c2 0 3.3 1.1 4.1 2.3h3c.8-1.2 2.1-2.3 4.1-2.3 3.4 0 5.1 3.5 3.6 6.4C19 15.6 12 20 12 20z" />
@@ -54,6 +54,9 @@ export function Heart({ on, onClick, className = "" }: { on: boolean; onClick: (
   );
 }
 
+// No backdrop-filter on anything inside a card: ~30 cards × 3 hidden blurred controls fading in on
+// hover were each a GPU layer over the photo, and Chrome's hover hit-testing went stale (cursor
+// flickering arrow/pointer, hover stuck until the mouse left the window). Plain translucent white.
 export function ProductTile({
   t,
   index,
@@ -87,7 +90,7 @@ export function ProductTile({
           )}
         </button>
         {t.listPriceMinor && t.priceMinor && t.listPriceMinor > t.priceMinor ? (
-          <span className="pointer-events-none absolute left-2 top-2 rounded-xs frost px-1.5 py-1 text-2xs font-semibold leading-none">
+          <span className="pointer-events-none absolute left-2 top-2 rounded-xs bg-white/85 px-1.5 py-1 text-2xs font-semibold leading-none">
             -{Math.round((1 - t.priceMinor / t.listPriceMinor) * 100)}%
           </span>
         ) : null}
@@ -99,14 +102,14 @@ export function ProductTile({
           type="button"
           onClick={onDismiss}
           aria-label="Mostrar menos como este"
-          className={`absolute top-2 grid size-7 place-items-center rounded-full glass-white text-ink opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 ${onFav ? "right-11" : "right-2"}`}
+          className={`absolute top-2 grid size-7 place-items-center rounded-full bg-white/90 shadow-sm text-ink opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 ${onFav ? "right-11" : "right-2"}`}
         >
           ×
         </button>
         <button
           type="button"
           onClick={onMore}
-          className="absolute inset-x-2 bottom-2 frost rounded-full px-3 py-2 text-xs font-medium opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
+          className="absolute inset-x-2 bottom-2 rounded-full bg-white/90 shadow-sm px-3 py-2 text-xs font-medium opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
         >
           Mais como este
         </button>

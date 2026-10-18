@@ -58,7 +58,7 @@ export function FavoritesDrawer({ onOpenTile, onClose }: { onOpenTile: (t: Tile)
                         type="button"
                         onClick={() => favorites.remove(t.id)}
                         aria-label={`Remover ${t.title}`}
-                        className="absolute right-1 top-1 grid size-6 place-items-center rounded-full glass-white text-xs opacity-0 transition group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+                        className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-white/90 shadow-sm text-xs opacity-0 transition group-hover:opacity-100 [@media(hover:none)]:opacity-100"
                       >
                         ×
                       </button>
