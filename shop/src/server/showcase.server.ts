@@ -38,7 +38,7 @@ interface Snapshot {
 }
 
 const DAY = 86_400_000;
-const SNAPSHOT = (h: string) => `showcase:v16:${h}`; // v16: category grid with jewelry/lingerie, editorial photos
+const SNAPSHOT = (h: string) => `showcase:v17:${h}`; // v17: warm category reads (v16 starved on cold ?q= reads)
 const SPEC = (h: string) => `showcase-spec:${h}`;
 const LOCK = (h: string) => `showcase-lock:${h}`;
 // One shared caller key: showcase reads are few and must not eat a shopper's per-IP budget.
