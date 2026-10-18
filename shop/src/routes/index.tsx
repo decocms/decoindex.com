@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { cmsHomeRouteConfig } from "@decocms/tanstack";
 import { HomePage } from "~/components/HomePage";
 import { thumb } from "~/components/Product";
+import { splitDetails } from "~/details";
 
 /**
  * The home, and every chat turn's URL. `/c/{id}` is rewritten to `/?c={id}` (router.tsx), so a
@@ -58,7 +59,7 @@ export const Route = createFileRoute("/")({
       const base = config.head({ loaderData: loaderData?.page as never });
       return { ...base, scripts: [...((base as { scripts?: object[] }).scripts ?? []), { type: "application/ld+json", children: JSON.stringify(LD) }] };
     }
-    const title = `“${s.q}” — deco shop`;
+    const title = `“${splitDetails(s.q).q}” — deco shop`;
     const description = s.answer || `${s.tiles.length} achados no deco shop.`;
     const image = s.tiles[0]?.images[0];
     return {

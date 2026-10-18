@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { splitDetails } from "~/details";
 import type { ChatEvent, ChatTurn, RefineDim, Share, Tile } from "~/types";
 
 export type Dept = "feminino" | "masculino";
@@ -159,7 +160,7 @@ export function useShopChat() {
     setModel(s.model);
     setTurns((all) => [
       ...all.slice(0, keep),
-      { key: newId(), user: s.q, seed: s.seed, answer: s.answer, products: s.tiles, curated: s.tiles.map((t) => t.id), refinements: s.refinements, shareId: s.id, done: true },
+      { key: newId(), user: splitDetails(s.q).q, context: splitDetails(s.q).context, seed: s.seed, answer: s.answer, products: s.tiles, curated: s.tiles.map((t) => t.id), refinements: s.refinements, shareId: s.id, done: true },
     ]);
     return s;
   }, []);
