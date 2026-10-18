@@ -91,6 +91,9 @@ export const BRANDS: Brand[] = [
   { domain: "www.carolbassi.com.br", name: "Carol Bassi", segments: ["feminino"], blurb: "moda feminina de luxo, vestidos, alfaiataria e tricô" },
   { domain: "www.foxtonbrasil.com.br", name: "Foxton", segments: ["masculino"], blurb: "moda masculina casual, camisas, polos e bermudas" },
   { domain: "www.afabula.com.br", name: "Fábula", segments: ["infantil"], blurb: "moda infantil estampada, vestidos e conjuntos" },
+  // Added Oct 18 2026: Azzas outlet and Reserva's premium line, both VTEX via decoindex.
+  { domain: "www.offpremium.com.br", name: "Off Premium", segments: ["feminino", "masculino", "infantil"], blurb: "outlet das marcas do grupo Azzas (Animale, FARM, Fábula e outras), peças de coleções anteriores com desconto" },
+  { domain: "www.oficinareserva.com.br", name: "Oficina Reserva", segments: ["masculino"], blurb: "linha masculina premium da Reserva, alfaiataria casual, matérias-primas nobres, peças atemporais" },
 ];
 
 const byHost = new Map(BRANDS.map((b) => [b.domain.replace(/^www\./, ""), b]));

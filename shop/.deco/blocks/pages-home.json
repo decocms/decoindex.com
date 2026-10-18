@@ -384,95 +384,111 @@
               "type": "vestido",
               "terms": "linho",
               "dept": "feminino",
-              "color": "#a8957a",
-              "prompt": "Peças de linho"
+              "color": "#a8957a"
             },
             {
               "label": "Seda",
               "type": "blusa",
               "terms": "seda",
               "dept": "feminino",
-              "color": "#8c6f8a",
-              "prompt": "Peças de seda"
-            },
-            {
-              "label": "Tricô",
-              "type": "casaco",
-              "terms": "trico",
-              "dept": "feminino",
-              "color": "#7b6a58",
-              "prompt": "Tricô e malha"
+              "color": "#8c6f8a"
             },
             {
               "label": "Couro",
               "type": "bolsa",
               "terms": "couro",
               "dept": "feminino",
-              "color": "#5a3a2a",
-              "prompt": "Bolsas e peças de couro"
+              "color": "#5a3a2a"
             },
             {
               "label": "Jeans",
               "type": "calca",
+              "terms": "jeans",
               "dept": "feminino",
-              "color": "#3f5f86",
-              "prompt": "Jeans feminino",
-              "terms": "jeans"
+              "color": "#3f5f86"
+            },
+            {
+              "label": "Tricô",
+              "type": "blusa",
+              "terms": "tricot",
+              "dept": "feminino",
+              "color": "#7b6a58"
+            },
+            {
+              "label": "Renda",
+              "type": "vestido",
+              "terms": "renda",
+              "dept": "feminino",
+              "color": "#b59aa6"
+            },
+            {
+              "label": "Algodão",
+              "type": "camiseta",
+              "terms": "algodao",
+              "dept": "feminino",
+              "color": "#6b7a5a"
             },
             {
               "label": "Viscose",
-              "type": "vestido",
+              "type": "saia",
               "terms": "viscose",
               "dept": "feminino",
-              "color": "#b08a5a",
-              "prompt": "Peças de viscose"
+              "color": "#b08a5a"
             },
             {
               "label": "Linho",
               "type": "camisa",
               "terms": "linho",
               "dept": "masculino",
-              "color": "#a8957a",
-              "prompt": "Camisas e calças de linho"
+              "color": "#a8957a"
             },
             {
               "label": "Algodão",
               "type": "camiseta",
               "terms": "algodao",
               "dept": "masculino",
-              "color": "#6b7a5a",
-              "prompt": "Camisetas de algodão"
+              "color": "#6b7a5a"
             },
             {
               "label": "Sarja",
               "type": "calca",
               "terms": "sarja",
               "dept": "masculino",
-              "color": "#7b6a58",
-              "prompt": "Calças e bermudas de sarja"
+              "color": "#7b6a58"
             },
             {
               "label": "Couro",
               "type": "tenis",
               "terms": "couro",
               "dept": "masculino",
-              "color": "#5a3a2a",
-              "prompt": "Tênis e sapatos de couro"
+              "color": "#5a3a2a"
             },
             {
               "label": "Jeans",
               "type": "calca",
+              "terms": "jeans",
               "dept": "masculino",
-              "color": "#3f5f86",
-              "prompt": "Jeans masculino",
-              "terms": "jeans"
+              "color": "#3f5f86"
             },
             {
               "label": "Moletom",
               "type": "moletom",
               "dept": "masculino",
-              "color": "#555b66",
-              "prompt": "Moletons"
+              "color": "#555b66"
+            },
+            {
+              "label": "Piquet",
+              "type": "polo",
+              "terms": "piquet",
+              "dept": "masculino",
+              "color": "#2f4a3a"
+            },
+            {
+              "label": "Tricô",
+              "type": "casaco",
+              "terms": "trico",
+              "dept": "masculino",
+              "color": "#8a6f52"
             }
           ]
         },
@@ -485,96 +501,133 @@
               "type": "vestido",
               "terms": "branco",
               "dept": "feminino",
-              "color": "#cfc8bc",
-              "prompt": "Peças brancas"
+              "color": "#cfc8bc"
             },
             {
-              "label": "Preto",
+              "label": "Amarelo",
               "type": "vestido",
-              "terms": "preto",
+              "terms": "amarelo",
               "dept": "feminino",
-              "color": "#1f1f1f",
-              "prompt": "Peças pretas"
+              "color": "#c9a227"
             },
             {
-              "label": "Verde",
-              "type": "vestido",
-              "terms": "verde",
+              "label": "Laranja",
+              "type": "blusa",
+              "terms": "laranja",
               "dept": "feminino",
-              "color": "#3f6b4a",
-              "prompt": "Peças verdes"
-            },
-            {
-              "label": "Azul",
-              "type": "vestido",
-              "terms": "azul",
-              "dept": "feminino",
-              "color": "#2f4f86",
-              "prompt": "Peças azuis"
+              "color": "#cc6b2c"
             },
             {
               "label": "Vermelho",
               "type": "vestido",
               "terms": "vermelho",
               "dept": "feminino",
-              "color": "#a8322b",
-              "prompt": "Peças vermelhas"
+              "color": "#a8322b"
             },
             {
               "label": "Rosa",
               "type": "blusa",
               "terms": "rosa",
               "dept": "feminino",
-              "color": "#c77a92",
-              "prompt": "Peças rosa"
+              "color": "#c77a92"
+            },
+            {
+              "label": "Lilás",
+              "type": "vestido",
+              "terms": "lilas",
+              "dept": "feminino",
+              "color": "#8e78a8"
+            },
+            {
+              "label": "Azul",
+              "type": "vestido",
+              "terms": "azul",
+              "dept": "feminino",
+              "color": "#2f4f86"
+            },
+            {
+              "label": "Verde",
+              "type": "saia",
+              "terms": "verde",
+              "dept": "feminino",
+              "color": "#3f6b4a"
+            },
+            {
+              "label": "Marrom",
+              "type": "calca",
+              "terms": "marrom",
+              "dept": "feminino",
+              "color": "#6b4a33"
+            },
+            {
+              "label": "Preto",
+              "type": "vestido",
+              "terms": "preto",
+              "dept": "feminino",
+              "color": "#1f1f1f"
             },
             {
               "label": "Branco",
               "type": "camisa",
               "terms": "branco",
               "dept": "masculino",
-              "color": "#cfc8bc",
-              "prompt": "Camisas brancas"
-            },
-            {
-              "label": "Preto",
-              "type": "camiseta",
-              "terms": "preto",
-              "dept": "masculino",
-              "color": "#1f1f1f",
-              "prompt": "Peças pretas masculinas"
-            },
-            {
-              "label": "Azul",
-              "type": "camisa",
-              "terms": "azul",
-              "dept": "masculino",
-              "color": "#2f4f86",
-              "prompt": "Camisas azuis"
-            },
-            {
-              "label": "Verde",
-              "type": "camiseta",
-              "terms": "verde",
-              "dept": "masculino",
-              "color": "#3f6b4a",
-              "prompt": "Peças verdes masculinas"
+              "color": "#cfc8bc"
             },
             {
               "label": "Bege",
               "type": "calca",
               "terms": "bege",
               "dept": "masculino",
-              "color": "#a8957a",
-              "prompt": "Calças bege"
+              "color": "#a8957a"
+            },
+            {
+              "label": "Amarelo",
+              "type": "camiseta",
+              "terms": "amarelo",
+              "dept": "masculino",
+              "color": "#c9a227"
+            },
+            {
+              "label": "Vermelho",
+              "type": "camiseta",
+              "terms": "vermelho",
+              "dept": "masculino",
+              "color": "#a8322b"
+            },
+            {
+              "label": "Azul",
+              "type": "camisa",
+              "terms": "azul",
+              "dept": "masculino",
+              "color": "#2f4f86"
+            },
+            {
+              "label": "Verde",
+              "type": "camiseta",
+              "terms": "verde",
+              "dept": "masculino",
+              "color": "#3f6b4a"
+            },
+            {
+              "label": "Marrom",
+              "type": "calca",
+              "terms": "marrom",
+              "dept": "masculino",
+              "color": "#6b4a33"
             },
             {
               "label": "Cinza",
               "type": "camiseta",
               "terms": "cinza",
               "dept": "masculino",
-              "color": "#6e7178",
-              "prompt": "Peças cinza"
+              "color": "#6e7178"
+            },
+            {
+              "label": "Preto",
+              "type": "camiseta",
+              "terms": "preto",
+              "dept": "masculino",
+              "color": "#1f1f1f"
             }
           ]
         }
