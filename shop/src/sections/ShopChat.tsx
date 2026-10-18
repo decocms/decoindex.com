@@ -736,7 +736,8 @@ function RefineSheet({ text, dims, onSearch, onClose }: { text: string; dims: Re
   }, [onClose]);
   const toggle = (key: string, o: string) => setSel((s) => ({ ...s, [key]: s[key]?.includes(o) ? s[key].filter((x) => x !== o) : [...(s[key] ?? []), o] }));
   const asked = dims.filter((d) => d.ask);
-  const known = dims.filter((d) => !d.ask);
+  const known = dims.filter((d) => !d.ask && d.picked.length);
+  const more = dims.filter((d) => !d.ask && !d.picked.length).sort((a, b) => b.relevance - a.relevance);
   const context = dims.filter((d) => sel[d.key]?.length).map((d) => `${d.name}: ${sel[d.key].join(", ")}`);
   const group = (title: string, list: RefineDim[]) =>
     list.length > 0 && (
@@ -787,6 +788,7 @@ function RefineSheet({ text, dims, onSearch, onClose }: { text: string; dims: Re
           </div>
           {group(asked.length ? "Pra eu acertar" : "", asked)}
           {group("O que eu entendi", known)}
+          {group("Quer detalhar?", more)}
         </div>
         <div className="flex items-center gap-3 border-t border-line px-5 py-3">
           <button type="button" onClick={() => onSearch([])} className="text-sm text-ink-soft underline-offset-2 hover:underline">

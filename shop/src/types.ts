@@ -76,6 +76,7 @@ export interface Share {
 export interface RefineDim {
   key: string;
   name: string;
+  relevance: number;
   label: string;
   options: { label: string; p: number }[];
   picked: string[];

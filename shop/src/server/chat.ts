@@ -587,5 +587,7 @@ export async function handleRefine(req: Request, env: Env, ctx: ExecutionContext
     }),
   );
   if (!res) return Response.json({ error: "unavailable" }, { status: 503 });
-  return Response.json({ dims: res.dims.filter((d) => d.ask || d.picked.length) });
+  // Everything at least plausible for this request: the auto-ask only acts on `ask`, the button
+  // shows the rest too ("vestido de praia" can still say color, print, length).
+  return Response.json({ dims: res.dims.filter((d) => d.ask || d.picked.length || d.relevance >= 0.15) });
 }
