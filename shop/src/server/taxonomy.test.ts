@@ -186,4 +186,5 @@ test("a shared request splits back into question and Refinar chips", async () =>
   const { splitDetails } = await import("../details");
   expect(splitDetails("roupa pra correr na praia\n(Detalhes: ocasião: corrida; clima: quente)")).toEqual({ q: "roupa pra correr na praia", context: ["ocasião: corrida", "clima: quente"] });
   expect(splitDetails("saia jeans")).toEqual({ q: "saia jeans" });
+  expect(splitDetails("vestido em portugal\n(Detalhes: ocasião: casamento — convidada(o); horário: tarde)")).toEqual({ q: "vestido em portugal", context: ["ocasião: casamento — convidada(o)", "horário: tarde"] });
 });
