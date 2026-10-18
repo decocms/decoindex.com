@@ -160,6 +160,8 @@ export default function ShopChat({
    * ask before searching ("de tarde ou de noite?") instead of guessing.
    */
   const [refining, setRefining] = useState<{ text: string; dims: RefineDim[] } | null>(null);
+  /** Closing the sheet without searching puts the request back in the composer (remounted by key). */
+  const [draft, setDraft] = useState({ text: "", key: 0 });
   const [thinking, setThinking] = useState(false);
   const askOrRefine = async (text: string, force = false) => {
     if (!force && (view >= 0 || text.length < AUTO_REFINE_MIN)) return ask(text);
@@ -216,7 +218,7 @@ export default function ShopChat({
             <DeptToggle value={dept} onChange={setDept} />
           </div>
           <div className="mt-5 w-full animate-rise" style={{ animationDelay: "160ms" }}>
-            <Composer placeholder={placeholder} onSend={(t) => askOrRefine(t)} onRefine={(t) => askOrRefine(t, true)} busy={thinking} autoFocus large />
+            <Composer key={draft.key} initialText={draft.text} placeholder={placeholder} onSend={(t) => askOrRefine(t)} onRefine={(t) => askOrRefine(t, true)} busy={thinking} autoFocus large />
           </div>
           {chips.length > 0 && (
             <div className="mt-5 flex flex-wrap justify-center gap-2">
@@ -256,7 +258,10 @@ export default function ShopChat({
         <RefineSheet
           text={refining.text}
           dims={refining.dims}
-          onClose={() => setRefining(null)}
+          onClose={() => {
+            setDraft((d) => ({ text: refining.text, key: d.key + 1 }));
+            setRefining(null);
+          }}
           onSearch={(context) => {
             track("shop.enrich.search", { chat: chatId(), context });
             ask(refining.text, context);
@@ -302,7 +307,9 @@ function Composer({
   busy,
   autoFocus,
   large,
+  initialText = "",
 }: {
+  initialText?: string;
   placeholder: string;
   onSend: (t: string) => void;
   onRefine?: (t: string) => void;
@@ -310,7 +317,7 @@ function Composer({
   autoFocus?: boolean;
   large?: boolean;
 }) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
   const ref = useRef<HTMLTextAreaElement>(null);
   const submit = () => {
     if (!text.trim() || busy) return;
@@ -352,7 +359,7 @@ function Composer({
             <span
               id="refine-hint"
               role="tooltip"
-              className="pointer-events-none absolute bottom-full right-0 mb-2 w-56 rounded-xl bg-ink px-3 py-2 text-left text-xs leading-snug text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-within:opacity-100"
+              className="pointer-events-none absolute bottom-full right-0 mb-2 w-56 rounded-xl bg-ink px-3 py-2 text-left text-xs leading-snug text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-has-[:focus-visible]:opacity-100"
             >
               Escreva um pouco mais (a ocasião, pra quem é, onde) e eu te ajudo a refinar antes de buscar.
             </span>
@@ -699,7 +706,8 @@ function RefineSheet({ text, dims, onSearch, onClose }: { text: string; dims: Re
                     onClick={() => toggle(d.key, o.label)}
                     className={`tap-scale rounded-full px-3 py-1.5 text-xs transition ${on ? "bg-ink text-white" : "bg-[#f2f2f2] text-ink hover:bg-[#e8e8e8]"}`}
                   >
-                    {o.label}
+                    {/* "Qual o seu papel?": the event is the same on every chip, show only the role */}
+                    {d.label === "Qual o seu papel?" ? (o.label.split(" — ")[1] ?? o.label) : o.label}
                   </button>
                 );
               })}
