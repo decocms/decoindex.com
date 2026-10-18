@@ -102,8 +102,23 @@ const SURE = 0.7;
 const TASTE = new Set(["cor", "estampa", "comprimento", "tecido", "estilo"]);
 const SURE_TASTE = 0.85;
 
-export async function refine(env: Env, text: string, dept?: string): Promise<{ dims: RefineDim[]; cost: number } | null> {
-  const questions: Record<string, object> = {};
+/** How sure Jev must be that the request is for the other department before the toggle flips. */
+const SURE_DEPT = 0.8;
+
+export async function refine(
+  env: Env,
+  text: string,
+  dept?: string,
+): Promise<{ dims: RefineDim[]; dept?: "feminino" | "masculino"; cost: number } | null> {
+  const questions: Record<string, object> = {
+    // The toggle starts on Feminino whatever the shopper is: "roupa para solteiro" said masculino.
+    para_quem: {
+      type: "choice",
+      instructions:
+        "Só pelo texto do pedido (ignore o departamento): a roupa pedida é moda feminina ou masculina? Use o gênero das palavras (solteiro/solteira, noivo/noiva, convidado/convidada) e as peças (vestido, terno). Presente para outra pessoa: o gênero de quem vai usar.",
+      criteria: { o0: "feminina", o1: "masculina", o2: UNKNOWN },
+    },
+  };
   for (const d of DIMS) {
     questions[d.key] = { type: "choice", instructions: d.question, criteria: Object.fromEntries([...d.options, UNKNOWN].map((o, i) => [`o${i}`, o])) };
     questions[`${d.key}_importa`] = { type: "noul", instructions: d.relevance };
@@ -147,5 +162,7 @@ export async function refine(env: Env, text: string, dept?: string): Promise<{ d
         d.ask = true; // it mattered enough to infer, so it's worth asking
       }
   }
-  return { dims, cost: res.cost };
+  const who = res.answers.para_quem?.probabilities ?? {};
+  const said = (who.o0 ?? 0) >= SURE_DEPT ? "feminino" : (who.o1 ?? 0) >= SURE_DEPT ? "masculino" : undefined;
+  return { dims, dept: said, cost: res.cost };
 }
