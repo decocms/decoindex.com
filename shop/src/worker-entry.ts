@@ -54,6 +54,19 @@ export default {
       return Response.json({ error: "forbidden" }, { status: 403 });
     }
 
+    // Shared links used to open a separate "Achados" page; a shared turn now opens in the chat itself.
+    const legacy = url.pathname.match(/^\/s\/([0-9A-Za-z]{8})\/?$/);
+    if (legacy && request.method === "GET") return Response.redirect(`${url.origin}/c/${legacy[1]}${url.search}`, 301);
+
+    if (url.pathname === "/robots.txt") {
+      return new Response(`User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${url.origin}/sitemap.xml\n`, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=86400" } });
+    }
+    // The pages worth finding. Chat turns (/c/) stay crawlable (link previews read them) but carry noindex.
+    if (url.pathname === "/sitemap.xml") {
+      const urls = ["/", "/como-funciona"].map((p) => `<url><loc>${url.origin}${p}</loc></url>`).join("");
+      return new Response(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`, { headers: { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=86400" } });
+    }
+
     if (url.pathname === "/api/chat" && request.method === "POST") return handleChat(request, env, ctx);
     if (url.pathname === "/api/similar" && request.method === "POST") return handleSimilar(request, env, ctx);
     if (url.pathname === "/api/refine" && request.method === "POST") return handleRefine(request, env, ctx);

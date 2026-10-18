@@ -14,6 +14,34 @@ const getShare = createServerFn({ method: "GET" })
   .inputValidator((id: string) => id)
   .handler(async ({ data }) => (await import("~/server/share.server")).readShare(data));
 
+/** Who we are and how to search us, for search engines: a WebSite with its search, by deco. */
+const LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://shop.decoindex.com/#website",
+      url: "https://shop.decoindex.com/",
+      name: "deco shop",
+      inLanguage: "pt-BR",
+      description: "Converse para comprar nas marcas brasileiras de moda: FARM, Animale, Osklen, Reserva e mais, num chat só.",
+      publisher: { "@id": "https://decocms.com/#organization" },
+      potentialAction: {
+        "@type": "SearchAction",
+        target: { "@type": "EntryPoint", urlTemplate: "https://shop.decoindex.com/?q={search_term_string}" },
+        "query-input": "required name=search_term_string",
+      },
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://decocms.com/#organization",
+      name: "deco",
+      url: "https://decocms.com",
+      logo: "https://shop.decoindex.com/deco-logo.png",
+    },
+  ],
+};
+
 const config = cmsHomeRouteConfig({ defaultTitle: "deco shop", siteName: "deco shop", pendingMs: 60_000, pendingMinMs: 0 });
 
 export const Route = createFileRoute("/")({
@@ -26,7 +54,10 @@ export const Route = createFileRoute("/")({
   headers: (ctx: { loaderData?: { page?: unknown } }) => config.headers({ loaderData: ctx.loaderData?.page as never }),
   head: ({ loaderData }) => {
     const s = loaderData?.share;
-    if (!s) return config.head({ loaderData: loaderData?.page as never });
+    if (!s) {
+      const base = config.head({ loaderData: loaderData?.page as never });
+      return { ...base, scripts: [...((base as { scripts?: object[] }).scripts ?? []), { type: "application/ld+json", children: JSON.stringify(LD) }] };
+    }
     const title = `“${s.q}” — deco shop`;
     const description = s.answer || `${s.tiles.length} achados no deco shop.`;
     const image = s.tiles[0]?.images[0];

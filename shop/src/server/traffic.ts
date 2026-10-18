@@ -22,7 +22,7 @@ export function clientClass(ua: string | null): ClientClass {
 }
 
 function pageKind(url: URL): string {
-  if (url.pathname.startsWith("/s/")) return "share";
+  if (/^\/[cs]\//.test(url.pathname)) return "share";
   if (url.pathname === "/") return url.searchParams.has("q") ? "chat" : "home";
   return "other";
 }
@@ -57,7 +57,7 @@ export function trackView(req: Request, env: Env, ctx: ExecutionContext) {
         kind: pageKind(url),
         ref,
         cls: clientClass(ua),
-        share: url.pathname.startsWith("/s/") ? url.pathname.slice(3, 11) : undefined,
+        share: /^\/[cs]\//.test(url.pathname) ? url.pathname.slice(3, 11) : undefined,
         ua: clientClass(ua) === "browser" ? undefined : ua?.slice(0, 120), // keep bot UAs to see who they are
       },
       undefined,

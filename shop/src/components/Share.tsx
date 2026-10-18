@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { track } from "~/sdk/useShopChat";
 
-const shareUrl = (id: string) => `${location.origin}/s/${id}`;
+// The turn's own address: it opens in the chat, where the conversation can go on.
+const shareUrl = (id: string) => `${location.origin}/c/${id}`;
 const shareText = (q: string) => `Olha o que o deco shop achou pra “${q}” ✨`;
 
 /**
