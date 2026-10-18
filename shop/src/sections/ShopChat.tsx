@@ -63,7 +63,10 @@ export default function ShopChat({
   const turnsRef = useRef(turns);
   turnsRef.current = turns;
 
+  /** Where the home was scrolled when a card or idea left it: Back returns to that card. */
+  const homeY = useRef(0);
   const pushTurn = (turn: number, q: string) => {
+    if (view < 0) homeY.current = scrollY;
     const p = new URLSearchParams(location.search);
     p.set("q", q);
     p.set("dept", dept);
@@ -76,27 +79,35 @@ export default function ShopChat({
     setView(turn);
   };
 
+  // Registered once, calling the latest handler through a ref. Re-adding it on every render lost
+  // Back: the router's own popstate listener re-renders synchronously mid-dispatch, our effect
+  // swapped the listener during that dispatch, and the DOM calls neither the removed nor the
+  // added one. The URL went home while the results stayed on screen.
+  const onPopRef = useRef<(e: PopStateEvent) => void>(() => {});
   useEffect(() => {
-    const onPop = (e: PopStateEvent) => {
-      if (e.state?.layer) return; // an overlay's own entry (drawer, gallery): it handles itself
-      const p = new URLSearchParams(location.search);
-      const q = p.get("q");
-      const snap = snapshotOf(location);
-      const turn: number = typeof e.state?.turn === "number" ? e.state.turn : q || snap ? 0 : -1;
-      if (turn >= 0 && turn >= turnsRef.current.length && (q || snap)) {
-        // Forward into a turn we no longer hold (the chat was reset): reopen its snapshot, or ask again.
-        const at = turnsRef.current.length;
-        setView(at);
-        if (snap) void restore(snap, at).then((ok) => { if (!ok && q) send(q, at, (p.get("dept") as Dept) || dept, store); });
-        else if (q) send(q, at, (p.get("dept") as Dept) || dept, store);
-        return;
-      }
-      setOpen(null);
-      setView(turn);
-    };
-    addEventListener("popstate", onPop);
-    return () => removeEventListener("popstate", onPop);
-  });
+    const h = (e: PopStateEvent) => onPopRef.current(e);
+    addEventListener("popstate", h);
+    return () => removeEventListener("popstate", h);
+  }, []);
+  onPopRef.current = (e: PopStateEvent) => {
+    if (e.state?.layer) return; // an overlay's own entry (drawer, gallery): it handles itself
+    const p = new URLSearchParams(location.search);
+    const q = p.get("q");
+    const snap = snapshotOf(location);
+    const turn: number = typeof e.state?.turn === "number" ? e.state.turn : q || snap ? 0 : -1;
+    if (turn >= 0 && turn >= turnsRef.current.length && (q || snap)) {
+      // Forward into a turn we no longer hold (the chat was reset): reopen its snapshot, or ask again.
+      const at = turnsRef.current.length;
+      setView(at);
+      if (snap) void restore(snap, at).then((ok) => { if (!ok && q) send(q, at, (p.get("dept") as Dept) || dept, store); });
+      else if (q) send(q, at, (p.get("dept") as Dept) || dept, store);
+      return;
+    }
+    setOpen(null);
+    setView(turn);
+    // The router restores scroll before the home has re-rendered, so it lands short. Redo it after.
+    if (turn < 0) requestAnimationFrame(() => scrollTo(0, homeY.current));
+  };
 
   // When the turn on screen is frozen, its URL becomes /c/{id}: copying the address bar shares
   // exactly these picks, like the Share button, instead of re-running the search.
