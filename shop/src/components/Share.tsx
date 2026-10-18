@@ -89,7 +89,7 @@ export function ShareButton({ id, q, variant = "pill" }: { id: string; q: string
 export function SiteHeader({ onHome, right }: { onHome?: () => void; right?: React.ReactNode }) {
   return (
     // One centered floating frost pill, like demo-storefront's HeaderNav: logo | wordmark, then the page's controls.
-    <header className="sticky top-0 z-30 flex justify-center px-3 py-3 md:px-6">
+    <header className="sticky top-0 z-30 flex justify-center px-3 py-3 max-[359px]:px-2 md:px-6">
       <nav className={`frost flex h-11 max-w-full items-center gap-2 rounded-sm sm:gap-3 pl-3 ${right ? "pr-1.5" : "pr-3.5"}`}>
         <a
           href="/"
@@ -102,7 +102,7 @@ export function SiteHeader({ onHome, right }: { onHome?: () => void; right?: Rea
           }}
           className="tap-scale flex shrink-0 items-center gap-3"
         >
-          <img src="/deco-logo.png" alt="deco" width={67} height={28} className="h-7 w-auto" />
+          <img src="/deco-logo.png" alt="deco" width={67} height={28} className="h-7 w-auto max-[359px]:h-6" />
           {/* On a phone with controls on the right, the wordmark doesn't fit: the logo alone goes home. */}
           <span aria-hidden className={`h-5 w-px bg-ink/20 ${right ? "hidden sm:inline" : ""}`} />
           <span className={`text-sm tracking-[0.14em] text-ink/80 ${right ? "hidden sm:inline" : ""}`}>shop</span>
