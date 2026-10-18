@@ -4,6 +4,7 @@
  *
  *   POST /api/chat   NDJSON stream: the shopping agent (server/chat.ts)
  *   POST /api/similar NDJSON stream: "mais como este" by category heuristics, no model (server/find.ts)
+ *   POST /api/refine  JSON: "Refinar ✨", Jev ranks what the request may mean per dimension (server/refine.ts)
  *   POST /api/event  feedback + small client events, into decoindex's events table
  *   GET  /go         outbound click to a merchant PDP: logged, then 302
  *   ALL  /mcp        admin MCP app: queries, models, CTR (server/admin/*), token-guarded
@@ -13,7 +14,7 @@ import "./setup";
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
 import { createDecoWorkerEntry } from "@decocms/tanstack";
 import { handleMeta, handleDecofileRead, handleDecofileReload, handleRender, corsHeaders } from "@decocms/blocks-admin";
-import { handleChat, handleSimilar } from "./server/chat";
+import { handleChat, handleRefine, handleSimilar } from "./server/chat";
 import { brandForUrl } from "./server/brands";
 import { logEvent } from "./server/events";
 import { EMBED_JS } from "./server/embed";
@@ -42,7 +43,7 @@ const decoWorker = createDecoWorkerEntry(createServerEntry({ fetch: handler.fetc
   },
 });
 
-const EVENT_NAMES = new Set(["shop.feedback", "shop.dismiss", "shop.open", "shop.share", "shop.refine"]);
+const EVENT_NAMES = new Set(["shop.feedback", "shop.dismiss", "shop.open", "shop.share", "shop.refine", "shop.enrich.shown", "shop.enrich.search"]);
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -55,6 +56,7 @@ export default {
 
     if (url.pathname === "/api/chat" && request.method === "POST") return handleChat(request, env, ctx);
     if (url.pathname === "/api/similar" && request.method === "POST") return handleSimilar(request, env, ctx);
+    if (url.pathname === "/api/refine" && request.method === "POST") return handleRefine(request, env, ctx);
 
     if (url.pathname === "/api/event" && request.method === "POST") {
       const e = (await request.json().catch(() => null)) as { name?: string; meta?: Record<string, unknown> } | null;

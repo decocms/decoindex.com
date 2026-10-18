@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import type { ChatEvent, ChatTurn, Share, Tile } from "~/types";
+import type { ChatEvent, ChatTurn, RefineDim, Share, Tile } from "~/types";
 
 export type Dept = "feminino" | "masculino";
 
@@ -7,6 +7,8 @@ export interface Turn {
   /** Identity of this turn, so a stream only ever writes into its own turn. */
   key: string;
   user: string;
+  /** Details picked in "Refinar ✨" ("horário: noite"), shown under the question and sent with it. */
+  context?: string[];
   answer: string;
   status?: string;
   /** What the server said it was doing, in order: the loading view lists them. */
@@ -67,13 +69,13 @@ export function useShopChat() {
    * Patching "the last turn" instead let an aborted stream finish the new one
    * and leave itself spinning forever.
    */
-  const stream = useCallback(async (label: string, keep: number, endpoint: string, payload: (id: string) => object, seed?: Turn["seed"]) => {
+  const stream = useCallback(async (label: string, keep: number, endpoint: string, payload: (id: string) => object, seed?: Turn["seed"], context?: string[]) => {
     abort.current?.abort();
     const ctrl = (abort.current = new AbortController());
     if (keep === 0 || !chatId.current) chatId.current = newId();
     const key = newId();
     const patchLast = (fn: (t: Turn) => Turn) => setTurns((all) => all.map((t) => (t.key === key ? fn(t) : t)));
-    setTurns((all) => [...all.slice(0, keep), { key, user: label, seed, answer: "", products: [], done: false, status: "Pensando…" }]);
+    setTurns((all) => [...all.slice(0, keep), { key, user: label, seed, context, answer: "", products: [], done: false, status: "Pensando…" }]);
     try {
         const res = await fetch(endpoint, {
           method: "POST",
@@ -128,16 +130,17 @@ export function useShopChat() {
   }, []);
 
   const send = useCallback(
-    (text: string, keep: number, dept?: Dept, store?: string) => {
+    (text: string, keep: number, dept?: Dept, store?: string, context?: string[]) => {
       const q = text.trim();
       if (!q) return;
+      const withContext = (t: { user: string; context?: string[] }) => (t.context?.length ? `${t.user}\n(Detalhes: ${t.context.join("; ")})` : t.user);
       const history: ChatTurn[] = turnsRef.current.slice(0, keep).flatMap((t) => [
-        { role: "user" as const, content: t.user },
+        { role: "user" as const, content: withContext(t) },
         ...(t.answer ? [{ role: "assistant" as const, content: t.answer }] : []),
       ]);
       const forced = new URLSearchParams(location.search).get("model") ?? undefined;
       const profile = myContext.get() || undefined;
-      return stream(q, keep, "/api/chat", (id) => ({ chatId: id, dept, store, model: forced, profile, messages: [...history, { role: "user", content: q }] }));
+      return stream(q, keep, "/api/chat", (id) => ({ chatId: id, dept, store, model: forced, profile, messages: [...history, { role: "user", content: withContext({ user: q, context }) }] }), undefined, context);
     },
     [stream],
   );
@@ -180,6 +183,21 @@ export function useShopChat() {
 }
 
 /** Fire-and-forget event to /api/event. */
-export function track(name: "shop.feedback" | "shop.dismiss" | "shop.open" | "shop.share" | "shop.refine", meta: Record<string, unknown>) {
+export function track(name: "shop.feedback" | "shop.dismiss" | "shop.open" | "shop.share" | "shop.refine" | "shop.enrich.shown" | "shop.enrich.search", meta: Record<string, unknown>) {
   fetch("/api/event", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, meta }), keepalive: true }).catch(() => {});
+}
+
+/** "Refinar ✨": what the request may mean, ranked per dimension by Jev. Null when unavailable. */
+export async function fetchRefine(text: string, dept: Dept, chatId?: string): Promise<RefineDim[] | null> {
+  try {
+    const res = await fetch("/api/refine", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text, dept, chatId }),
+      signal: AbortSignal.timeout(4_000),
+    });
+    return res.ok ? ((await res.json()) as { dims: RefineDim[] }).dims : null;
+  } catch {
+    return null;
+  }
 }

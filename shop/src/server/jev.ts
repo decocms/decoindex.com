@@ -20,13 +20,13 @@ export function rosterLine(b: Brand): string {
  * OpenRouter's /api/alpha/decisions, which is the same API). Every helper returns null on any
  * failure, and its caller falls back to the unfiltered list: Jev can only narrow, never lose.
  */
-async function score(
+/** One raw Decisions call: typed questions in, typed answers out. Null on any failure. */
+export async function decide<A = Record<string, unknown>>(
   env: Env,
   state: Record<string, string>,
-  questions: string[],
-  criteria: string[],
+  questions: Record<string, object>,
   timeout: number,
-): Promise<{ scores: number[]; cost: number } | null> {
+): Promise<{ answers: Record<string, A>; cost: number } | null> {
   if (env.PRESELECT_MODEL === "off") return null; // kill switch, and the A/B baseline
   try {
     const res = await fetch(`https://gateway.ai.cloudflare.com/v1/${env.AI_GATEWAY_ACCOUNT_ID}/${env.AI_GATEWAY_NAME}/openrouter/v1/systemone`, {
@@ -35,22 +35,35 @@ async function score(
         "content-type": "application/json",
         ...(env.CF_AI_GATEWAY_TOKEN ? { "cf-aig-authorization": `Bearer ${env.CF_AI_GATEWAY_TOKEN}` } : {}),
       },
-      body: JSON.stringify({
-        model: env.PRESELECT_MODEL || "~typesafe/jev-latest",
-        state,
-        questions: Object.fromEntries(questions.map((q, i) => [`q${i}`, { type: "score", instructions: q, criteria }])),
-      }),
+      body: JSON.stringify({ model: env.PRESELECT_MODEL || "~typesafe/jev-latest", state, questions }),
       signal: AbortSignal.timeout(timeout),
     });
     if (!res.ok) throw new Error(`systemone ${res.status}: ${(await res.text()).slice(0, 200)}`);
-    const out = (await res.json()) as { answers?: Record<string, { score?: number }>; usage?: { cost?: number } };
-    const scores = questions.map((_, i) => out.answers?.[`q${i}`]?.score ?? -1);
-    if (scores.filter((x) => x >= 0).length < questions.length / 2) return null;
-    return { scores, cost: out.usage?.cost ?? 0 };
+    const out = (await res.json()) as { answers?: Record<string, A>; usage?: { cost?: number } };
+    return out.answers ? { answers: out.answers, cost: out.usage?.cost ?? 0 } : null;
   } catch (err) {
     console.error("jev failed", String((err as Error)?.message ?? err).slice(0, 200));
     return null;
   }
+}
+
+async function score(
+  env: Env,
+  state: Record<string, string>,
+  questions: string[],
+  criteria: string[],
+  timeout: number,
+): Promise<{ scores: number[]; cost: number } | null> {
+  const res = await decide<{ score?: number }>(
+    env,
+    state,
+    Object.fromEntries(questions.map((q, i) => [`q${i}`, { type: "score", instructions: q, criteria }])),
+    timeout,
+  );
+  if (!res) return null;
+  const scores = questions.map((_, i) => res.answers[`q${i}`]?.score ?? -1);
+  if (scores.filter((x) => x >= 0).length < questions.length / 2) return null;
+  return { scores, cost: res.cost };
 }
 
 interface Ask {

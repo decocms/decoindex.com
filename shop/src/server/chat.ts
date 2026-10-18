@@ -9,6 +9,7 @@ import { logEvent } from "./events";
 import { findProducts, similar } from "./find";
 import { preselect, rankTiles, rosterLine, scoreTiles, topByScore } from "./jev";
 import { MERCHANT_IMAGE, describe } from "./vision";
+import { refine } from "./refine";
 import { TYPE_NAMES } from "./taxonomy";
 
 const MAX_SEARCHES = 6;
@@ -559,4 +560,32 @@ export function anotherRound(tiles: Tile[], scores: Map<string, number>): string
   if (good.length < 6) return `Só ${good.length} produtos realmente atendem ao pedido.`;
   if (n > good.length / 2 && byBrand.size < 4) return `${top} é ${n} dos ${good.length} produtos que atendem ao pedido.`;
   return "";
+}
+
+/** Below this many characters a request is too short to enrich ("saia jeans"). */
+export const REFINE_MIN = 20;
+
+/** "Refinar ✨": one Jev call that ranks what the request may mean, dimension by dimension. */
+export async function handleRefine(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const body = (await req.json().catch(() => null)) as { text?: unknown; dept?: unknown; chatId?: unknown } | null;
+  const text = typeof body?.text === "string" ? body.text.trim().slice(0, 600) : "";
+  if (text.length < REFINE_MIN) return Response.json({ error: "text too short" }, { status: 400 });
+  const ip = req.headers.get("cf-connecting-ip") ?? "local";
+  if (await limited(env, ip)) return TOO_MANY();
+  const dept = body?.dept === "masculino" || body?.dept === "feminino" ? body.dept : undefined;
+  const started = Date.now();
+  const res = await refine(env, text, dept);
+  ctx.waitUntil(
+    logEvent(env, "shop.enrich", Date.now() - started, {
+      q: text.slice(0, 300),
+      chat: typeof body?.chatId === "string" ? body.chatId.slice(0, 80) : undefined,
+      dept,
+      cost: res?.cost ?? 0,
+      asked: res?.dims.filter((d) => d.ask).map((d) => d.key),
+      known: res?.dims.filter((d) => d.picked.length).map((d) => `${d.key}:${d.picked.join("|")}`),
+      error: res ? "" : "jev",
+    }),
+  );
+  if (!res) return Response.json({ error: "unavailable" }, { status: 503 });
+  return Response.json({ dims: res.dims.filter((d) => d.ask || d.picked.length) });
 }

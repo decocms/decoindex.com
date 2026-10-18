@@ -154,13 +154,15 @@ Local D1 is empty, so event inserts log an error and move on — expected.
 
 ## Shipping
 
-Own Workers Build with root directory `shop/`, build `npm run build`, deploy
-`npx wrangler deploy`. Secrets: `CF_AI_GATEWAY_TOKEN`, `OPENROUTER_API_KEY`
-(`wrangler secret put …`, typed by a human).
+Workers Build on the `decoindex-shop` Worker: repo `decocms/decoindex.com`, root directory
+`shop`, build `bun run build`, deploy `npx wrangler deploy`, watch path `shop/*`. A merge to
+`main` deploys. Secrets: `CF_AI_GATEWAY_TOKEN`, `OPENROUTER_API_KEY` (`wrangler secret put …`,
+typed by a human).
 
-**Preview worker** (`decoindex-shop-preview`, workers.dev, no route, no cron): build, copy
-`dist/server/wrangler.json` to `wrangler.preview.json` with `name` changed and `routes`/`triggers`
-removed, then `npx wrangler deploy -c dist/server/wrangler.preview.json --var BUILD_HASH:p$(date +%s)`.
-The `BUILD_HASH` is required for uncommitted builds: the edge HTML cache is versioned by the git
-commit, so two preview builds of the same commit share a cache and the second one serves HTML that
-points at the first one's deleted JS chunks (404s, nothing hydrates). Then `git checkout -- .deco`.
+**Previews come from the PR.** Every PR gets a preview version of `decoindex-shop` from the same
+build (Cloudflare posts the URL on the PR). It shares production's bindings (KV, D1, rate
+limits), so tag test traffic. To preview something before it is a PR: `npm run build && npx
+wrangler versions upload --var BUILD_HASH:p$(date +%s)`, which prints a `Version Preview URL` and
+sends it no traffic. The `BUILD_HASH` matters for uncommitted builds: the edge HTML cache is
+versioned by the git commit, so two uploads of one commit would share HTML pointing at deleted JS
+chunks. Then `git checkout -- .deco`. There is no separate preview Worker any more.

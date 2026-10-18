@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Tile } from "~/types";
+import type { RefineDim, Tile } from "~/types";
 import { ProductDrawer, ProductTile, outbound, thumb } from "~/components/Product";
 import { ShareButton, SiteHeader } from "~/components/Share";
 import { bus, useBus } from "~/sdk/bus";
-import { myContext, track, useShopChat, type Dept, type Turn } from "~/sdk/useShopChat";
+import { fetchRefine, myContext, track, useShopChat, type Dept, type Turn } from "~/sdk/useShopChat";
 
 /** @titleBy label */
 export interface Suggestion {
@@ -146,11 +146,30 @@ export default function ShopChat({
 
   // Asking from turn `view` keeps turns 0..view and drops what came after it
   // (from the home, view = -1: a fresh conversation), exactly like browser history.
-  const ask = (text: string) => {
+  const ask = (text: string, context?: string[]) => {
     setOpen(null);
+    setRefining(null);
     const keep = view + 1;
     pushTurn(keep, text);
-    send(text, keep, dept, store);
+    send(text, keep, dept, store, context);
+  };
+
+  /**
+   * "Refinar ✨". Forced (the button): always show what Jev understood. Otherwise only for a new
+   * conversation with a real sentence, and only when something that matters is unknown: then we
+   * ask before searching ("de tarde ou de noite?") instead of guessing.
+   */
+  const [refining, setRefining] = useState<{ text: string; dims: RefineDim[] } | null>(null);
+  const [thinking, setThinking] = useState(false);
+  const askOrRefine = async (text: string, force = false) => {
+    if (!force && (view >= 0 || text.length < AUTO_REFINE_MIN)) return ask(text);
+    setThinking(true);
+    const dims = await fetchRefine(text, dept, chatId());
+    setThinking(false);
+    if (dims && (force ? dims.length > 0 : dims.some((d) => d.ask))) {
+      setRefining({ text, dims });
+      track("shop.enrich.shown", { chat: chatId(), forced: force, asked: dims.filter((d) => d.ask).map((d) => d.key) });
+    } else ask(text);
   };
   const more = (t: Tile) => {
     setOpen(null);
@@ -197,7 +216,7 @@ export default function ShopChat({
             <DeptToggle value={dept} onChange={setDept} />
           </div>
           <div className="mt-5 w-full animate-rise" style={{ animationDelay: "160ms" }}>
-            <Composer placeholder={placeholder} onSend={ask} autoFocus large />
+            <Composer placeholder={placeholder} onSend={(t) => askOrRefine(t)} onRefine={(t) => askOrRefine(t, true)} busy={thinking} autoFocus large />
           </div>
           {chips.length > 0 && (
             <div className="mt-5 flex flex-wrap justify-center gap-2">
@@ -226,13 +245,24 @@ export default function ShopChat({
           <aside className="lg:sticky lg:top-20 lg:h-[calc(100dvh-6rem)] lg:overflow-y-auto">
             <Thread turns={turns.slice(0, view + 1)} model={model} chatId={chatId()} onAsk={(r) => { track("shop.refine", { chat: chatId(), model, text: r }); ask(r); }} />
             <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line/70 frost p-3 lg:static lg:mt-5 lg:border-0 lg:bg-transparent lg:p-0">
-              <Composer placeholder="Refine: mais barato, outra cor, só tênis…" onSend={ask} />
+              <Composer placeholder="Refine: mais barato, outra cor, só tênis…" onSend={ask} onRefine={(t) => askOrRefine(t, true)} busy={thinking} />
             </div>
           </aside>
           <Results turn={turns[Math.min(view, turns.length - 1)]} hidden={hidden} onOpen={(t) => { setOpen(t); track("shop.open", { chat: chatId(), model, id: t.id }); }} onMore={more} onDismiss={dismiss} />
         </div>
       )}
 
+      {refining && (
+        <RefineSheet
+          text={refining.text}
+          dims={refining.dims}
+          onClose={() => setRefining(null)}
+          onSearch={(context) => {
+            track("shop.enrich.search", { chat: chatId(), context });
+            ask(refining.text, context);
+          }}
+        />
+      )}
       {open && (
         <ProductDrawer
           t={open}
@@ -265,14 +295,29 @@ function DeptToggle({ value, onChange }: { value: Dept; onChange: (d: Dept) => v
   );
 }
 
-function Composer({ placeholder, onSend, autoFocus, large }: { placeholder: string; onSend: (t: string) => void; autoFocus?: boolean; large?: boolean }) {
+function Composer({
+  placeholder,
+  onSend,
+  onRefine,
+  busy,
+  autoFocus,
+  large,
+}: {
+  placeholder: string;
+  onSend: (t: string) => void;
+  onRefine?: (t: string) => void;
+  busy?: boolean;
+  autoFocus?: boolean;
+  large?: boolean;
+}) {
   const [text, setText] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
   const submit = () => {
-    if (!text.trim()) return;
+    if (!text.trim() || busy) return;
     onSend(text.trim());
     setText("");
   };
+  const canRefine = !!onRefine && text.trim().length >= REFINE_MIN;
   return (
     <form
       onSubmit={(e) => { e.preventDefault(); submit(); }}
@@ -291,13 +336,27 @@ function Composer({ placeholder, onSend, autoFocus, large }: { placeholder: stri
         aria-label={placeholder}
         className={`max-h-40 min-w-0 flex-1 resize-none bg-transparent outline-none placeholder:text-ink-soft/70 field-sizing-content ${large ? "py-3 text-lg" : "py-2.5 text-sm"}`}
       />
+      {canRefine && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => { onRefine!(text.trim()); setText(""); }}
+          className={`tap-scale shrink-0 animate-rise self-center rounded-full border border-line px-3 font-medium text-ink transition hover:border-ink disabled:opacity-40 ${large ? "py-2 text-sm" : "py-1.5 text-xs"}`}
+        >
+          Refinar ✨
+        </button>
+      )}
       <button
         type="submit"
-        disabled={!text.trim()}
+        disabled={!text.trim() || busy}
         aria-label="Enviar"
         className={`grid shrink-0 place-items-center rounded-full bg-ink text-white transition hover:bg-ink disabled:opacity-30 ${large ? "size-12" : "size-10"}`}
       >
-        <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        {busy ? (
+          <span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+        ) : (
+          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        )}
       </button>
     </form>
   );
@@ -327,6 +386,13 @@ function Thread({ turns, model, chatId, onAsk }: { turns: Turn[]; model?: string
             </div>
           ) : (
             <p className="self-end rounded-2xl rounded-br-md bg-ink px-4 py-2.5 text-sm text-paper">{t.user}</p>
+          )}
+          {!!t.context?.length && (
+            <div className="flex flex-wrap justify-end gap-1">
+              {t.context.map((c) => (
+                <span key={c} className="rounded-full bg-[#f2f2f2] px-2.5 py-1 text-[11px] text-ink-soft">{c}</span>
+              ))}
+            </div>
           )}
           {!t.answer && !t.done && <Steps steps={t.steps?.length ? t.steps : [t.status ?? "Pensando…"]} />}
           {t.answer && <p className="text-[15px] font-medium leading-snug tracking-tight lg:text-lg">{t.answer}</p>}
@@ -464,6 +530,9 @@ export const eager = true;
 export const sync = true;
 
 const CONTEXT_MAX = 280;
+/** "Refinar ✨" shows from this many characters (the server refuses fewer); asking on its own, from a longer sentence. */
+const REFINE_MIN = 20;
+const AUTO_REFINE_MIN = 25;
 
 /** "Adicionar meu contexto": saved per device, sent with every search (see myContext). */
 function MyContext() {
@@ -580,6 +649,83 @@ function Drift({ tiles, reverse }: { tiles: Tile[]; reverse?: boolean }) {
           <figcaption className="mt-1.5 truncate text-[11px] uppercase tracking-[0.06em] text-ink-soft">{t.brand}</figcaption>
         </figure>
       ))}
+    </div>
+  );
+}
+
+/**
+ * What Jev understood from the request, dimension by dimension, best guesses first. What it is
+ * sure of comes pre-selected; what matters and is unknown is asked. Picks are multi-select.
+ */
+function RefineSheet({ text, dims, onSearch, onClose }: { text: string; dims: RefineDim[]; onSearch: (context: string[]) => void; onClose: () => void }) {
+  const [sel, setSel] = useState<Record<string, string[]>>(() => Object.fromEntries(dims.map((d) => [d.key, d.picked])));
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const toggle = (key: string, o: string) => setSel((s) => ({ ...s, [key]: s[key]?.includes(o) ? s[key].filter((x) => x !== o) : [...(s[key] ?? []), o] }));
+  const asked = dims.filter((d) => d.ask);
+  const known = dims.filter((d) => !d.ask);
+  const context = dims.filter((d) => sel[d.key]?.length).map((d) => `${d.name}: ${sel[d.key].join(", ")}`);
+  const group = (title: string, list: RefineDim[]) =>
+    list.length > 0 && (
+      <section className="mt-5">
+        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-soft">{title}</p>
+        {list.map((d) => (
+          <div key={d.key} className="mt-3">
+            <p className="text-sm font-medium">{d.label}</p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {d.options.map((o) => {
+                const on = sel[d.key]?.includes(o.label);
+                return (
+                  <button
+                    key={o.label}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => toggle(d.key, o.label)}
+                    className={`tap-scale rounded-full px-3 py-1.5 text-xs transition ${on ? "bg-ink text-white" : "bg-[#f2f2f2] text-ink hover:bg-[#e8e8e8]"}`}
+                  >
+                    {o.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </section>
+    );
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/30 sm:items-center" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Refinar a busca"
+        onClick={(e) => e.stopPropagation()}
+        className="flex max-h-[88dvh] w-full max-w-lg animate-rise flex-col rounded-t-3xl bg-paper shadow-2xl sm:rounded-3xl"
+      >
+        <div className="overflow-y-auto px-5 pb-4 pt-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-soft">Refinar ✨</p>
+              <p className="mt-1 text-lg font-medium leading-snug tracking-tight">“{text}”</p>
+            </div>
+            <button type="button" aria-label="Fechar" onClick={onClose} className="tap-scale -mr-1 rounded-full p-1.5 text-ink-soft hover:bg-line">
+              <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2}><path d="M6 6l12 12M18 6L6 18" /></svg>
+            </button>
+          </div>
+          {group(asked.length ? "Pra eu acertar" : "", asked)}
+          {group("O que eu entendi", known)}
+        </div>
+        <div className="flex items-center gap-3 border-t border-line px-5 py-3">
+          <button type="button" onClick={() => onSearch([])} className="text-sm text-ink-soft underline-offset-2 hover:underline">
+            Buscar sem detalhes
+          </button>
+          <button type="button" onClick={() => onSearch(context)} className="tap-scale ml-auto rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-white">
+            Buscar
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

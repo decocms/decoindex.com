@@ -71,3 +71,13 @@ export interface Share {
   /** "Mais como este" snapshots: the piece it started from. */
   seed?: Pick<Tile, "brand" | "title" | "images">;
 }
+
+/** One dimension of "Refinar ✨" (server/refine.ts). */
+export interface RefineDim {
+  key: string;
+  name: string;
+  label: string;
+  options: { label: string; p: number }[];
+  picked: string[];
+  ask: boolean;
+}

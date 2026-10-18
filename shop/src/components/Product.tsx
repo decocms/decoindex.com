@@ -140,6 +140,9 @@ export function ProductDrawer({
 }) {
   const [change, setChange] = useState("");
   const [shown, setShown] = useState<number | null>(null);
+  /** Desktop: the photo on the stage left of the drawer. Thumbs switch it; phones open the gallery instead. */
+  const [stage, setStage] = useState(0);
+  const wide = () => matchMedia("(min-width: 1024px)").matches;
   const close = useBackToClose(1, onClose);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && shown == null && close();
@@ -149,7 +152,27 @@ export function ProductDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label={t.title}>
-      <button type="button" aria-label="Fechar" onClick={close} className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]" />
+      <button type="button" aria-label="Fechar" onClick={close} className="absolute inset-0 bg-ink/30 backdrop-blur-[2px] lg:bg-ink/55 lg:backdrop-blur-md" />
+      {t.images.length > 0 && (
+        // The space the drawer leaves on a desktop is the product's photo, not a blurred grid.
+        <div className="pointer-events-none relative hidden min-w-0 flex-1 items-center justify-center p-10 lg:flex">
+          <button type="button" onClick={() => setShown(stage)} aria-label="Ver fotos em tela cheia" className="pointer-events-auto h-full max-h-[min(100%,1100px)] animate-rise">
+            <img key={stage} src={thumb(t.images[stage], 1200)} alt={t.title} className="h-full w-auto max-w-full animate-rise rounded-sm object-contain shadow-2xl" />
+          </button>
+          {t.images.length > 1 &&
+            ([-1, 1] as const).map((d) => (
+              <button
+                key={d}
+                type="button"
+                aria-label={d < 0 ? "Foto anterior" : "Próxima foto"}
+                onClick={() => setStage((i) => (i + d + t.images.length) % t.images.length)}
+                className={`pointer-events-auto absolute top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-paper/90 text-xl text-ink transition hover:bg-paper ${d < 0 ? "left-6" : "right-6"}`}
+              >
+                {d < 0 ? "‹" : "›"}
+              </button>
+            ))}
+        </div>
+      )}
       <aside className="relative flex h-full w-full max-w-[520px] animate-rise flex-col overflow-y-auto bg-card shadow-2xl">
         <button type="button" onClick={close} aria-label="Fechar" className="absolute right-3 top-3 z-10 grid size-9 place-items-center rounded-full bg-card/90 text-lg">
           ×
@@ -163,9 +186,10 @@ export function ProductDrawer({
                 <button
                   key={src}
                   type="button"
-                  onClick={() => setShown(i)}
+                  onClick={() => (wide() ? setStage(i) : setShown(i))}
                   aria-label={`Foto ${i + 1} de ${t.images.length}`}
-                  className="aspect-[3/4] overflow-hidden rounded-sm bg-[#f0f0f0] transition hover:opacity-80"
+                  aria-current={stage === i}
+                  className={`aspect-[3/4] overflow-hidden rounded-sm bg-[#f0f0f0] transition hover:opacity-80 lg:ring-offset-2 ${stage === i ? "lg:ring-2 lg:ring-ink" : ""}`}
                 >
                   <img src={thumb(src, 480)} alt="" className="h-full w-full object-cover" />
                 </button>
