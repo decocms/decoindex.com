@@ -43,6 +43,16 @@
   to { opacity: 1; filter: blur(0); transform: none; }
 }
 
+/* A strip of photos drifting sideways while a search runs. The track holds the list twice, so -50% loops seamlessly. */
+@keyframes drift {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@utility edge-fade {
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
 @keyframes shimmer {
   from { background-position: -200% 0; }
   to { background-position: 200% 0; }

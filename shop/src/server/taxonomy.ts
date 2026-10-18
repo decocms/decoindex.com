@@ -68,8 +68,8 @@ export function words(s: string): string[] {
 
 const FEM = /\b(feminin[oa]|fem|mulher|women|woman|female|ela)\b/;
 const MASC = /\b(masculin[oa]|masc|homem|men|man|male|ele)\b/;
-const KIDS = /\b(infantil|kid|crianca|baby|bebe|menin[oa]|teen|mini)\b/;
-const JUNK = /\b(desativad[oa]|integracao|category|nao categorizado|vale presente|presente|gift|teste|test|casa|home|tok stok|clube|me leva)\b/;
+const KIDS = /\b(infantil|inf|kid|crianca|baby|bebe|menin[oa]|teen|mini)\b/;
+const JUNK = /\b(desativad[oa]|inativ[oa]|integracao|category|nao categorizado|vale presente|presente|gift|teste|test|casa|home|tok stok|clube|me leva)\b/;
 const SALE = /\b(bazar|outlet|sale|promo|liquida|black friday|off)\b/;
 
 export function toCategories(raw: { path: string; name: string; depth?: number; count?: number; parent?: string }[]): Category[] {
@@ -84,6 +84,9 @@ export function toCategories(raw: { path: string; name: string; depth?: number; 
     };
   });
 }
+
+/** Names that carry a type's word but mean something else: Mizuno's "Tênis de Mesa" is table tennis. */
+const NOT_THE_TYPE: Partial<Record<ProductType, RegExp>> = { tenis: /\btenis de mesa\b/ };
 
 export interface Pick {
   category: Category;
@@ -105,7 +108,7 @@ export function pickCategory(
     const hit = c.words.some((w) => syn.includes(w));
     if (!hit) continue;
     const text = c.words.join(" ");
-    if (JUNK.test(text)) continue;
+    if (JUNK.test(text) || NOT_THE_TYPE[type]?.test(text)) continue;
     let score = 10;
     // The type is the category's own name, not just somewhere up the breadcrumb.
     if (words(c.name).some((w) => syn.includes(w))) score += 6;
@@ -123,6 +126,12 @@ export function pickCategory(
     if (!best || score > best.score) best = { category: c, score };
   }
   return best && best.score > 0 ? best : undefined;
+}
+
+/** Categories worth offering to Jev when the words found none: no scaffolding, no sale bins, no kids line for an adult department. */
+export function browsable(c: Category, dept?: "feminino" | "masculino"): boolean {
+  const text = c.words.join(" ");
+  return !JUNK.test(text) && !SALE.test(text) && !(dept && KIDS.test(text));
 }
 
 /** Which canonical type a free-text title/category is about, if any. */

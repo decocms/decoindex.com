@@ -9,6 +9,8 @@ export interface Turn {
   user: string;
   answer: string;
   status?: string;
+  /** What the server said it was doing, in order: the loading view lists them. */
+  steps?: string[];
   /** Every tile the searches returned, in arrival order. */
   products: Tile[];
   /** The model's pick, in its order. Undefined until show_products runs. */
@@ -108,11 +110,11 @@ export function useShopChat() {
           case "meta":
             return setModel(e.model);
           case "status":
-            return patchLast((t) => ({ ...t, status: e.text }));
+            return patchLast((t) => ({ ...t, status: e.text, steps: t.steps?.includes(e.text) ? t.steps : [...(t.steps ?? []), e.text] }));
           case "products":
-            return patchLast((t) => ({ ...t, products: [...t.products, ...e.items], status: "Escolhendo os melhores…" }));
+            return patchLast((t) => ({ ...t, products: [...t.products, ...e.items] }));
           case "curate":
-            return patchLast((t) => ({ ...t, curated: e.ids, refinements: e.refinements, status: t.answer ? undefined : "Escrevendo…" }));
+            return patchLast((t) => ({ ...t, curated: e.ids, refinements: e.refinements ?? t.refinements, status: t.answer ? undefined : "Escrevendo…" }));
           case "share":
             return patchLast((t) => ({ ...t, shareId: e.id }));
           case "text":
