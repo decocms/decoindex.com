@@ -105,8 +105,11 @@ export function SiteHeader({ onHome, right }: { onHome?: () => void; right?: Rea
           <img src="/deco-logo.png" alt="deco" width={67} height={28} className="h-7 w-auto max-[359px]:h-6" />
           {/* On a phone with controls on the right, the wordmark doesn't fit: the logo alone goes home. */}
           <span aria-hidden className={`h-5 w-px bg-ink/20 ${right ? "hidden sm:inline" : ""}`} />
-          <span className={`text-sm tracking-[0.14em] text-ink/80 ${right ? "hidden sm:inline" : ""}`}>shop</span>
-          <span className={`rounded-full bg-[#d4f01f] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[#0b3d1c] ${right ? "hidden sm:inline" : ""}`}>beta</span>
+          {/* "beta" rides on "shop" like an exponent: shop², not a third item in the row. */}
+          <span className={`items-start ${right ? "hidden sm:flex" : "flex"}`}>
+            <span className="text-base leading-none tracking-[0.14em] text-ink/80">shop</span>
+            <span className="-mt-1.5 ml-0.5 rounded-full bg-[#d4f01f] px-1 py-px text-[7px] font-semibold uppercase leading-[9px] tracking-wider text-[#0b3d1c]">beta</span>
+          </span>
         </a>
         {right}
       </nav>
