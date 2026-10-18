@@ -110,25 +110,25 @@ export async function refine(
   text: string,
   dept?: string,
 ): Promise<{ dims: RefineDim[]; dept?: "feminino" | "masculino"; cost: number } | null> {
-  const questions: Record<string, object> = {
-    // The toggle starts on Feminino whatever the shopper is: "roupa para solteiro" said masculino.
-    para_quem: {
-      type: "choice",
-      instructions:
-        "Quem vai usar a roupa do pedido: uma mulher ou um homem? Julgue só pelo texto do pedido. Em português o gênero das palavras diz: 'solteiro', 'noivo', 'convidado', 'padrinho' = homem; 'solteira', 'noiva', 'convidada', 'madrinha' = mulher. Peças também dizem: terno, gravata, cueca, sunga = homem; vestido, saia, biquíni = mulher. Responda indefinido só se nada no texto indicar.",
-      criteria: { o0: "mulher", o1: "homem", o2: UNKNOWN },
-    },
-  };
+  const questions: Record<string, object> = {};
   for (const d of DIMS) {
     questions[d.key] = { type: "choice", instructions: d.question, criteria: Object.fromEntries([...d.options, UNKNOWN].map((o, i) => [`o${i}`, o])) };
     questions[`${d.key}_importa`] = { type: "noul", instructions: d.relevance };
   }
-  const res = await decide<{ probabilities?: Record<string, number>; noul?: number }>(
-    env,
-    { pedido: text.slice(0, 600), departamento: dept ?? "qualquer", data_de_hoje: new Date().toISOString().slice(0, 10) },
-    questions,
-    4_000,
-  );
+  type Answer = { probabilities?: Record<string, number>; noul?: number };
+  // The toggle starts on Feminino whatever the shopper is: "roupa para solteiro" said masculino. Asked
+  // apart, on the words alone: next to `departamento: feminino` Jev leaned feminine (solteiro 0.96 → 0.60).
+  const [res, whoRes] = await Promise.all([
+    decide<Answer>(env, { pedido: text.slice(0, 600), departamento: dept ?? "qualquer", data_de_hoje: new Date().toISOString().slice(0, 10) }, questions, 4_000),
+    decide<Answer>(env, { pedido: text.slice(0, 600) }, {
+      para_quem: {
+        type: "choice",
+        instructions:
+          "Quem vai usar a roupa do pedido: uma mulher ou um homem? Julgue só pelo texto do pedido. Em português o gênero das palavras diz: 'solteiro', 'noivo', 'convidado', 'padrinho' = homem; 'solteira', 'noiva', 'convidada', 'madrinha' = mulher. Peças também dizem: terno, gravata, cueca, sunga = homem; vestido, saia, biquíni = mulher. Responda indefinido só se nada no texto indicar.",
+        criteria: { o0: "mulher", o1: "homem", o2: UNKNOWN },
+      },
+    }, 4_000),
+  ]);
   if (!res) return null;
   const dims = DIMS.map((d): RefineDim => {
     const probs = res.answers[d.key]?.probabilities ?? {};
@@ -162,7 +162,7 @@ export async function refine(
         d.ask = true; // it mattered enough to infer, so it's worth asking
       }
   }
-  const who = res.answers.para_quem?.probabilities ?? {};
+  const who = whoRes?.answers.para_quem?.probabilities ?? {};
   const said = (who.o0 ?? 0) >= SURE_DEPT ? "feminino" : (who.o1 ?? 0) >= SURE_DEPT ? "masculino" : undefined;
-  return { dims, dept: said, cost: res.cost };
+  return { dims, dept: said, cost: res.cost + (whoRes?.cost ?? 0) };
 }
