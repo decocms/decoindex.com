@@ -90,7 +90,12 @@ async function fetchTree(shop: Storefront): Promise<StoredTree | null> {
   }
 }
 
-/** Every top-level category plus its immediate children, for the overview. */
+/**
+ * Three levels of the tree, for the overview. Two was not enough: most fashion stores file the
+ * product type on the third level (`/feminino/vestuario/vestido`), so an agent looking for
+ * "vestido" at Osklen, C&A or Reserva found no category at all and fell back to keyword search.
+ * The Markdown overview still shows two levels; the third is for agents reading `.json`.
+ */
 export function flatten(tree: StoredTree): CategoryRef[] {
   const out: CategoryRef[] = [];
   for (const rootPath of tree.roots) {
@@ -99,6 +104,9 @@ export function flatten(tree: StoredTree): CategoryRef[] {
     out.push({ path: root.path, name: root.name, depth: 0 });
     for (const child of root.children) {
       out.push({ path: child.path, name: child.name, depth: 1, parent: root.name });
+      for (const grand of tree.nodes[child.path]?.children ?? []) {
+        out.push({ path: grand.path, name: grand.name, depth: 2, parent: child.name });
+      }
     }
   }
   return out;
