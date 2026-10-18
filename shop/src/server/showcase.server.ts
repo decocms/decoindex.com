@@ -193,7 +193,7 @@ async function sampleLive(
   for (const b of ordered) {
     if (out.length >= 3 || out.length + searched.length >= 4) break;
     if (++tries > MAX_TRIES || health.ok + health.failed >= ITEM_BUDGET) break;
-    const f = await findProducts({ env, ip: IP, dept: spec.dept, health }, { domain: b.domain, type, terms });
+    const f = await findProducts({ env, ip: IP, dept: spec.dept, health }, { domain: b.domain, type, terms, warm: true });
     // Best photos first; a store whose best is score 0 still counts, but sorts last.
     const withImg = f.tiles
       .filter((t) => t.images[0])
