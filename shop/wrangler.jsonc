@@ -37,7 +37,7 @@
     "DECO_ENV_NAME": "production",
     // Comma-separated OpenRouter slugs. Each chat is pinned to one, picked by
     // hashing its id, so we learn which one shoppers click through on.
-    "CHAT_MODELS": "anthropic/claude-haiku-5.5,deepseek/deepseek-v4.1-flash,z-ai/glm-5.3-flash",
+    "CHAT_MODELS": "anthropic/claude-haiku-5.5,deepseek/deepseek-v4.1-flash",
     "AI_GATEWAY_ACCOUNT_ID": "55dd6d847f366735ef6e0f860c7bdc51",
     "AI_GATEWAY_NAME": "default",
     "PRESELECT_MODEL": "~typesafe/jev-latest",
