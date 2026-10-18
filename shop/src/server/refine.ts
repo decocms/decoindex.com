@@ -115,8 +115,8 @@ export async function refine(
     para_quem: {
       type: "choice",
       instructions:
-        "Só pelo texto do pedido (ignore o departamento): a roupa pedida é moda feminina ou masculina? Use o gênero das palavras (solteiro/solteira, noivo/noiva, convidado/convidada) e as peças (vestido, terno). Presente para outra pessoa: o gênero de quem vai usar.",
-      criteria: { o0: "feminina", o1: "masculina", o2: UNKNOWN },
+        "Quem vai usar a roupa do pedido: uma mulher ou um homem? Julgue só pelo texto do pedido. Em português o gênero das palavras diz: 'solteiro', 'noivo', 'convidado', 'padrinho' = homem; 'solteira', 'noiva', 'convidada', 'madrinha' = mulher. Peças também dizem: terno, gravata, cueca, sunga = homem; vestido, saia, biquíni = mulher. Responda indefinido só se nada no texto indicar.",
+      criteria: { o0: "mulher", o1: "homem", o2: UNKNOWN },
     },
   };
   for (const d of DIMS) {
