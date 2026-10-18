@@ -37,7 +37,8 @@ const decoWorker = createDecoWorkerEntry(createServerEntry({ fetch: handler.fetc
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com",
       "img-src 'self' https: data: blob:",
       "style-src 'self' 'unsafe-inline' api.fontshare.com",
-      "font-src 'self' data: cdn.fontshare.com api.fontshare.com",
+      // https: wide like images: the browser's own assistant (Comet) injects its UI font into every page.
+      "font-src 'self' data: https:",
       "object-src 'none'",
       "base-uri 'self'",
     ].join("; "),
