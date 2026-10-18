@@ -237,6 +237,12 @@ export default function ShopChat({
     bus.set({ started });
   }, [started]);
 
+  /** A suggested next step ("Só sutiã com aro"): a follow-up question. */
+  const followUp = (r: string) => {
+    track("shop.refine", { chat: chatId(), model, text: r });
+    ask(r);
+  };
+
   /** Details picked beside the result ("clima: frio") ask the same question again with it, in place. */
   const refineHere = (details: string[]) => {
     const t = onScreen;
@@ -319,11 +325,11 @@ export default function ShopChat({
       ) : (
         <div className="mx-auto grid max-w-[1600px] grid-cols-[minmax(0,1fr)] gap-6 px-4 pb-28 pt-5 md:px-8 lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-10">
           <aside className="lg:sticky lg:top-20 lg:h-[calc(100dvh-6rem)] lg:overflow-y-auto">
-            <Thread turns={turns.slice(0, view + 1)} model={model} chatId={chatId()} onAsk={(r) => { track("shop.refine", { chat: chatId(), model, text: r }); ask(r); }} />
+            <Thread turns={turns.slice(0, view + 1)} model={model} chatId={chatId()} onAsk={followUp} />
             <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line/70 frost p-3 lg:static lg:mt-5 lg:border-0 lg:bg-transparent lg:p-0 lg:[backdrop-filter:none]">
               <Composer placeholder="Refine: mais barato, outra cor, só tênis…" onSend={ask} />
             </div>
-            {onScreen?.done && !onScreen.seed && <InlineRefine key={`${onScreen.key}:${dept}`} text={onScreen.user} dept={dept} context={onScreen.context} onPick={refineHere} />}
+            {onScreen?.done && <InlineRefine key={`${onScreen.key}:${dept}`} text={onScreen.seed ? undefined : onScreen.user} dept={dept} context={onScreen.context} suggestions={onScreen.refinements} onSuggest={followUp} onPick={refineHere} />}
           </aside>
           <Results turn={turns[Math.min(view, turns.length - 1)]} hidden={hidden} favIds={favIds} onFav={toggleFav} onOpen={(t) => { setOpen(t); track("shop.open", { chat: chatId(), model, id: t.id }); }} onMore={more} onDismiss={dismiss} />
         </div>
@@ -528,7 +534,8 @@ function Thread({ turns, model, chatId, onAsk }: { turns: Turn[]; model?: string
           {!t.answer && !t.done && <Steps steps={t.steps?.length ? t.steps : [t.status ?? "Pensando…"]} />}
           {t.answer && <p className="text-[15px] font-medium leading-snug tracking-tight lg:text-lg">{t.answer}</p>}
           {t.done && !!t.refinements?.length && (
-            <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0">
+            // Desktop shows them in the Refinar panel under the composer, next to the dimension chips.
+            <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 lg:hidden">
               {t.refinements.map((r) => (
                 <button
                   key={r}
@@ -939,12 +946,27 @@ function RefineSheet({ text, dims, onSearch, onClose }: { text: string; dims: Re
  * dimensions as the sheet, cached per words + department on the server, so the home's categories
  * come back instantly. Pick any number of chips, then "Refinar" searches again with them.
  */
-function InlineRefine({ text, dept, context, onPick }: { text: string; dept: Dept; context?: string[]; onPick: (details: string[]) => void }) {
+function InlineRefine({
+  text,
+  dept,
+  context,
+  suggestions = [],
+  onSuggest,
+  onPick,
+}: {
+  /** Undefined for "Mais como este": no request to read, only the suggestions. */
+  text?: string;
+  dept: Dept;
+  context?: string[];
+  suggestions?: string[];
+  onSuggest: (r: string) => void;
+  onPick: (details: string[]) => void;
+}) {
   const [dims, setDims] = useState<RefineDim[]>([]);
   const [sel, setSel] = useState<Record<string, string[]>>({});
   const toggle = (key: string, o: string) => setSel((s) => ({ ...s, [key]: s[key]?.includes(o) ? s[key].filter((x) => x !== o) : [...(s[key] ?? []), o] }));
   useEffect(() => {
-    if (!matchMedia("(min-width: 1024px)").matches) return; // phones: no room beside the grid
+    if (!text || !matchMedia("(min-width: 1024px)").matches) return; // phones: no room beside the grid
     let live = true;
     void fetchRefine(text, dept).then((r) => live && setDims(r?.dims ?? []));
     return () => {
@@ -958,10 +980,19 @@ function InlineRefine({ text, dept, context, onPick }: { text: string; dept: Dep
     .slice(0, 4);
   const picked = show.filter((d) => sel[d.key]?.length).map((d) => `${d.name}: ${sel[d.key].join(", ")}`);
   const n = show.reduce((k, d) => k + (sel[d.key]?.length ?? 0), 0);
-  if (!show.length) return null;
+  if (!show.length && !suggestions.length) return null;
   return (
     <section className="mt-8 hidden animate-rise lg:block">
       <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-soft">Refinar ✨</p>
+      {suggestions.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {suggestions.map((r) => (
+            <button key={r} type="button" onClick={() => onSuggest(r)} className="tap-scale rounded-full border border-ink/15 px-3 py-1.5 text-xs font-medium transition hover:border-ink">
+              {r}
+            </button>
+          ))}
+        </div>
+      )}
       {show.map((d) => (
         <div key={d.key} className="mt-3">
           <p className="text-sm font-medium">{d.label}</p>
@@ -983,6 +1014,7 @@ function InlineRefine({ text, dept, context, onPick }: { text: string; dept: Dep
           </div>
         </div>
       ))}
+      {show.length > 0 && (
       <button
         type="button"
         disabled={!picked.length}
@@ -991,6 +1023,7 @@ function InlineRefine({ text, dept, context, onPick }: { text: string; dept: Dep
       >
         Refinar{n ? ` (${n})` : ""}
       </button>
+      )}
     </section>
   );
 }
