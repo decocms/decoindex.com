@@ -75,7 +75,10 @@ export const DIMS: Dim[] = [
   { key: "periodo", name: "horário", label: "Que horas?", question: "Em que período do dia a peça vai ser usada?", relevance: "O período do dia (manhã, tarde, noite) muda a escolha da peça para este pedido", options: ["manhã", "tarde", "fim de tarde", "noite", "o dia todo"] },
   { key: "traje", name: "traje", label: "Qual o traje?", question: "Qual o nível de formalidade esperado?", relevance: "O nível de formalidade muda a escolha da peça para este pedido", options: ["casual", "esporte fino", "passeio completo", "black tie / gala", "esportivo"] },
   { key: "clima", name: "clima", label: "Como vai estar o clima?", question: "Qual o clima provável no lugar e na época em que a peça vai ser usada?", relevance: "O clima muda a escolha da peça (tecido, manga, comprimento) para este pedido", options: ["calor forte", "quente", "ameno", "fresco", "frio", "frio intenso"] },
-  { key: "cor", name: "cor", label: "Alguma cor?", question: "Que cor o cliente prefere, ou combina com o pedido e a ocasião?", relevance: "A cor importa para este pedido", options: ["preto", "branco", "off-white", "bege ou nude", "marrom", "cinza", "azul-marinho", "azul", "azul-claro", "verde", "verde-oliva", "rosa", "vermelho", "vinho", "amarelo", "laranja", "lilás", "dourado ou prata", "estampado", "tons pastel", "colorido vibrante"] },
+  { key: "cor", name: "cor", label: "Alguma cor?", question: "Que cor o cliente prefere, ou combina com o pedido e a ocasião?", relevance: "A cor importa para este pedido", options: ["preto", "branco", "off-white", "bege ou nude", "marrom", "cinza", "azul-marinho", "azul", "azul-claro", "verde", "verde-oliva", "rosa", "vermelho", "vinho", "amarelo", "laranja", "lilás", "dourado ou prata", "tons pastel", "colorido vibrante"] },
+  { key: "estampa", name: "estampa", label: "Liso ou estampado?", question: "Que padronagem combina com o pedido?", relevance: "A estampa ou padronagem importa para este pedido", options: ["liso", "estampado", "floral", "tropical", "listrado", "xadrez", "poá", "animal print", "geométrico", "bordado", "renda"] },
+  { key: "comprimento", name: "comprimento", label: "Qual comprimento?", question: "Qual comprimento da peça combina com o pedido?", relevance: "O comprimento da peça (curto, midi, longo) importa para este pedido", options: ["curto", "midi", "longo", "cropped", "na altura do joelho"] },
+  { key: "tecido", name: "tecido", label: "Algum tecido?", question: "Que tecido ou material combina com o pedido?", relevance: "O tecido ou material importa para este pedido", options: ["linho", "algodão", "seda", "viscose", "malha", "tricô", "jeans", "couro", "crepe", "tule", "lã", "tecido tecnológico"] },
   { key: "estilo", name: "estilo", label: "Qual estilo?", question: "Qual estilo combina com o pedido?", relevance: "O estilo muda a escolha da peça para este pedido", options: ["clássico", "elegante", "romântico", "minimalista", "boho", "moderno", "sexy", "básico", "esportivo", "praiano", "streetwear"] },
   { key: "orcamento", name: "orçamento", label: "Quanto quer gastar?", question: "Qual faixa de preço o cliente sugere?", relevance: "Saber o orçamento importa para este pedido", options: ["até R$ 200", "R$ 200 a 500", "R$ 500 a 1.000", "R$ 1.000 a 3.000", "acima de R$ 3.000"] },
 ];
@@ -83,6 +86,8 @@ export const DIMS: Dim[] = [
 export interface RefineDim {
   key: string;
   name: string;
+  /** Jev's yes/no "does this matter here?", 0–1. The button shows the plausible ones too. */
+  relevance: number;
   label: string;
   /** Best first, "indefinido" left out. */
   options: { label: string; p: number }[];
@@ -92,8 +97,10 @@ export interface RefineDim {
   ask: boolean;
 }
 
-/** Probability at which an option comes pre-selected. */
+/** Probability at which an option comes pre-selected. Taste is a higher bar: "linho" for a beach dress is a fair guess, not something she said. */
 const SURE = 0.7;
+const TASTE = new Set(["cor", "estampa", "comprimento", "tecido", "estilo"]);
+const SURE_TASTE = 0.85;
 
 export async function refine(env: Env, text: string, dept?: string): Promise<{ dims: RefineDim[]; cost: number } | null> {
   const questions: Record<string, object> = {};
@@ -113,8 +120,9 @@ export async function refine(env: Env, text: string, dept?: string): Promise<{ d
     const unknown = probs[`o${d.options.length}`] ?? 0;
     // Stable sort: when the request says nothing, the list's own order (manhã, tarde, noite) stands.
     let ranked = d.options.map((label, i) => ({ label, p: probs[`o${i}`] ?? 0 })).sort((a, b) => b.p - a.p);
-    const relevant = (res.answers[`${d.key}_importa`]?.noul ?? 0) >= 0.6;
-    let picked = ranked.filter((o) => o.p >= SURE).map((o) => o.label);
+    const relevance = res.answers[`${d.key}_importa`]?.noul ?? 0;
+    const relevant = relevance >= 0.6;
+    let picked = ranked.filter((o) => o.p >= (TASTE.has(d.key) ? SURE_TASTE : SURE)).map((o) => o.label);
     let ask = relevant && !picked.length && (unknown >= 0.4 || (ranked[0]?.p ?? 0) < 0.5);
     // The event is known but not the role ("vestido de casamento"): ask the role, among that event's.
     const roles = d.key === "ocasiao" && EVENTS_WITH_ROLES[ranked[0]?.label] && ranked[0].p >= 0.5 ? EVENTS_WITH_ROLES[ranked[0].label] : null;
@@ -128,7 +136,7 @@ export async function refine(env: Env, text: string, dept?: string): Promise<{ d
     // them. Occasions only where Jev sees a chance (the list is long; "casamento" is no alternative
     // to a half marathon); the short lists show their best six.
     const shown = d.key === "ocasiao" && !roles ? ranked.filter((o, i) => i === 0 || o.p >= 0.002) : ranked;
-    return { key: d.key, name: d.name, label: roles ? "Qual o seu papel?" : d.label, options: shown.slice(0, 6), picked, ask };
+    return { key: d.key, name: d.name, relevance, label: roles ? "Qual o seu papel?" : d.label, options: shown.slice(0, 6), picked, ask };
   });
   // Without the role, what Jev inferred from an assumed one (white and black tie: the bride) is not
   // known either. Still offered, nothing pre-selected.
