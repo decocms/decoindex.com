@@ -967,7 +967,7 @@ function InlineRefine({ text, dept, context, onPick }: { text: string; dept: Dep
           <p className="text-sm font-medium">{d.label}</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {d.options.slice(0, 5).map((o) => {
-              const on = sel[d.key]?.includes(o.label);
+              const on = !!sel[d.key]?.includes(o.label);
               return (
                 <button
                   key={o.label}
