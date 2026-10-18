@@ -90,7 +90,7 @@ export function SiteHeader({ onHome, right }: { onHome?: () => void; right?: Rea
   return (
     // One centered floating frost pill, like demo-storefront's HeaderNav: logo | wordmark, then the page's controls.
     <header className="sticky top-0 z-30 flex justify-center px-3 py-3 md:px-6">
-      <nav className={`frost flex h-11 max-w-full items-center gap-3 rounded-sm pl-3 ${right ? "pr-1.5" : "pr-3.5"}`}>
+      <nav className={`frost flex h-11 max-w-full items-center gap-2 rounded-sm sm:gap-3 pl-3 ${right ? "pr-1.5" : "pr-3.5"}`}>
         <a
           href="/"
           aria-label="deco shop — início"
