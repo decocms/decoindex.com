@@ -237,13 +237,13 @@ export default function ShopChat({
     bus.set({ started });
   }, [started]);
 
-  /** A detail picked beside the result ("clima: frio") asks the same question again with it, in place. */
-  const refineHere = (detail: string) => {
+  /** Details picked beside the result ("clima: frio") ask the same question again with it, in place. */
+  const refineHere = (details: string[]) => {
     const t = onScreen;
-    if (!t) return;
+    if (!t || !details.length) return;
     setOpen(null);
-    track("shop.enrich.inline", { chat: chatId(), detail });
-    send(t.user, view, dept, store, [...(t.context ?? []), detail]);
+    track("shop.enrich.inline", { chat: chatId(), details });
+    send(t.user, view, dept, store, [...(t.context ?? []), ...details]);
   };
 
   /** Switching Feminino/Masculino over a result asks the same question again in that department, in place. */
@@ -937,10 +937,12 @@ function RefineSheet({ text, dims, onSearch, onClose }: { text: string; dims: Re
 /**
  * "Refinar ✨" beside a finished result (desktop: the empty space under the composer). Same Jev
  * dimensions as the sheet, cached per words + department on the server, so the home's categories
- * come back instantly. One tap adds that detail and searches again.
+ * come back instantly. Pick any number of chips, then "Refinar" searches again with them.
  */
-function InlineRefine({ text, dept, context, onPick }: { text: string; dept: Dept; context?: string[]; onPick: (detail: string) => void }) {
+function InlineRefine({ text, dept, context, onPick }: { text: string; dept: Dept; context?: string[]; onPick: (details: string[]) => void }) {
   const [dims, setDims] = useState<RefineDim[]>([]);
+  const [sel, setSel] = useState<Record<string, string[]>>({});
+  const toggle = (key: string, o: string) => setSel((s) => ({ ...s, [key]: s[key]?.includes(o) ? s[key].filter((x) => x !== o) : [...(s[key] ?? []), o] }));
   useEffect(() => {
     if (!matchMedia("(min-width: 1024px)").matches) return; // phones: no room beside the grid
     let live = true;
@@ -954,6 +956,8 @@ function InlineRefine({ text, dept, context, onPick }: { text: string; dept: Dep
     .filter((d) => !answered.has(d.name) && d.options.length > 1)
     .sort((a, b) => Number(b.ask) - Number(a.ask) || b.relevance - a.relevance)
     .slice(0, 4);
+  const picked = show.filter((d) => sel[d.key]?.length).map((d) => `${d.name}: ${sel[d.key].join(", ")}`);
+  const n = show.reduce((k, d) => k + (sel[d.key]?.length ?? 0), 0);
   if (!show.length) return null;
   return (
     <section className="mt-8 hidden animate-rise lg:block">
@@ -962,19 +966,31 @@ function InlineRefine({ text, dept, context, onPick }: { text: string; dept: Dep
         <div key={d.key} className="mt-3">
           <p className="text-sm font-medium">{d.label}</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {d.options.slice(0, 5).map((o) => (
-              <button
-                key={o.label}
-                type="button"
-                onClick={() => onPick(`${d.name}: ${o.label}`)}
-                className="tap-scale rounded-full bg-[#f2f2f2] px-3 py-1.5 text-xs text-ink transition hover:bg-[#e8e8e8]"
-              >
-                {d.label === "Qual o seu papel?" ? (o.label.split(" — ")[1] ?? o.label) : o.label}
-              </button>
-            ))}
+            {d.options.slice(0, 5).map((o) => {
+              const on = !!sel[d.key]?.includes(o.label);
+              return (
+                <button
+                  key={o.label}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => toggle(d.key, o.label)}
+                  className={`tap-scale rounded-full px-3 py-1.5 text-xs transition ${on ? "bg-ink text-white" : "bg-[#f2f2f2] text-ink hover:bg-[#e8e8e8]"}`}
+                >
+                  {d.label === "Qual o seu papel?" ? (o.label.split(" — ")[1] ?? o.label) : o.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       ))}
+      <button
+        type="button"
+        disabled={!picked.length}
+        onClick={() => onPick(picked)}
+        className="tap-scale mt-5 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-white transition disabled:cursor-default disabled:opacity-30"
+      >
+        Refinar{n ? ` (${n})` : ""}
+      </button>
     </section>
   );
 }
