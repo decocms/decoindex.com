@@ -365,7 +365,7 @@ export default function ShopChat({
 
 function DeptToggle({ value, onChange }: { value: Dept; onChange: (d: Dept) => void }) {
   return (
-    <div role="radiogroup" aria-label="Departamento" className="flex rounded-full border border-line bg-card p-0.5 text-sm">
+    <div role="radiogroup" aria-label="Departamento" className="flex rounded-full border border-line bg-card p-0.5 text-[13px] sm:text-sm">
       {(["feminino", "masculino"] as const).map((d) => (
         <button
           key={d}
@@ -373,7 +373,7 @@ function DeptToggle({ value, onChange }: { value: Dept; onChange: (d: Dept) => v
           role="radio"
           aria-checked={value === d}
           onClick={() => onChange(d)}
-          className={`rounded-full px-3.5 py-1.5 capitalize transition ${value === d ? "bg-ink text-paper" : "text-ink-soft hover:text-ink"}`}
+          className={`rounded-full px-2.5 py-1.5 capitalize transition max-[359px]:px-2 sm:px-3.5 ${value === d ? "bg-ink text-paper" : "text-ink-soft hover:text-ink"}`}
         >
           {d}
         </button>
