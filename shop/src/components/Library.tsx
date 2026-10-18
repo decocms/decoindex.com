@@ -30,7 +30,7 @@ export function LibraryButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-/** Side drawer (like the product one): every past search, or the saved pieces. Back closes it. */
+/** Side drawer (like the product one): the saved pieces (default), or every past search. Back closes it. */
 export function LibraryDrawer({ initial, onOpen, onOpenTile, onClose }: { initial: LibraryTab; onOpen: (p: Past) => void; onOpenTile: (t: Tile) => void; onClose: () => void }) {
   const [tab, setTab] = useState(initial);
   const close = useBackToClose(1, onClose);
@@ -42,8 +42,8 @@ export function LibraryDrawer({ initial, onOpen, onOpenTile, onClose }: { initia
           <div role="radiogroup" aria-label="Mostrar" className="flex rounded-full border border-line bg-card p-0.5 text-sm">
             {(
               [
-                ["historico", "Histórico"],
                 ["favoritos", "Favoritos"],
+                ["historico", "Histórico"],
               ] as const
             ).map(([k, label]) => (
               <button

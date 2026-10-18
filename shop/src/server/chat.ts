@@ -567,22 +567,33 @@ export function anotherRound(tiles: Tile[], scores: Map<string, number>): string
 }
 
 /** Below this many characters a request is too short to enrich ("saia jeans"). */
-export const REFINE_MIN = 20;
+/** Server floor only: the button asks for 20 characters, but a home category ("Casacos") refines too. */
+export const REFINE_MIN = 3;
+/** Same words, same department, same dimensions: a day-one category is computed once a week, not per click. */
+const REFINE_TTL = 7 * 86_400;
 
 /** "Refinar ✨": one Jev call that ranks what the request may mean, dimension by dimension. */
 export async function handleRefine(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const body = (await req.json().catch(() => null)) as { text?: unknown; dept?: unknown; chatId?: unknown } | null;
   const text = typeof body?.text === "string" ? body.text.trim().slice(0, 600) : "";
   if (text.length < REFINE_MIN) return Response.json({ error: "text too short" }, { status: 400 });
+  const dept = body?.dept === "masculino" || body?.dept === "feminino" ? body.dept : undefined;
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${text.toLowerCase().replace(/\s+/g, " ")}|${dept ?? ""}`));
+  const key = `refine:v1:${[...new Uint8Array(digest)].slice(0, 10).map((b) => b.toString(16).padStart(2, "0")).join("")}`;
+  const chat = typeof body?.chatId === "string" ? body.chatId.slice(0, 80) : undefined;
+  const hit = await env.SHARES?.get(key);
+  if (hit) {
+    ctx.waitUntil(logEvent(env, "shop.enrich", 0, { q: text.slice(0, 300), chat, dept, cost: 0, cached: true }));
+    return new Response(hit, { headers: { "content-type": "application/json" } });
+  }
   const ip = req.headers.get("cf-connecting-ip") ?? "local";
   if (await limited(env, ip)) return TOO_MANY();
-  const dept = body?.dept === "masculino" || body?.dept === "feminino" ? body.dept : undefined;
   const started = Date.now();
   const res = await refine(env, text, dept);
   ctx.waitUntil(
     logEvent(env, "shop.enrich", Date.now() - started, {
       q: text.slice(0, 300),
-      chat: typeof body?.chatId === "string" ? body.chatId.slice(0, 80) : undefined,
+      chat,
       dept,
       said: res?.dept,
       cost: res?.cost ?? 0,
@@ -594,5 +605,7 @@ export async function handleRefine(req: Request, env: Env, ctx: ExecutionContext
   if (!res) return Response.json({ error: "unavailable" }, { status: 503 });
   // Everything at least plausible for this request: the auto-ask only acts on `ask`, the button
   // shows the rest too ("vestido de praia" can still say color, print, length).
-  return Response.json({ dept: res.dept, dims: res.dims.filter((d) => d.ask || d.picked.length || d.relevance >= 0.15) });
+  const out = JSON.stringify({ dept: res.dept, dims: res.dims.filter((d) => d.ask || d.picked.length || d.relevance >= 0.15) });
+  if (env.SHARES) ctx.waitUntil(env.SHARES.put(key, out, { expirationTtl: REFINE_TTL }));
+  return new Response(out, { headers: { "content-type": "application/json" } });
 }

@@ -237,6 +237,15 @@ export default function ShopChat({
     bus.set({ started });
   }, [started]);
 
+  /** A detail picked beside the result ("clima: frio") asks the same question again with it, in place. */
+  const refineHere = (detail: string) => {
+    const t = onScreen;
+    if (!t) return;
+    setOpen(null);
+    track("shop.enrich.inline", { chat: chatId(), detail });
+    send(t.user, view, dept, store, [...(t.context ?? []), detail]);
+  };
+
   /** Switching Feminino/Masculino over a result asks the same question again in that department, in place. */
   const switchDept = (d: Dept) => {
     if (d === dept) return;
@@ -265,7 +274,7 @@ export default function ShopChat({
         }}
         right={
           <span className="flex items-center gap-1">
-            <LibraryButton onClick={() => setLibrary("historico")} />
+            <LibraryButton onClick={() => setLibrary("favoritos")} />
             {started && <DeptToggle value={dept} onChange={switchDept} />}
           </span>
         }
@@ -314,6 +323,7 @@ export default function ShopChat({
             <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line/70 frost p-3 lg:static lg:mt-5 lg:border-0 lg:bg-transparent lg:p-0 lg:[backdrop-filter:none]">
               <Composer placeholder="Refine: mais barato, outra cor, só tênis…" onSend={ask} />
             </div>
+            {onScreen?.done && !onScreen.seed && <InlineRefine key={`${onScreen.key}:${dept}`} text={onScreen.user} dept={dept} context={onScreen.context} onPick={refineHere} />}
           </aside>
           <Results turn={turns[Math.min(view, turns.length - 1)]} hidden={hidden} favIds={favIds} onFav={toggleFav} onOpen={(t) => { setOpen(t); track("shop.open", { chat: chatId(), model, id: t.id }); }} onMore={more} onDismiss={dismiss} />
         </div>
@@ -921,5 +931,50 @@ function RefineSheet({ text, dims, onSearch, onClose }: { text: string; dims: Re
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * "Refinar ✨" beside a finished result (desktop: the empty space under the composer). Same Jev
+ * dimensions as the sheet, cached per words + department on the server, so the home's categories
+ * come back instantly. One tap adds that detail and searches again.
+ */
+function InlineRefine({ text, dept, context, onPick }: { text: string; dept: Dept; context?: string[]; onPick: (detail: string) => void }) {
+  const [dims, setDims] = useState<RefineDim[]>([]);
+  useEffect(() => {
+    if (!matchMedia("(min-width: 1024px)").matches) return; // phones: no room beside the grid
+    let live = true;
+    void fetchRefine(text, dept).then((r) => live && setDims(r?.dims ?? []));
+    return () => {
+      live = false;
+    };
+  }, [text, dept]);
+  const answered = new Set((context ?? []).map((c) => c.split(":")[0].trim()));
+  const show = dims
+    .filter((d) => !answered.has(d.name) && d.options.length > 1)
+    .sort((a, b) => Number(b.ask) - Number(a.ask) || b.relevance - a.relevance)
+    .slice(0, 4);
+  if (!show.length) return null;
+  return (
+    <section className="mt-8 hidden animate-rise lg:block">
+      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-soft">Refinar ✨</p>
+      {show.map((d) => (
+        <div key={d.key} className="mt-3">
+          <p className="text-sm font-medium">{d.label}</p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {d.options.slice(0, 5).map((o) => (
+              <button
+                key={o.label}
+                type="button"
+                onClick={() => onPick(`${d.name}: ${o.label}`)}
+                className="tap-scale rounded-full bg-[#f2f2f2] px-3 py-1.5 text-xs text-ink transition hover:bg-[#e8e8e8]"
+              >
+                {d.label === "Qual o seu papel?" ? (o.label.split(" — ")[1] ?? o.label) : o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
   );
 }
