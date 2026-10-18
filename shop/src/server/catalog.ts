@@ -8,6 +8,8 @@ const UA = "decoshop/0.1 (+https://shop.decoindex.com)";
 /** The subset of decoindex's listing JSON we read. */
 interface IndexListing {
   shop?: { origin?: string; name?: string };
+  /** Set when the listing was filtered by `?q=` (VTEX); absent when the platform ignored it. */
+  query?: string;
   products?: {
     id: string;
     slug: string;
@@ -87,10 +89,24 @@ export async function searchBrand(env: Env, domain: string, query: string, ip: s
   return tiles(env, domain, await read<IndexListing>(env, domain, `/search.json?q=${encodeURIComponent(query)}`, ip, health));
 }
 
-/** One category page (page 1). The same URL for every shopper, so it is the warm path. */
-export async function browseCategory(env: Env, domain: string, path: string, ip: string, sort?: string, health?: Health): Promise<Tile[]> {
-  const q = sort && sort !== "relevance" ? `?sort=${sort}` : "";
-  return tiles(env, domain, await read<IndexListing>(env, domain, `${path}.json${q}`, ip, health));
+/**
+ * One category page (page 1). Without `terms` it is the same URL for every shopper, so it is the
+ * warm path. With `terms`, VTEX stores answer with the category's products matching the words
+ * (Intelligent Search scoped to the category, one read); Shopify ignores `q` and returns the
+ * collection, so `matched` says which of the two came back.
+ */
+export async function browseCategory(
+  env: Env,
+  domain: string,
+  path: string,
+  ip: string,
+  opts: { sort?: string; terms?: string; health?: Health } = {},
+): Promise<{ tiles: Tile[]; matched: boolean }> {
+  const qs = new URLSearchParams();
+  if (opts.sort && opts.sort !== "relevance") qs.set("sort", opts.sort);
+  if (opts.terms) qs.set("q", opts.terms);
+  const doc = await read<IndexListing>(env, domain, `${path}.json${qs.size ? `?${qs}` : ""}`, ip, opts.health);
+  return { tiles: tiles(env, domain, doc), matched: !!opts.terms && !!doc?.query };
 }
 
 type RawCategory = { path: string; name: string; depth?: number; count?: number; parent?: string };
@@ -131,7 +147,7 @@ export function colorsFromNames(slug: string, variants: { name?: string }[]): st
 }
 
 export function colorsFromClaims(claims: { predicate: string; value: string }[] | undefined): string[] {
-  const vals = (claims ?? []).filter((c) => /^(cor|cores|color|colour)(_filtro)?$/i.test(c.predicate)).flatMap((c) => c.value.split(/[\/,]/));
+  const vals = (claims ?? []).filter((c) => /^(cor|cores|color|colour)(_filtro|_filtraveis)?$/i.test(c.predicate)).flatMap((c) => c.value.split(/[\/,]/));
   return [...new Set(vals.map((v) => v.trim()).filter((v) => v && v.length < 40))].slice(0, 6);
 }
 

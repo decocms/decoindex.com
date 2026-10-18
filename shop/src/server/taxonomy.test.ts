@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { anotherRound, curate } from "./chat";
+import type { Tile } from "../types";
 import { BRAND_CONTEXT } from "./brand-context";
 import { BRANDS } from "./brands";
 import { attributes, detectType, overlap, pickCategory, toCategories, words } from "./taxonomy";
@@ -142,4 +144,40 @@ test("colorsFromClaims reads VTEX color specifications", async () => {
   const { colorsFromClaims } = await import("./catalog");
   expect(colorsFromClaims([{ predicate: "cor_filtro", value: "BORDO ESCURO" }, { predicate: "cor", value: "Bordo Escuro/Fungi-Marrom Claro" }, { predicate: "categoria", value: "Corrida" }])).toEqual(["BORDO ESCURO", "Bordo Escuro", "Fungi-Marrom Claro"]);
   expect(colorsFromClaims(undefined)).toEqual([]);
+});
+
+describe("Jev grid", () => {
+  const tile = (brand: string, n: number) => ({ id: `${brand}:${n}`, brand, domain: brand, title: `${brand} ${n}`, images: [], url: "", sizes: [], currency: "BRL" }) as Tile;
+  const tiles = [...Array(10)].map((_, i) => tile("cea", i)).concat([...Array(4)].map((_, i) => tile("hering", i)), [tile("bobo", 0)]);
+
+  test("best first, one brand capped, brands take turns", () => {
+    const scores = new Map(tiles.map((t, i) => [t.id, t.brand === "cea" ? 2 - i * 0.01 : 1.5]));
+    const grid = curate(tiles, scores);
+    expect(grid.filter((t) => t.brand === "cea").length).toBe(8); // cap = ceil(24 / 3 brands)
+    expect(grid.slice(0, 3).map((t) => t.brand)).toEqual(["cea", "hering", "bobo"]);
+  });
+
+  test("unrelated tiles stay off the grid once there are 12 good ones", () => {
+    const scores = new Map(tiles.map((t) => [t.id, t.brand === "bobo" ? 0.1 : 1.8]));
+    expect(curate(tiles, scores).some((t) => t.brand === "bobo")).toBe(false);
+  });
+
+  test("without scores, the stores' order", () => {
+    expect(curate(tiles.slice(0, 3), new Map()).map((t) => t.id)).toEqual(["cea:0", "cea:1", "cea:2"]);
+  });
+
+  test("a second round when good ones are few or one brand dominates", () => {
+    const allGood = (ts: Tile[]) => new Map(ts.map((t) => [t.id, 2]));
+    expect(anotherRound(tiles.slice(0, 4), allGood(tiles))).toContain("Só 4");
+    expect(anotherRound(tiles.slice(0, 9), allGood(tiles))).toContain("cea é 9 dos 9");
+    expect(anotherRound(tiles, allGood(tiles))).toBe("");
+  });
+});
+
+test("Tênis de Mesa is not tênis", () => {
+  const mizuno = toCategories([
+    { path: "/feminino/calcados/tenis-de-mesa", name: "Tênis de Mesa", depth: 2, parent: "Calçados" },
+    { path: "/feminino/calcados/corrida", name: "Corrida", depth: 2, parent: "Calçados" },
+  ]);
+  expect(pickCategory(mizuno, "tenis", { dept: "feminino" })).toBeUndefined();
 });

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Tile } from "~/types";
-import { ProductDrawer, ProductTile, TileSkeleton, outbound, thumb } from "~/components/Product";
+import { ProductDrawer, ProductTile, outbound, thumb } from "~/components/Product";
 import { ShareButton, SiteHeader } from "~/components/Share";
 import { bus, useBus } from "~/sdk/bus";
 import { myContext, track, useShopChat, type Dept, type Turn } from "~/sdk/useShopChat";
@@ -222,7 +222,7 @@ export default function ShopChat({
           </p>
         </div>
       ) : (
-        <div className="mx-auto grid max-w-[1600px] gap-6 px-4 pb-28 pt-5 md:px-8 lg:grid-cols-[340px_1fr] lg:gap-10">
+        <div className="mx-auto grid max-w-[1600px] grid-cols-[minmax(0,1fr)] gap-6 px-4 pb-28 pt-5 md:px-8 lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-10">
           <aside className="lg:sticky lg:top-20 lg:h-[calc(100dvh-6rem)] lg:overflow-y-auto">
             <Thread turns={turns.slice(0, view + 1)} model={model} chatId={chatId()} onAsk={(r) => { track("shop.refine", { chat: chatId(), model, text: r }); ask(r); }} />
             <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line/70 frost p-3 lg:static lg:mt-5 lg:border-0 lg:bg-transparent lg:p-0">
@@ -328,12 +328,7 @@ function Thread({ turns, model, chatId, onAsk }: { turns: Turn[]; model?: string
           ) : (
             <p className="self-end rounded-2xl rounded-br-md bg-ink px-4 py-2.5 text-sm text-paper">{t.user}</p>
           )}
-          {t.status && !t.answer && (
-            <p className="flex items-center gap-2 text-sm text-ink-soft">
-              <span className="size-2 animate-pulse rounded-full bg-forest" />
-              {t.status}
-            </p>
-          )}
+          {!t.answer && !t.done && <Steps steps={t.steps?.length ? t.steps : [t.status ?? "Pensando…"]} />}
           {t.answer && <p className="text-[15px] font-medium leading-snug tracking-tight lg:text-lg">{t.answer}</p>}
           {t.done && !!t.refinements?.length && (
             <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0">
@@ -428,31 +423,19 @@ function Results({
 
   if (choosing) {
     const found = turn.products.filter((p) => p.images[0]);
+    // Nothing found yet: the steps above say what is happening; no wall of grey boxes.
+    if (!found.length) return null;
     const brands = new Set(found.map((p) => p.brand)).size;
+    // Two rows drifting in opposite directions, each its own half of what has arrived so far.
+    const rows = [found.filter((_, i) => i % 2 === 0), found.filter((_, i) => i % 2 === 1)].filter((r) => r.length);
     return (
-      <div aria-busy="true">
-        {found.length > 0 && (
-          <div className="mb-6 flex items-center gap-4">
-            <div className="flex -space-x-3">
-              {found.slice(0, 7).map((t, i) => (
-                <img
-                  key={t.id}
-                  src={thumb(t.images[0], 120)}
-                  alt=""
-                  onError={(e) => (e.currentTarget.style.display = "none")}
-                  className="h-14 w-10 animate-rise rounded-xs object-cover opacity-80 ring-2 ring-white"
-                  style={{ animationDelay: `${i * 60}ms` }}
-                />
-              ))}
-            </div>
-            <p className="text-sm text-ink-soft">
-              <span className="font-medium text-ink tabular-nums">{found.length} peças</span> em {brands} {brands === 1 ? "marca" : "marcas"} · escolhendo as melhores…
-            </p>
-          </div>
-        )}
-        <div className="grid grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {Array.from({ length: 10 }, (_, i) => (
-            <TileSkeleton key={i} />
+      <div aria-busy="true" className="animate-rise">
+        <p className="mb-4 text-sm text-ink-soft">
+          <span className="font-medium text-ink tabular-nums">{found.length} peças</span> em {brands} {brands === 1 ? "marca" : "marcas"} até agora
+        </p>
+        <div className="edge-fade -mx-4 flex flex-col gap-3 overflow-hidden lg:mx-0">
+          {rows.map((row, r) => (
+            <Drift key={r} tiles={row.slice(0, 16)} reverse={r === 1} />
           ))}
         </div>
       </div>
@@ -548,6 +531,55 @@ function MyContext() {
           </button>
         </span>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The loading view's narration: every step the server reported, the current one live, the
+ * earlier ones checked off and fading. Only the last four, so it never pushes the photos away.
+ */
+function Steps({ steps }: { steps: string[] }) {
+  const last = steps.slice(-4);
+  return (
+    <ol className="flex flex-col gap-1.5 text-sm" aria-live="polite">
+      {last.map((s, i) => {
+        const current = i === last.length - 1;
+        return (
+          <li key={`${steps.length - last.length + i}:${s}`} className={`flex animate-rise items-start gap-2 ${current ? "text-ink" : "text-ink-soft/70"}`}>
+            {current ? (
+              <span className="mt-1.5 size-2 shrink-0 animate-pulse rounded-full bg-forest" />
+            ) : (
+              <svg viewBox="0 0 16 16" className="mt-0.5 size-4 shrink-0 text-forest/70" fill="none" stroke="currentColor" strokeWidth={2}><path d="M3.5 8.5l3 3 6-7" /></svg>
+            )}
+            <span className="min-w-0">{s}</span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/** One row of found photos sliding sideways forever (the list is doubled so the loop has no seam). */
+function Drift({ tiles, reverse }: { tiles: Tile[]; reverse?: boolean }) {
+  const loop = [...tiles, ...tiles];
+  return (
+    <div
+      className="flex w-max gap-3"
+      style={{ animation: `drift ${Math.max(20, tiles.length * 4)}s linear infinite${reverse ? " reverse" : ""}` }}
+    >
+      {loop.map((t, i) => (
+        <figure key={`${t.id}:${i}`} className="w-32 shrink-0 sm:w-40" aria-hidden={i >= tiles.length}>
+          <img
+            src={thumb(t.images[0], 320)}
+            alt=""
+            loading="lazy"
+            onError={(e) => (e.currentTarget.parentElement!.style.display = "none")}
+            className="aspect-[3/4] w-full rounded-sm bg-[#f4f4f4] object-cover"
+          />
+          <figcaption className="mt-1.5 truncate text-[11px] uppercase tracking-[0.06em] text-ink-soft">{t.brand}</figcaption>
+        </figure>
+      ))}
     </div>
   );
 }

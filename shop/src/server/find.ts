@@ -2,6 +2,7 @@ import type { Tile } from "../types";
 import { BRANDS, brandByDomain } from "./brands";
 import { browseCategory, categories, searchBrand, type Health } from "./catalog";
 import type { Env } from "./env";
+import { categoryByJev } from "./jev";
 import { FAMILY, TYPES, attributes, colorConflict, detectType, isKids, otherDept, overlap, pickCategory, words, type ProductType } from "./taxonomy";
 
 export type Sort = "relevance" | "price_asc" | "price_desc" | "new" | "discount";
@@ -32,9 +33,10 @@ const MIN_AFTER_FILTER = 6;
 /**
  * The heuristic, per store:
  *   1. type known and the store has a matching category → read that category
- *      page (warm, shared cache key), rank by the shopper's terms locally;
- *   2. too few left after the terms → also run the store's search for
- *      "type terms" and merge (still ≤2 decoindex reads per store);
+ *      page with the shopper's terms: VTEX filters it by them (one read),
+ *      Shopify returns the plain collection and we rank it by the terms locally;
+ *   2. too few left → also run the store's search for "type terms" and merge
+ *      (still ≤2 decoindex reads per store);
  *   3. no category → search only.
  */
 export async function findProducts(ctx: Ctx, r: FindRequest): Promise<Found> {
@@ -43,17 +45,23 @@ export async function findProducts(ctx: Ctx, r: FindRequest): Promise<Found> {
   const typeWord = r.type ? TYPES[r.type][0] : "";
   const query = [typeWord, r.terms].filter(Boolean).join(" ").trim();
 
-  const pick = r.type ? pickCategory(await categories(ctx.env, r.domain, ctx.ip, ctx.health), r.type, { dept: ctx.dept, sale: r.sort === "discount" }) : undefined;
+  const cats = r.type ? await categories(ctx.env, r.domain, ctx.ip, ctx.health) : [];
+  const pick = r.type
+    ? (pickCategory(cats, r.type, { dept: ctx.dept, sale: r.sort === "discount" }) ??
+      (await categoryByJev(ctx.env, r.domain, cats, r.type, ctx.dept).then((category) => (category ? { category, score: 0 } : undefined))))
+    : undefined;
   const polish = (ts: Tile[]) => fit(ts, { type: r.type, want, dept: ctx.dept, keepOrder: !want.length && !!r.sort });
   if (!pick) {
     return { tiles: query ? polish(await searchBrand(ctx.env, r.domain, query, ctx.ip, ctx.health)) : [], via: `${brand}: busca “${query}”` };
   }
 
-  const page = await browseCategory(ctx.env, r.domain, pick.category.path, ctx.ip, r.sort, ctx.health);
+  const page = await browseCategory(ctx.env, r.domain, pick.category.path, ctx.ip, { sort: r.sort, terms: r.terms?.trim() || undefined, health: ctx.health });
   const label = `${brand} › ${pick.category.name.replace(/^.*>\s*/, "")}`;
-  if (!want.length) return { tiles: polish(page), via: label };
+  if (!want.length) return { tiles: polish(page.tiles), via: label };
 
-  const ranked = polish(page).filter((t) => overlap(want, text(t)) > 0);
+  // The store already matched the terms (VTEX): trust it, a synonym or a spec may be why it matched.
+  // A plain collection (Shopify): keep what names a term.
+  const ranked = page.matched ? polish(page.tiles) : polish(page.tiles).filter((t) => overlap(want, text(t)) > 0);
   if (ranked.length >= MIN_AFTER_FILTER) return { tiles: ranked, via: `${label} + “${r.terms}”` };
 
   const searched = await searchBrand(ctx.env, r.domain, query, ctx.ip, ctx.health);
@@ -135,7 +143,7 @@ export async function similar(
   // look from the photo, also search the seed's store and the first peer for it: 2 more reads, bounded.
   const lookQuery = look.length ? [TYPES[type][0], ...look.slice(0, 2)].join(" ") : "";
   const pages = await Promise.all([
-    ...withType.map((s) => browseCategory(ctx.env, s.domain, s.path, ctx.ip, undefined, ctx.health)),
+    ...withType.map((s) => browseCategory(ctx.env, s.domain, s.path, ctx.ip, { health: ctx.health }).then((p) => p.tiles)),
     ...(lookQuery ? withType.slice(0, 2).map((s) => searchBrand(ctx.env, s.domain, lookQuery, ctx.ip, ctx.health)) : []),
   ]);
   const p0 = seed.priceMinor;

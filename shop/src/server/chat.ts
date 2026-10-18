@@ -7,7 +7,7 @@ import { newHealth, tileLine } from "./catalog";
 import type { Env, ExecutionContext } from "./env";
 import { logEvent } from "./events";
 import { findProducts, similar } from "./find";
-import { preselect, rankTiles, rosterLine } from "./jev";
+import { preselect, rankTiles, rosterLine, scoreTiles, topByScore } from "./jev";
 import { MERCHANT_IMAGE, describe } from "./vision";
 import { TYPE_NAMES } from "./taxonomy";
 
@@ -64,8 +64,8 @@ Como trabalhar:
 1. Sempre chame find_products primeiro. Escolha de 3 a ${MAX_SEARCHES} marcas que realmente vendem o que foi pedido.
 2. Para cada marca informe "type" (o tipo de peça, da lista fixa) e, em "terms", só os atributos que importam: material, cor, estampa, comprimento, uso ("linho", "azul", "estampado", "midi", "corrida"). Com type, a loja é navegada pela categoria daquele tipo e os terms ordenam o resultado — mais preciso que busca. Sem type (algo fora da lista, nome de coleção, personagem), mande só "terms" e vira busca por palavra-chave (1 a 3 palavras, como num catálogo).
 3. "sort": price_asc quando há orçamento ou pedem barato, discount para promoção, new para novidades; senão omita. Se vier pouco, faça outra rodada com outro type, menos terms ou outras marcas.
-4. Depois chame show_products com os ids que melhor atendem ao pedido, do mais para o menos relevante (12 a 24). Respeite orçamento, tamanho e estilo pedidos. Misture marcas: no máximo 4 da mesma marca, a não ser que o cliente tenha pedido uma marca específica. Junto, mande de 2 a 4 refinamentos: frases curtas (até 5 palavras) que o cliente clicaria a seguir, como "Só midi", "Até R$ 300", "Em tons de azul", "Ver sandálias para combinar".
-5. Por fim, responda em no máximo 2 frases curtas (até 220 caracteres), no idioma do cliente, com o critério da seleção. Não liste produtos nem preços: eles já aparecem na tela. Não escreva nada antes disso: nada de "vou buscar", "boa base", "vou ampliar" entre as chamadas — todo texto que você escreve aparece para o cliente.
+4. A seleção na tela é montada automaticamente com os produtos mais relevantes que find_products devolveu, misturando marcas. Você não escolhe ids.
+5. Quando tiver o suficiente, chame responder com "resposta": no máximo 2 frases curtas (até 220 caracteres), no idioma do cliente, com o critério da seleção — não liste produtos nem preços, eles já aparecem na tela; e "refinamentos": 2 a 4 frases curtas (até 5 palavras) que o cliente clicaria a seguir, como "Só midi", "Até R$ 300", "Em tons de azul", "Ver sandálias para combinar". Não escreva texto fora de responder: nada de "vou buscar", "boa base", "vou ampliar" entre as chamadas.
 
 Se find_products disser que a LEITURA FALHOU, as lojas não responderam: nunca diga que não existem produtos; diga que as lojas não responderam agora e peça para tentar de novo em instantes.
 
@@ -162,6 +162,8 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
   const model = pickModel(env, body.chatId, body.model);
 
   const seen = new Map<string, Tile>();
+  /** Jev's 0–2 score for every tile it has seen this turn: it picks the grid and decides on a second round. */
+  const scores = new Map<string, number>();
   let sentBack = false;
   const stats = { searches: 0, viaCategory: 0, hits: 0, curated: 0, brands: [] as string[], share: "", fallback: false, tokensIn: 0, tokensOut: 0, cost: 0, lateError: "", sentBack: false, preselect: null as { ms: number; n: number } | null, rank: [] as { ms: number; from: number; to: number }[] };
   const final = { answer: "", ids: [] as string[], refinements: [] as string[] };
@@ -174,7 +176,7 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
     ctx,
     async (send) => {
       await send({ type: "meta", chatId: body.chatId, model });
-      await send({ type: "status", text: "Escolhendo marcas…" });
+      await send({ type: "status", text: "Lendo seu pedido e escolhendo onde procurar…" });
       const pick = await preselect(env, {
         asks: messages.filter((m) => m.role === "user").slice(-3).map((m) => m.content),
         dept: body.dept,
@@ -182,14 +184,18 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
         store,
       });
       stats.preselect = pick ? { ms: pick.ms, n: pick.domains.length } : null;
+      if (pick) {
+        const names = pick.domains.slice(0, 4).map((d) => brandByDomain(d)?.name).filter(Boolean);
+        await send({ type: "status", text: `${pick.domains.length} marcas combinam com o pedido: ${names.join(", ")} e outras` });
+      }
       stats.cost += pick?.cost ?? 0;
       const result = streamText({
         // usage.include: OpenRouter reports tokens and USD cost per step, logged below for the admin's cost view.
         model: openrouter(model, { usage: { include: true } }),
         system: systemPrompt(body.dept, store, pick?.domains, profile),
         messages,
-        stopWhen: stepCountIs(6), // one more than before: show_products may send it back for a second round
-        maxOutputTokens: 3000, // per step; DeepSeek ran out at 1200 mid show_products ("Tool calls cutoff by max_tokens")
+        stopWhen: stepCountIs(6), // find, maybe a second find round, then the answer; room for a retry
+        maxOutputTokens: 3000, // per step; DeepSeek ran out at 1200 mid tool call ("Tool calls cutoff by max_tokens")
         abortSignal: req.signal,
         tools: {
           find_products: tool({
@@ -212,7 +218,8 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
             execute: async ({ requests, maxPriceBRL }) => {
               const known = requests.filter((r) => BRANDS.some((b) => b.domain === r.domain)).slice(0, MAX_SEARCHES);
               const names = [...new Set(known.map((r) => brandByDomain(r.domain)?.name))].join(", ");
-              await send({ type: "status", text: `Procurando em ${names}…` });
+              const what = [...new Set(known.map((r) => [r.type, r.terms].filter(Boolean).join(" ")).filter(Boolean))].slice(0, 2).join(", ");
+              await send({ type: "status", text: `${sentBack ? "Procurando em mais marcas" : "Procurando"}${what ? ` “${what}”` : ""} em ${names}…` });
               stats.searches += known.length;
               stats.brands.push(...known.map((r) => r.domain).filter((d) => !stats.brands.includes(d)));
               const found = await Promise.all(
@@ -227,53 +234,57 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
                 .slice(0, 90);
               for (const t of fresh) seen.set(t.id, t);
               stats.hits += fresh.length;
-              if (fresh.length) await send({ type: "products", items: interleave(lists, fresh) });
+              if (fresh.length) {
+                await send({ type: "products", items: interleave(lists, fresh) });
+                const viaCat = found.filter((f) => f.via.includes("›")).length;
+                const nb = new Set(fresh.map((t) => t.brand)).size;
+                await send({ type: "status", text: `Achei ${fresh.length} ${fresh.length === 1 ? "peça" : "peças"} em ${nb} ${nb === 1 ? "marca" : "marcas"}${viaCat ? `, ${viaCat} pela categoria da loja` : ""}. Comparando cada uma com o seu pedido…` });
+              }
               const how = found.map((f) => `- ${f.via}: ${f.tiles.length}`).join("\n");
               const asks = messages.filter((m) => m.role === "user").slice(-3).map((m) => m.content);
-              const ranked = await rankTiles(env, { asks, dept: body.dept, profile }, fresh, tileLine);
-              if (ranked) {
-                stats.rank.push({ ms: ranked.ms, from: fresh.length, to: ranked.tiles.length });
-                stats.cost += ranked.cost;
+              // Every tile gets a Jev score, not only big rounds: the scores pick the grid at the end.
+              const scored = await scoreTiles(env, { asks, dept: body.dept, profile }, fresh, tileLine);
+              if (scored) {
+                fresh.forEach((t, i) => scored.scores[i] >= 0 && scores.set(t.id, scored.scores[i]));
+                stats.cost += scored.cost;
               }
-              const shown = ranked?.tiles ?? fresh;
+              const shown = scored ? topByScore(fresh, scored.scores, 30, 8) : fresh;
+              if (scored) {
+                stats.rank.push({ ms: scored.ms, from: fresh.length, to: shown.length });
+                const good = [...seen.values()].filter((t) => (scores.get(t.id) ?? -1) >= GOOD).length;
+                await send({ type: "status", text: good ? `${good} combinam bem com o que você pediu` : "Poucas combinam de verdade; vendo outras opções…" });
+              }
               if (!fresh.length && health.failed && !health.ok) {
                 return `LEITURA FALHOU: ${health.failed} leituras de catálogo não responderam (status ${[...new Set(health.statuses)].join(", ")}). Isso não significa que as lojas não tenham o produto.`;
               }
-              return fresh.length
-                ? `Como cada loja foi lida:\n${how}\n\nProdutos${ranked ? ` (os ${shown.length} mais relevantes de ${fresh.length})` : ""}:\n${shown.map(tileLine).join("\n")}`
+              // Too few good ones, or one brand is most of them: one more round in other brands, once
+              // (the cardigan case: 6 of 9 from C&A while Hering, Bo.Bô and Sacada had white ones).
+              const thin = !sentBack && !store ? anotherRound([...seen.values()], scores) : "";
+              if (thin) sentBack = stats.sentBack = true;
+              const list = fresh.length
+                ? `Como cada loja foi lida:\n${how}\n\nProdutos${shown.length < fresh.length ? ` (os ${shown.length} mais relevantes de ${fresh.length})` : ""}:\n${shown.map(tileLine).join("\n")}`
                 : `Nenhum resultado.\n${how}\nTente outro type, menos terms ou outras marcas.`;
+              return thin ? `${list}\n\n${thin} Faça mais uma rodada de find_products em 3 a 5 marcas que você ainda não buscou e que possam ter isso (inclusive as da lista "Outras marcas"). Se o cliente pediu uma marca específica, ignore isto e responda.` : list;
             },
           }),
-          show_products: tool({
-            description: "Mostra ao cliente os produtos escolhidos, em ordem de relevância. Use apenas ids retornados por find_products.",
+          // No execute: calling it ends the turn, so the answer and the chips come out of the same step
+          // as the decision to stop searching. (A separate chips tool after free text failed: Haiku
+          // called the tool and wrote no text.)
+          responder: tool({
+            description: "Por último: a resposta ao cliente e 2 a 4 próximos passos curtos que ele clicaria.",
             inputSchema: z.object({
-              ids: z.array(z.string()).min(1).max(24),
-              refinements: z.array(z.string().max(60)).max(4).optional().describe("2 a 4 próximos passos curtos que o cliente clicaria"),
+              resposta: z.string().max(400),
+              refinamentos: z.array(z.string().max(60)).max(4).optional(),
             }),
-            execute: async ({ ids, refinements = [] }) => {
-              // One curation per turn: a second call would swap the grid under the shopper.
-              if (final.ids.length) return "Os produtos já estão na tela. Agora só responda ao cliente.";
-              const picked: string[] = [...new Set((ids as string[]).filter((id) => seen.has(id)))];
-              // One brand is most of a thin pick: send the model back once to search other brands
-              // (the cardigan case: 6 of 9 from C&A while Hering, Bo.Bô and Sacada had white ones).
-              const byBrand = new Map<string, number>();
-              for (const id of picked) byBrand.set(seen.get(id)!.brand, (byBrand.get(seen.get(id)!.brand) ?? 0) + 1);
-              const [top, n] = [...byBrand].sort((a, b) => b[1] - a[1])[0] ?? ["", 0];
-              if (!sentBack && picked.length < 12 && n > picked.length / 2 && byBrand.size < 4) {
-                sentBack = true;
-                stats.sentBack = true;
-                return `${top} é ${n} de ${picked.length} da seleção. Antes de mostrar, faça mais uma rodada de find_products em 3 a 5 marcas que você ainda não buscou e que possam ter isso (inclusive as da lista "Outras marcas"); depois chame show_products de novo com a seleção misturada. Se o cliente pediu essa marca, apenas chame show_products de novo com os mesmos ids.`;
-              }
-              const valid = mixBrands(picked.map((id) => seen.get(id)!)).map((t) => t.id);
-              stats.curated = valid.length;
-              final.ids = valid;
-              final.refinements = refinements.slice(0, 4);
-              await send({ type: "curate", ids: valid, refinements: final.refinements });
-              return `Mostrando ${valid.length} produtos.`;
-            },
           }),
         },
       });
+
+      const pickGrid = async () => {
+        final.ids = curate([...seen.values()], scores).map((t) => t.id);
+        stats.curated = final.ids.length;
+        await send({ type: "curate", ids: final.ids });
+      };
 
       let warned = false;
       let failed: unknown;
@@ -285,8 +296,22 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
             await send({ type: "error", message: UNREACHABLE });
           }
           if (part.type === "text-delta") {
+            // The answer starts once the searching is over: put the grid up before the first word.
+            if (!final.ids.length && seen.size) await pickGrid();
             final.answer += part.text;
             await send({ type: "text", text: part.text });
+          } else if (part.type === "tool-input-start" && part.toolName === "responder") {
+            await send({ type: "status", text: "Montando a seleção…" });
+            // Searching is over: the grid goes up while the model writes its answer.
+            if (!final.ids.length && seen.size) await pickGrid();
+          } else if (part.type === "tool-call" && part.toolName === "responder") {
+            if (!final.ids.length && seen.size) await pickGrid();
+            const { resposta, refinamentos } = part.input as { resposta?: unknown; refinamentos?: unknown };
+            if (typeof resposta === "string" && resposta.trim()) {
+              final.answer += resposta.trim();
+              await send({ type: "text", text: resposta.trim() });
+            }
+            final.refinements = Array.isArray(refinamentos) ? refinamentos.filter((x): x is string => typeof x === "string").map((x) => x.slice(0, 60)).slice(0, 4) : [];
           } else if (part.type === "error") throw part.error ?? new Error("stream error");
         }
       } catch (err) {
@@ -309,12 +334,9 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
 
       // Some models stop after searching without curating or answering. Never leave the shopper
       // with a spinner or a silent grid: show what was found and say so in one line.
-      const fallback = (stats.fallback = !final.ids.length || !final.answer.trim());
-      if (!final.ids.length && seen.size) {
-        final.ids = [...seen.keys()].slice(0, 24);
-        stats.curated = final.ids.length;
-        await send({ type: "curate", ids: final.ids, refinements: [] });
-      }
+      const fallback = (stats.fallback = !final.answer.trim());
+      if (!final.ids.length && seen.size) await pickGrid();
+      if (final.refinements.length) await send({ type: "curate", ids: final.ids, refinements: final.refinements });
       if (!final.answer.trim() && final.ids.length) {
         const brands = [...new Set(final.ids.map((i) => seen.get(i)?.brand))].slice(0, 4).join(", ");
         final.answer = `Separei estas opções de ${brands}. Toque em uma para ver mais, ou me diga o que mudar.`;
@@ -452,6 +474,9 @@ export async function handleSimilar(req: Request, env: Env, ctx: ExecutionContex
       }
       // Heuristics found up to 60 candidates; Jev scores each against the seed and its look.
       let tiles = found.tiles;
+      await send({ type: "products", items: tiles });
+      const nb = new Set(tiles.map((t) => t.brand)).size;
+      await send({ type: "status", text: `Achei ${tiles.length} candidatas em ${nb} ${nb === 1 ? "marca" : "marcas"}. Comparando cada uma com a peça…` });
       const lookLine = look.length ? ` | aparência: ${look.join(", ")}` : "";
       const byJev = await rankTiles(env, { asks: [`Peças parecidas com: ${seedLine}${lookLine}`], dept: body.dept }, tiles, tileLine, 24, 8);
       if (byJev) {
@@ -461,7 +486,6 @@ export async function handleSimilar(req: Request, env: Env, ctx: ExecutionContex
       }
       found.tiles = mixBrands(tiles.slice(0, 24));
       hits = found.tiles.length;
-      await send({ type: "products", items: found.tiles });
       await send({ type: "curate", ids: found.tiles.map((t) => t.id), refinements: [] });
       const brands = [...new Set(found.tiles.map((t) => t.brand))].slice(0, 4).join(", ");
       const answer = `Peças parecidas com “${clean.title}”, de ${brands}. Toque em uma para ver mais, ou me diga o que mudar.`;
@@ -501,4 +525,38 @@ function interleave(lists: Tile[][], keep: Tile[]): Tile[] {
     for (const l of lists) if (l[i] && ok.has(l[i].id)) out.push(l[i]);
   }
   return out;
+}
+
+/** Jev score at or above which a tile counts as a real answer (0 = unrelated, 1 = close, 2 = exactly it). */
+const GOOD = 1.2;
+
+/**
+ * The grid: Jev's best first, 12 to 24 of them, no brand crowding the rest out, brands taking
+ * turns. Without scores (Jev down) the order the stores returned them in.
+ */
+export function curate(tiles: Tile[], scores: Map<string, number>): Tile[] {
+  const s = (t: Tile) => scores.get(t.id) ?? -1;
+  const ranked = scores.size ? [...tiles].sort((a, b) => s(b) - s(a)) : tiles;
+  // Everything good, topped up to 12 with the "close enough" ones.
+  const pool = scores.size ? ranked.filter((t, i) => s(t) >= GOOD || (i < 12 && s(t) >= 0.6)) : ranked;
+  const cap = Math.max(4, Math.ceil(24 / new Set(pool.map((t) => t.brand)).size));
+  const count = new Map<string, number>();
+  const picked = pool.filter((t) => {
+    const n = count.get(t.brand) ?? 0;
+    count.set(t.brand, n + 1);
+    return n < cap;
+  });
+  return mixBrands(picked.slice(0, 24));
+}
+
+/** Why one more round in other brands is worth it, or "" when the good tiles already make a mixed grid. */
+export function anotherRound(tiles: Tile[], scores: Map<string, number>): string {
+  const good = scores.size ? tiles.filter((t) => (scores.get(t.id) ?? -1) >= GOOD) : tiles;
+  if (good.length >= 12) return "";
+  const byBrand = new Map<string, number>();
+  for (const t of good) byBrand.set(t.brand, (byBrand.get(t.brand) ?? 0) + 1);
+  const [top, n] = [...byBrand].sort((a, b) => b[1] - a[1])[0] ?? ["", 0];
+  if (good.length < 6) return `Só ${good.length} produtos realmente atendem ao pedido.`;
+  if (n > good.length / 2 && byBrand.size < 4) return `${top} é ${n} dos ${good.length} produtos que atendem ao pedido.`;
+  return "";
 }

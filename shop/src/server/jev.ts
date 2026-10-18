@@ -1,6 +1,7 @@
 import { BRAND_CONTEXT } from "./brand-context";
 import { BRANDS, type Brand } from "./brands";
 import type { Env } from "./env";
+import { browsable, type Category } from "./taxonomy";
 
 /** One line per brand: what the model reads to decide where to look. */
 export function rosterLine(b: Brand): string {
@@ -84,6 +85,40 @@ export async function preselect(env: Env, input: Ask & { store?: string }): Prom
   return { domains, ms: Date.now() - started, cost: res.cost };
 }
 
+/** How well each tile answers the conversation, 0 (nothing to do with it) to 2 (exactly it), in input order. */
+export async function scoreTiles<T>(
+  env: Env,
+  input: Ask,
+  tiles: T[],
+  line: (t: T) => string,
+): Promise<{ scores: number[]; ms: number; cost: number } | null> {
+  if (!tiles.length) return null;
+  const started = Date.now();
+  const res = await score(
+    env,
+    stateOf(input),
+    tiles.map((t) => `Quão bem este produto atende ao pedido do cliente? ${line(t)}`),
+    ["Não tem nada a ver", "Parecido, mas não é isso", "É exatamente o que ele pediu"],
+    4_000,
+  );
+  return res ? { scores: res.scores, ms: Date.now() - started, cost: res.cost } : null;
+}
+
+/** Best first, at most `perBrand` per brand so the pick stays mixed. */
+export function topByScore<T extends { brand: string }>(tiles: T[], scores: number[], keep: number, perBrand: number): T[] {
+  const count = new Map<string, number>();
+  return tiles
+    .map((t, i) => ({ t, s: scores[i] ?? -1, i }))
+    .sort((a, b) => b.s - a.s || a.i - b.i)
+    .filter(({ t }) => {
+      const n = count.get(t.brand) ?? 0;
+      count.set(t.brand, n + 1);
+      return n < perBrand;
+    })
+    .slice(0, keep)
+    .map((r) => r.t);
+}
+
 /**
  * Between steps: a find_products round returns up to 90 tiles and every one becomes a line the
  * chat model reads, then re-reads on each later step. Jev scores each tile against the
@@ -99,25 +134,40 @@ export async function rankTiles<T extends { brand: string }>(
   perBrand = 8,
 ): Promise<{ tiles: T[]; ms: number; cost: number } | null> {
   if (tiles.length <= keep) return null;
-  const started = Date.now();
+  const res = await scoreTiles(env, input, tiles, line);
+  return res ? { tiles: topByScore(tiles, res.scores, keep, perBrand), ms: res.ms, cost: res.cost } : null;
+}
+
+const CATEGORY_TTL = 7 * 86_400;
+
+/**
+ * When no category name carries the type's words (Dress To files everything under
+ * "/lovedress/shop", Sacada under "/off"), Jev scores the store's categories for it. Remembered
+ * per store, type and department for a week, including "none", so each store pays once
+ * (~US$0.0003). A Jev failure is not remembered: the next shopper tries again.
+ */
+export async function categoryByJev(
+  env: Env,
+  domain: string,
+  cats: Category[],
+  type: string,
+  dept?: "feminino" | "masculino",
+): Promise<Category | undefined> {
+  const key = `jevcat:v1:${domain}:${type}:${dept ?? ""}`;
+  const hit = await env.SHARES?.get(key).catch(() => null);
+  if (hit != null) return hit ? cats.find((c) => c.path === hit) : undefined;
+  const options = cats.filter((c) => browsable(c, dept)).slice(0, 120);
+  if (!options.length) return undefined;
   const res = await score(
     env,
-    stateOf(input),
-    tiles.map((t) => `Quão bem este produto atende ao pedido do cliente? ${line(t)}`),
-    ["Não tem nada a ver", "Parecido, mas não é isso", "É exatamente o que ele pediu"],
-    4_000,
+    { tipo_de_peca: type, departamento: dept ?? "qualquer" },
+    options.map((c) => `Esta categoria da loja lista principalmente peças do tipo "${type}"${dept ? ` do departamento ${dept}` : ""}? ${c.name} (${c.path})`),
+    ["Não", "Mistura isso com outras coisas", "Sim, é exatamente essa"],
+    3_000,
   );
-  if (!res) return null;
-  const count = new Map<string, number>();
-  const ranked = tiles
-    .map((t, i) => ({ t, s: res.scores[i] }))
-    .sort((a, b) => b.s - a.s)
-    .filter(({ t }) => {
-      const n = count.get(t.brand) ?? 0;
-      count.set(t.brand, n + 1);
-      return n < perBrand;
-    })
-    .slice(0, keep)
-    .map((r) => r.t);
-  return { tiles: ranked, ms: Date.now() - started, cost: res.cost };
+  if (!res) return undefined;
+  const best = options.map((c, i) => ({ c, s: res.scores[i] })).sort((a, b) => b.s - a.s)[0];
+  const pick = best && best.s >= 1.4 ? best.c : undefined;
+  await env.SHARES?.put(key, pick?.path ?? "", { expirationTtl: CATEGORY_TTL }).catch(() => {});
+  return pick;
 }
