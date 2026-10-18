@@ -154,13 +154,15 @@ Local D1 is empty, so event inserts log an error and move on — expected.
 
 ## Shipping
 
-Own Workers Build with root directory `shop/`, build `npm run build`, deploy
-`npx wrangler deploy`. Secrets: `CF_AI_GATEWAY_TOKEN`, `OPENROUTER_API_KEY`
-(`wrangler secret put …`, typed by a human).
+Workers Build on the `decoindex-shop` Worker: repo `decocms/decoindex.com`, root directory
+`shop`, build `bun run build`, deploy `npx wrangler deploy`, watch path `shop/*`. A merge to
+`main` deploys. Secrets: `CF_AI_GATEWAY_TOKEN`, `OPENROUTER_API_KEY` (`wrangler secret put …`,
+typed by a human).
 
-**Preview worker** (`decoindex-shop-preview`, workers.dev, no route, no cron): build, copy
-`dist/server/wrangler.json` to `wrangler.preview.json` with `name` changed and `routes`/`triggers`
-removed, then `npx wrangler deploy -c dist/server/wrangler.preview.json --var BUILD_HASH:p$(date +%s)`.
-The `BUILD_HASH` is required for uncommitted builds: the edge HTML cache is versioned by the git
-commit, so two preview builds of the same commit share a cache and the second one serves HTML that
-points at the first one's deleted JS chunks (404s, nothing hydrates). Then `git checkout -- .deco`.
+**Previews come from the PR.** Workers Builds runs `npx wrangler preview` for every branch: a
+Worker Preview named after the branch, URL posted on the PR. Its config is the `previews` block in
+`wrangler.jsonc`, deliberately on production's KV, D1, rate limit and catalog binding (tag test
+traffic). Preview secrets are separate from production's: `wrangler preview base-config secret put
+CF_AI_GATEWAY_TOKEN` (piped, never typed into a transcript) — without it Jev and the chat fail.
+By hand: `npm run build && npx wrangler preview --name <name>`, then `git checkout -- .deco`.
+There is no separate preview Worker any more.
