@@ -164,5 +164,23 @@ export async function refine(
   }
   const who = whoRes?.answers.para_quem?.probabilities ?? {};
   const said = (who.o0 ?? 0) >= SURE_DEPT ? "feminino" : (who.o1 ?? 0) >= SURE_DEPT ? "masculino" : undefined;
-  return { dims, dept: said, cost: res.cost + (whoRes?.cost ?? 0) };
+  return { dims: forWhom(dims, said ?? dept), dept: said, cost: res.cost + (whoRes?.cost ?? 0) };
+}
+
+/** Roles only one side wears ("casamento — noiva" is no option for a terno). */
+const ONLY: Record<string, Set<string>> = {
+  feminino: new Set(["noiva", "madrinha", "mamãe", "noiva ou anfitriã"]),
+  masculino: new Set(["noivo", "padrinho"]),
+};
+/** Dimensions that are womenswear questions: "midi ou cropped?" for a terno asked nonsense. */
+const WOMENSWEAR = new Set(["comprimento"]);
+
+/** Drops what can't apply to who the request is for: the other side's roles, womenswear-only questions. */
+export function forWhom(dims: RefineDim[], dept?: string): RefineDim[] {
+  if (dept !== "feminino" && dept !== "masculino") return dims;
+  const other = ONLY[dept === "feminino" ? "masculino" : "feminino"];
+  const fits = (label: string) => !other.has(label.split(" — ").pop() ?? label);
+  return dims
+    .filter((d) => dept === "feminino" || !WOMENSWEAR.has(d.key))
+    .map((d) => ({ ...d, options: d.options.filter((o) => fits(o.label)), picked: d.picked.filter(fits) }));
 }
