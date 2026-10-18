@@ -61,13 +61,6 @@
           "color": "#c4a184"
         },
         {
-          "label": "Biquínis",
-          "type": "biquini",
-          "dept": "feminino",
-          "color": "#3f5f86",
-          "prompt": "Biquínis e maiôs para o verão"
-        },
-        {
           "label": "Blusas",
           "type": "blusa",
           "dept": "feminino",
@@ -80,16 +73,51 @@
           "color": "#2c3e5c"
         },
         {
+          "label": "Biquínis",
+          "type": "biquini",
+          "dept": "feminino",
+          "color": "#3f5f86"
+        },
+        {
+          "label": "Lingerie",
+          "type": "lingerie",
+          "dept": "feminino",
+          "prompt": "Lingerie"
+        },
+        {
           "label": "Bolsas",
           "type": "bolsa",
           "dept": "feminino",
           "color": "#5a3550"
         },
         {
+          "label": "Joias",
+          "type": "joia",
+          "dept": "feminino",
+          "terms": "colar",
+          "prompt": "Joias: colares, brincos e anéis"
+        },
+        {
           "label": "Sandálias",
           "type": "sandalia",
           "dept": "feminino",
           "color": "#2f4a3a"
+        },
+        {
+          "label": "Tênis",
+          "type": "tenis",
+          "dept": "feminino"
+        },
+        {
+          "label": "Casacos",
+          "type": "casaco",
+          "dept": "feminino"
+        },
+        {
+          "label": "Malas",
+          "type": "mala",
+          "dept": "feminino",
+          "prompt": "Malas de viagem"
         },
         {
           "label": "Camisas",
@@ -104,16 +132,16 @@
           "color": "#a8862f"
         },
         {
-          "label": "Bermudas",
-          "type": "bermuda",
-          "dept": "masculino",
-          "color": "#2f4a3a"
-        },
-        {
           "label": "Polos",
           "type": "polo",
           "dept": "masculino",
           "color": "#b5533c"
+        },
+        {
+          "label": "Bermudas",
+          "type": "bermuda",
+          "dept": "masculino",
+          "color": "#2f4a3a"
         },
         {
           "label": "Calças",
@@ -130,14 +158,39 @@
         {
           "label": "Tênis",
           "type": "tenis",
-          "color": "#3f5f86",
-          "prompt": "Tênis para o dia a dia"
+          "dept": "masculino"
+        },
+        {
+          "label": "Sungas",
+          "type": "praia",
+          "dept": "masculino",
+          "terms": "sunga",
+          "prompt": "Sungas e shorts de praia"
+        },
+        {
+          "label": "Cuecas",
+          "type": "lingerie",
+          "dept": "masculino",
+          "terms": "cueca",
+          "prompt": "Cuecas"
+        },
+        {
+          "label": "Relógios",
+          "type": "joia",
+          "dept": "masculino",
+          "terms": "relogio",
+          "prompt": "Relógios masculinos"
+        },
+        {
+          "label": "Mochilas",
+          "type": "mochila",
+          "dept": "masculino"
         },
         {
           "label": "Malas",
           "type": "mala",
-          "color": "#c4a184",
-          "prompt": "Mala de bordo leve"
+          "dept": "masculino",
+          "prompt": "Malas de viagem"
         }
       ],
       "ideasTitle": "Buscas em alta.",
@@ -524,6 +577,63 @@
               "prompt": "Peças cinza"
             }
           ]
+        }
+      ],
+      "editorialTitle": "Em alta agora.",
+      "editorialSubtitle": "O que mais estão pedindo ao deco shop.",
+      "editorials": [
+        {
+          "kicker": "Ocasião",
+          "title": "Convidada perfeita",
+          "subtitle": "Vestidos que chamam atenção",
+          "text": "Vestido longo de festa para convidada de casamento",
+          "type": "vestido",
+          "terms": "longo",
+          "dept": "feminino"
+        },
+        {
+          "kicker": "Tendência",
+          "title": "Saia midi",
+          "subtitle": "Do trabalho ao jantar",
+          "text": "Saia midi elegante",
+          "type": "saia",
+          "terms": "midi",
+          "dept": "feminino"
+        },
+        {
+          "kicker": "Joias",
+          "title": "Brilho do dia a dia",
+          "subtitle": "Colares e brincos delicados",
+          "text": "Joias delicadas para usar todo dia",
+          "type": "joia",
+          "terms": "colar",
+          "dept": "feminino"
+        },
+        {
+          "kicker": "Verão",
+          "title": "Linho que respira",
+          "subtitle": "Camisas para o calor",
+          "text": "Camisa de linho masculina",
+          "type": "camisa",
+          "terms": "linho",
+          "dept": "masculino"
+        },
+        {
+          "kicker": "Básicos",
+          "title": "Tênis branco",
+          "subtitle": "O par que vai com tudo",
+          "text": "Tênis branco masculino casual",
+          "type": "tenis",
+          "terms": "branco",
+          "dept": "masculino"
+        },
+        {
+          "kicker": "Fim de semana",
+          "title": "Bermuda e polo",
+          "subtitle": "Leve e arrumado",
+          "text": "Bermuda e polo para o fim de semana",
+          "type": "polo",
+          "dept": "masculino"
         }
       ]
     },

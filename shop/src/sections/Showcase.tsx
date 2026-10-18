@@ -57,6 +57,24 @@ export interface IdeaSection {
   ideas: Idea[];
 }
 
+/** @titleBy title */
+/** One of the three big editorial photos ("Convidada perfeita"); it runs `text` as a search. */
+export interface Editorial {
+  /** @title Rótulo, ex.: "Ocasião" */
+  kicker: string;
+  /** @title Título */
+  title: string;
+  /** @title Subtítulo */
+  subtitle?: string;
+  /** @title A busca que roda */
+  text: string;
+  /** @title Tipo de peça para a foto */
+  type?: ProductType;
+  /** @title Atributos para a foto */
+  terms?: string;
+  dept?: "feminino" | "masculino";
+}
+
 export interface Props {
   categoriesTitle?: string;
   cards?: CategoryCard[];
@@ -67,12 +85,27 @@ export interface Props {
   ideas?: Idea[];
   /** @title Mais blocos de ideias */
   ideaSections?: IdeaSection[];
+  editorialTitle?: string;
+  editorialSubtitle?: string;
+  /** @title Editorial (3 fotos grandes por departamento) */
+  editorials?: Editorial[];
 }
 
 const PALETTE = ["#b5533c", "#c4a184", "#a8862f", "#2c3e5c", "#2f4a3a", "#3f5f86", "#5a3550", "#6b6b3a"];
 const forDept = <T extends { dept?: string }>(xs: T[], dept: string) => xs.filter((x) => !x.dept || x.dept === dept);
 
-export default function Showcase({ categoriesTitle = "O que você procura?", cards = [], ideasTitle = "Buscas em alta.", ideasSubtitle = "O que as pessoas estão pedindo ao deco shop agora.", ideas = [], ideaSections = [], cardSections = [] }: Props) {
+export default function Showcase({
+  categoriesTitle = "O que você procura?",
+  cards = [],
+  ideasTitle = "Buscas em alta.",
+  ideasSubtitle = "O que as pessoas estão pedindo ao deco shop agora.",
+  ideas = [],
+  ideaSections = [],
+  cardSections = [],
+  editorialTitle = "Em alta agora.",
+  editorialSubtitle = "O que está sendo procurado.",
+  editorials = [],
+}: Props) {
   const { dept, started } = useBus();
   // Card carousels in order (categories, then by material, by color…); one flat list goes to the snapshot.
   const rows = [
@@ -85,7 +118,9 @@ export default function Showcase({ categoriesTitle = "O que você procura?", car
     { title: ideasTitle, subtitle: ideasSubtitle, ideas: forDept(ideas, dept).slice(0, 4) },
     ...ideaSections.slice(0, 2).map((b) => ({ title: b.title, subtitle: b.subtitle, ideas: forDept(b.ideas ?? [], dept).slice(0, 4) })),
   ].filter((b) => b.ideas.length);
-  const i = blocks.flatMap((b) => b.ideas);
+  const eds = forDept(editorials, dept).slice(0, 3);
+  // The editorial's photos ride along after the ideas' in the same snapshot.
+  const i = [...blocks.flatMap((b) => b.ideas), ...eds];
 
   const { data } = useQuery({
     queryKey: ["showcase", dept, c.map((x) => [x.type, x.terms]), i.map((x) => [x.type, x.terms])],
@@ -109,6 +144,7 @@ export default function Showcase({ categoriesTitle = "O que você procura?", car
   for (let n = 0; n < Math.max(rows.length, blocks.length); n++) {
     if (rows[n]) sections.push(<CardRow key={`r${n}`} row={rows[n]} first={offset(rows.map((r) => r.cards), n)} kicker={kicker} cards={data?.cards} top={n === 0} />);
     if (blocks[n]) sections.push(<IdeaBlock key={`b${n}`} block={blocks[n]} n={n} first={offset(blocks.map((b) => b.ideas), n)} tiles={data?.ideas} />);
+    if (n === 0 && eds.length) sections.push(<EditorialRow key="ed" title={editorialTitle} subtitle={editorialSubtitle} items={eds} first={i.length - eds.length} tiles={data?.ideas} />);
   }
   return <div className="pb-8">{sections}</div>;
 }
@@ -117,7 +153,8 @@ function CardRow({ row, first, kicker, cards, top }: { row: { kicker: string; ti
   return (
     <section className={`mx-auto max-w-[1280px] px-4 md:px-8 ${top ? "pt-10" : "mt-16"}`}>
       <Heading kicker={row.kicker} title={row.title} />
-      <div className="no-scrollbar -mx-4 mt-5 flex snap-x gap-2.5 overflow-x-auto px-4 pb-2 md:-mx-8 md:px-8">
+      {/* Categories are a grid (everything we carry, jewelry included, at a glance); the other rows scroll. */}
+      <div className={top ? "mt-5 grid grid-cols-2 gap-2.5 md:grid-cols-4" : "no-scrollbar -mx-4 mt-5 flex snap-x gap-2.5 overflow-x-auto px-4 pb-2 md:-mx-8 md:px-8"}>
         {/* A card whose photos came back empty is skipped, never shown as blank placeholders. */}
         {row.cards.map((card, k) => {
           const tiles = cards?.[first + k];
@@ -128,12 +165,12 @@ function CardRow({ row, first, kicker, cards, top }: { row: { kicker: string; ti
               key={card.label}
               type="button"
               onClick={() => bus.ask(card.prompt || card.label)}
-              className="tap-scale group relative flex h-[264px] w-[200px] shrink-0 snap-start flex-col items-center justify-start overflow-hidden rounded-md text-white md:w-[220px]"
+              className={`tap-scale group relative flex shrink-0 snap-start flex-col items-center justify-start overflow-hidden rounded-md text-white ${top ? "h-[260px] md:h-[380px]" : "h-[264px] w-[200px] md:w-[220px]"}`}
               style={{ background: `linear-gradient(180deg, ${bg} 0%, color-mix(in oklab, ${bg} 78%, black) 100%)` }}
             >
               <p className="pt-7 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/60">{kicker}</p>
-              <p className="mt-1.5 text-[22px] font-medium tracking-tight">{card.label}</p>
-              <Fan tiles={tiles} />
+              <p className={`mt-1.5 font-medium tracking-tight ${top ? "text-[22px] md:text-[28px]" : "text-[22px]"}`}>{card.label}</p>
+              <Fan tiles={tiles} big={top} />
             </button>
           );
         })}
@@ -178,16 +215,17 @@ function Heading({ kicker, title }: { kicker: string; title: string }) {
 }
 
 /** Three product photos fanned like cards in a hand; skeleton until the showcase lands. */
-function Fan({ tiles }: { tiles?: Tile[] }) {
+function Fan({ tiles, big }: { tiles?: Tile[]; big?: boolean }) {
   const [a, b, c] = tiles ?? [];
+  const size = big ? "h-[150px] w-[104px] md:h-[220px] md:w-[152px]" : "h-[150px] w-[104px]";
   const img = (t: Tile | undefined, cls: string) =>
     t ? (
-      <img src={thumb(t.images[0], 240)} alt="" loading="lazy" className={`absolute bottom-0 h-[150px] w-[104px] rounded-sm object-cover shadow-[0_8px_24px_-8px_rgba(0,0,0,0.45)] transition duration-300 ${cls}`} />
+      <img src={thumb(t.images[0], big ? 360 : 240)} alt="" loading="lazy" className={`absolute bottom-0 ${size} rounded-sm object-cover shadow-[0_8px_24px_-8px_rgba(0,0,0,0.45)] transition duration-300 ${cls}`} />
     ) : (
-      <span className={`absolute bottom-0 h-[150px] w-[104px] rounded-sm bg-white/15 ${cls}`} />
+      <span className={`absolute bottom-0 ${size} rounded-sm bg-white/15 ${cls}`} />
     );
   return (
-    <div className="absolute inset-x-0 bottom-5 h-[160px]">
+    <div className={`absolute inset-x-0 bottom-5 ${big ? "h-[160px] md:h-[236px]" : "h-[160px]"}`}>
       {img(b, "left-[14%] -rotate-[8deg] group-hover:-rotate-[12deg] group-hover:-translate-x-1")}
       {img(c, "right-[14%] rotate-[8deg] group-hover:rotate-[12deg] group-hover:translate-x-1")}
       {img(a, "left-1/2 z-10 -translate-x-1/2 group-hover:-translate-y-1")}
@@ -223,3 +261,33 @@ function IdeaRow({ idea, tile }: { idea: Idea; tile?: Tile | null }) {
   );
 }
 
+/** Three big portrait photos with a kicker, a title and a line under it, like a magazine's "trending". */
+function EditorialRow({ title, subtitle, items, first, tiles }: { title: string; subtitle?: string; items: Editorial[]; first: number; tiles?: (Tile | null)[] }) {
+  return (
+    <section className="mx-auto mt-16 max-w-[1280px] px-4 md:px-8">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-soft">Por busca</p>
+      <h2 className="mt-1.5 text-2xl font-medium tracking-tight md:text-[28px]">{title}</h2>
+      {subtitle && <p className="mt-1 text-sm text-ink-soft">{subtitle}</p>}
+      <div className="no-scrollbar -mx-4 mt-5 flex snap-x gap-3 overflow-x-auto px-4 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0">
+        {items.map((e, k) => {
+          const tile = tiles?.[first + k];
+          if (tiles && !tile) return null;
+          return (
+            <button key={e.title} type="button" onClick={() => bus.ask(e.text)} className="group w-[78%] shrink-0 snap-start text-left md:w-auto">
+              <div className="aspect-[4/5] overflow-hidden bg-[#f0f0f0]">
+                {tile && <img src={thumb(tile.images[0], 900)} alt="" loading="lazy" className="h-full w-full object-cover object-[50%_20%] transition duration-700 group-hover:scale-[1.03]" />}
+              </div>
+              <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-soft">{e.kicker}</p>
+              <p className="mt-1 text-2xl font-medium tracking-tight">{e.title}</p>
+              {e.subtitle && (
+                <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-soft group-hover:text-ink">
+                  {e.subtitle} <span aria-hidden>→</span>
+                </p>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
