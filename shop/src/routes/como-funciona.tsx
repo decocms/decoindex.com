@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Footer } from "~/components/Footer";
 import { SiteHeader } from "~/components/Share";
 import { BRANDS } from "~/server/brands";
 
@@ -201,6 +202,7 @@ function HowItWorks() {
       </Section>
 
       <Research />
+      <Footer />
     </div>
   );
 }
