@@ -108,7 +108,7 @@ export function TileSkeleton() {
  * nests them: Back from the gallery closes only the gallery. Returns the
  * close function the overlay's own buttons should use.
  */
-function useBackToClose(layer: number, onClose: () => void) {
+export function useBackToClose(layer: number, onClose: () => void) {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   useEffect(() => {
