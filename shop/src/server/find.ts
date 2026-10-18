@@ -13,6 +13,12 @@ export interface FindRequest {
   /** Attributes the shopper cares about: "linho", "azul marinho", "estampado". */
   terms?: string;
   sort?: Sort;
+  /**
+   * Read the plain category page (one URL for everyone, nearly always cached) and rank by the terms
+   * here, instead of sending them as ?q= (a cold read per combination). The showcase builds ~45
+   * cards against decoindex's 20 cold reads a minute; the chat, reading for one shopper, sends them.
+   */
+  warm?: boolean;
 }
 
 export interface Found {
@@ -55,7 +61,7 @@ export async function findProducts(ctx: Ctx, r: FindRequest): Promise<Found> {
     return { tiles: query ? polish(await searchBrand(ctx.env, r.domain, query, ctx.ip, ctx.health)) : [], via: `${brand}: busca “${query}”` };
   }
 
-  const page = await browseCategory(ctx.env, r.domain, pick.category.path, ctx.ip, { sort: r.sort, terms: r.terms?.trim() || undefined, health: ctx.health });
+  const page = await browseCategory(ctx.env, r.domain, pick.category.path, ctx.ip, { sort: r.sort, terms: r.warm ? undefined : r.terms?.trim() || undefined, health: ctx.health });
   const label = `${brand} › ${pick.category.name.replace(/^.*>\s*/, "")}`;
   if (!want.length) return { tiles: polish(page.tiles), via: label };
 
