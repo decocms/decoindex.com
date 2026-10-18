@@ -494,9 +494,22 @@ function Results({
   }, [turn.products, turn.curated, hidden]);
 
   const shown = showAll ? [...picked, ...rest] : picked;
+  // The drifting photos play for at least MIN_DRIFT once the first ones arrive, even when the
+  // answer is quick (or cached): it is the part people like watching. Reopened links skip it.
+  const found = turn.products.filter((p) => p.images[0]);
+  const [held, setHeld] = useState(false);
+  const heldFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!turn.live || !found.length || heldFor.current === turn.key) return;
+    heldFor.current = turn.key;
+    setHeld(true);
+    const t = setTimeout(() => setHeld(false), MIN_DRIFT);
+    return () => clearTimeout(t);
+  }, [turn.key, turn.live, found.length > 0]);
   // Until the model has picked, show progress, not the raw search results:
   // showing them and then swapping in the curated set reads as a glitch.
-  const choosing = !turn.done && !turn.curated;
+  const choosing = (!turn.done && !turn.curated) || (held && !turn.error);
+  const rowCount = useDriftRows(found.length);
 
   if (turn.done && !shown.length) {
     return (
@@ -508,12 +521,11 @@ function Results({
   }
 
   if (choosing) {
-    const found = turn.products.filter((p) => p.images[0]);
     // Nothing found yet: the steps above say what is happening; no wall of grey boxes.
     if (!found.length) return null;
     const brands = new Set(found.map((p) => p.brand)).size;
-    // Two rows drifting in opposite directions, each its own half of what has arrived so far.
-    const rows = [found.filter((_, i) => i % 2 === 0), found.filter((_, i) => i % 2 === 1)].filter((r) => r.length);
+    // Rows drifting in alternating directions, each its own share of what has arrived so far.
+    const rows = Array.from({ length: rowCount }, (_, r) => found.filter((_, i) => i % rowCount === r)).filter((r) => r.length);
     return (
       <div aria-busy="true" className="animate-rise">
         <p className="mb-4 text-sm text-ink-soft">
@@ -521,7 +533,7 @@ function Results({
         </p>
         <div className="edge-fade -mx-4 flex flex-col gap-3 overflow-hidden lg:mx-0">
           {rows.map((row, r) => (
-            <Drift key={r} tiles={row.slice(0, 16)} reverse={r === 1} />
+            <Drift key={r} tiles={row.slice(0, 16)} reverse={r % 2 === 1} />
           ))}
         </div>
       </div>
@@ -649,6 +661,23 @@ function Steps({ steps }: { steps: string[] }) {
   );
 }
 
+const MIN_DRIFT = 3_000;
+
+/**
+ * How many drifting rows: 2 on phones, 3 on a desktop, 4 on a tall one, but never thinner than
+ * ~7 photos a row (a row of three repeats itself on screen).
+ */
+function useDriftRows(found: number): number {
+  const [max, setMax] = useState(2);
+  useEffect(() => {
+    const pick = () => setMax(matchMedia("(min-width: 1024px) and (min-height: 1000px)").matches ? 4 : matchMedia("(min-width: 1024px)").matches ? 3 : 2);
+    pick();
+    addEventListener("resize", pick);
+    return () => removeEventListener("resize", pick);
+  }, []);
+  return Math.max(1, Math.min(max, Math.floor(found / 7)));
+}
+
 /** One row of found photos sliding sideways forever (the list is doubled so the loop has no seam). */
 function Drift({ tiles, reverse }: { tiles: Tile[]; reverse?: boolean }) {
   const loop = [...tiles, ...tiles];
@@ -658,7 +687,7 @@ function Drift({ tiles, reverse }: { tiles: Tile[]; reverse?: boolean }) {
       style={{ animation: `drift ${Math.max(20, tiles.length * 4)}s linear infinite${reverse ? " reverse" : ""}` }}
     >
       {loop.map((t, i) => (
-        <figure key={`${t.id}:${i}`} className="w-32 shrink-0 sm:w-40" aria-hidden={i >= tiles.length}>
+        <figure key={`${t.id}:${i}`} className="w-32 shrink-0 sm:w-40 lg:w-44 2xl:w-52" aria-hidden={i >= tiles.length}>
           <img
             src={thumb(t.images[0], 320)}
             alt=""
