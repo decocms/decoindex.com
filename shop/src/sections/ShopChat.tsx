@@ -72,11 +72,11 @@ export default function ShopChat({
 
   /** Where the home was scrolled when a card or idea left it: Back returns to that card. */
   const homeY = useRef(0);
-  const pushTurn = (turn: number, q: string) => {
+  const pushTurn = (turn: number, q: string, d: Dept = dept) => {
     if (view < 0) homeY.current = scrollY;
     const p = new URLSearchParams(location.search);
     p.set("q", q);
-    p.set("dept", dept);
+    p.set("dept", d);
     p.delete("s"); // the new turn gets its own /c/{id} when it finishes
     // Same path, new query: changing the path here (/c/x → /) switched routes, remounted the chat
     // and sent the follow-up as a brand-new conversation. Only the finished turn moves to /c/{id}.
@@ -189,12 +189,12 @@ export default function ShopChat({
 
   // Asking from turn `view` keeps turns 0..view and drops what came after it
   // (from the home, view = -1: a fresh conversation), exactly like browser history.
-  const ask = (text: string, context?: string[]) => {
+  const ask = (text: string, context?: string[], d: Dept = dept) => {
     setOpen(null);
     setRefining(null);
     const keep = view + 1;
-    pushTurn(keep, text);
-    send(text, keep, dept, store, context);
+    pushTurn(keep, text, d);
+    send(text, keep, d, store, context);
   };
 
   /**
@@ -209,12 +209,16 @@ export default function ShopChat({
   const askOrRefine = async (text: string, force = false) => {
     if (!force && (view >= 0 || text.length < AUTO_REFINE_MIN)) return ask(text);
     setThinking(true);
-    const dims = await fetchRefine(text, dept, chatId());
+    const res = await fetchRefine(text, dept, chatId());
     setThinking(false);
-    if (dims && (force ? dims.length > 0 : dims.some((d) => d.ask))) {
+    // "roupa para solteiro" with the toggle on Feminino: the request says who it's for, follow it.
+    const d = res?.dept ?? dept;
+    if (d !== dept) setDept(d);
+    const dims = res?.dims;
+    if (dims && (force ? dims.length > 0 : dims.some((x) => x.ask))) {
       setRefining({ text, dims });
-      track("shop.enrich.shown", { chat: chatId(), forced: force, asked: dims.filter((d) => d.ask).map((d) => d.key) });
-    } else ask(text);
+      track("shop.enrich.shown", { chat: chatId(), forced: force, asked: dims.filter((x) => x.ask).map((x) => x.key) });
+    } else ask(text, undefined, d);
   };
   const more = (t: Tile) => {
     setOpen(null);

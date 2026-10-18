@@ -207,7 +207,7 @@ export function track(name: "shop.feedback" | "shop.dismiss" | "shop.open" | "sh
 }
 
 /** "Refinar ✨": what the request may mean, ranked per dimension by Jev. Null when unavailable. */
-export async function fetchRefine(text: string, dept: Dept, chatId?: string): Promise<RefineDim[] | null> {
+export async function fetchRefine(text: string, dept: Dept, chatId?: string): Promise<{ dims: RefineDim[]; dept?: Dept } | null> {
   try {
     const res = await fetch("/api/refine", {
       method: "POST",
@@ -215,7 +215,7 @@ export async function fetchRefine(text: string, dept: Dept, chatId?: string): Pr
       body: JSON.stringify({ text, dept, chatId }),
       signal: AbortSignal.timeout(4_000),
     });
-    return res.ok ? ((await res.json()) as { dims: RefineDim[] }).dims : null;
+    return res.ok ? ((await res.json()) as { dims: RefineDim[]; dept?: Dept }) : null;
   } catch {
     return null;
   }

@@ -584,6 +584,7 @@ export async function handleRefine(req: Request, env: Env, ctx: ExecutionContext
       q: text.slice(0, 300),
       chat: typeof body?.chatId === "string" ? body.chatId.slice(0, 80) : undefined,
       dept,
+      said: res?.dept,
       cost: res?.cost ?? 0,
       asked: res?.dims.filter((d) => d.ask).map((d) => d.key),
       known: res?.dims.filter((d) => d.picked.length).map((d) => `${d.key}:${d.picked.join("|")}`),
@@ -593,5 +594,5 @@ export async function handleRefine(req: Request, env: Env, ctx: ExecutionContext
   if (!res) return Response.json({ error: "unavailable" }, { status: 503 });
   // Everything at least plausible for this request: the auto-ask only acts on `ask`, the button
   // shows the rest too ("vestido de praia" can still say color, print, length).
-  return Response.json({ dims: res.dims.filter((d) => d.ask || d.picked.length || d.relevance >= 0.15) });
+  return Response.json({ dept: res.dept, dims: res.dims.filter((d) => d.ask || d.picked.length || d.relevance >= 0.15) });
 }
