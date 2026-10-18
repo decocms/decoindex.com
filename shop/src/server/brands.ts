@@ -94,6 +94,10 @@ export const BRANDS: Brand[] = [
   // Added Oct 18 2026: Azzas outlet and Reserva's premium line, both VTEX via decoindex.
   { domain: "www.offpremium.com.br", name: "Off Premium", segments: ["feminino", "masculino", "infantil"], blurb: "outlet das marcas do grupo Azzas (Animale, FARM, Fábula e outras), peças de coleções anteriores com desconto" },
   { domain: "www.oficinareserva.com.br", name: "Oficina Reserva", segments: ["masculino"], blurb: "linha masculina premium da Reserva, alfaiataria casual, matérias-primas nobres, peças atemporais" },
+  // Added Oct 18 2026: Brazilian running apparel, all Shopify. No shoes in any of the three.
+  { domain: "badrunning.com", name: "Bad Running", segments: ["esporte", "masculino", "feminino"], blurb: "roupas de corrida com design urbano, para correr sem obsessão por performance, camisetas, shorts, bonés" },
+  { domain: "seekdopa.com", name: "Dopa", segments: ["esporte", "masculino", "feminino"], blurb: "roupas de corrida de performance, regatas, shorts, tops, bonés e meias" },
+  { domain: "aimo.com.br", name: "Aimo", segments: ["esporte", "feminino", "masculino"], blurb: "roupas esportivas de São Paulo para corrida, treino, outdoor e dia a dia" },
 ];
 
 const byHost = new Map(BRANDS.map((b) => [b.domain.replace(/^www\./, ""), b]));

@@ -94,4 +94,7 @@ export const BRAND_CONTEXT: Record<string, BrandContext> = {
   "www.afabula.com.br": {"from": null, "since": null, "group": "Azzas 2154", "price": "$$$", "about": "Marca infantil do grupo da Animale e da FARM, hoje parte do Azzas 2154.", "source": "https://www.euqueroinvestir.com/conheca-o-grupo-soma-soma3/"},
   "www.offpremium.com.br": {"from": null, "since": null, "group": "Azzas 2154", "price": "$$", "about": "Outlet online do grupo Azzas 2154: peças de coleções anteriores de marcas como Animale, FARM e Fábula, com desconto.", "source": "https://www.offpremium.com.br"},
   "www.oficinareserva.com.br": {"from": "Rio de Janeiro", "since": null, "group": "Azzas 2154", "price": "$$$", "about": "Linha masculina premium da Reserva, de roupas atemporais em matérias-primas nobres.", "source": "https://www.oficinareserva.com.br"},
+  "badrunning.com": {"from": null, "since": null, "group": null, "price": "$$$", "about": "Marca brasileira de roupas de corrida com pegada urbana, para quem corre sem obsessão por performance.", "source": "https://www.badrunning.com"},
+  "seekdopa.com": {"from": null, "since": null, "group": null, "price": "$$$", "about": "Marca brasileira de roupas de corrida focada em performance, tecnologia e inovação.", "source": "https://www.seekdopa.com"},
+  "aimo.com.br": {"from": "São Paulo", "since": null, "group": null, "price": "$$$", "about": "Marca paulistana de roupas esportivas que une design, conforto e performance.", "source": "https://www.aimo.com.br"},
 };
