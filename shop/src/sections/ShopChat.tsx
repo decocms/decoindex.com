@@ -235,6 +235,21 @@ export default function ShopChat({
     bus.set({ started });
   }, [started]);
 
+  /** Switching Feminino/Masculino over a result asks the same question again in that department, in place. */
+  const switchDept = (d: Dept) => {
+    if (d === dept) return;
+    setDept(d);
+    const t = onScreen;
+    if (!t || t.seed) return;
+    setOpen(null);
+    const p = new URLSearchParams(location.search);
+    p.set("q", t.user);
+    p.set("dept", d);
+    p.delete("s");
+    history.replaceState(history.state, "", `?${p}`);
+    send(t.user, view, d, store, t.context);
+  };
+
   const chips = suggestions.filter((s) => !s.dept || s.dept === dept);
 
   return (
@@ -250,7 +265,7 @@ export default function ShopChat({
           <span className="flex items-center gap-1">
             <FavoritesButton onClick={() => setShowFavs(true)} />
             <HistoryButton onClick={() => setShowHistory(true)} />
-            {started && <DeptToggle value={dept} onChange={setDept} />}
+            {started && <DeptToggle value={dept} onChange={switchDept} />}
           </span>
         }
       />
