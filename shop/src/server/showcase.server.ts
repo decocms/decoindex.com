@@ -114,7 +114,38 @@ function heroScore(t: Tile, type: ProductType, want: string[], beachBrand = fals
   return words(`${t.title} ${t.category ?? ""}`).some((w) => syn.includes(w)) ? 1 : 0;
 }
 
+/**
+ * One card's photos, kept a day per (department, type, terms). decoindex allows the showcase 20 cold
+ * reads a minute, so one build of ~45 cards gets most of them refused and they came back empty
+ * (Biquínis, Tricô, Verde). With this, each build only reads the cards still missing, and an
+ * incomplete page fills in over the next rebuilds instead of starting over.
+ */
+const ITEM = (dept: string, type: string, terms: string | undefined, n: number, day: number) => `showcase-item:v1:${dept}:${type}:${terms ?? ""}:${n}:${day}`;
+
 async function sample(
+  spec: ShowcaseSpec,
+  type: ProductType,
+  terms: string | undefined,
+  n: number,
+  day: number,
+  item: number,
+  taken: Set<string>,
+): Promise<Tile[]> {
+  const key = ITEM(spec.dept, type, terms, n, day);
+  const hit = await env.SHARES?.get(key).catch(() => null);
+  if (hit) {
+    const tiles = (JSON.parse(hit) as Tile[]).filter((t) => !taken.has(t.id));
+    if (tiles.length) {
+      for (const t of tiles) taken.add(t.id);
+      return tiles;
+    }
+  }
+  const tiles = await sampleLive(spec, type, terms, n, day, item, taken);
+  if (tiles.length) await env.SHARES?.put(key, JSON.stringify(tiles), { expirationTtl: 2 * 86_400 }).catch(() => {});
+  return tiles;
+}
+
+async function sampleLive(
   spec: ShowcaseSpec,
   type: ProductType,
   terms: string | undefined,
@@ -235,7 +266,10 @@ export async function serveShowcase(input: ShowcaseSpec): Promise<ShowcaseData> 
     const raw = await env.SHARES?.get(SNAPSHOT(h));
     if (raw) {
       const snap = JSON.parse(raw) as Snapshot;
-      if (Date.now() - snap.builtAt > DAY && !(await env.SHARES?.get(LOCK(h)))) {
+      // An incomplete page (some cards without photos) retries after 10 minutes, not a day: with the
+      // per-card cache each retry only reads what is missing, so it fills in within a few visits.
+      const maxAge = snap.complete ? DAY : 10 * 60_000;
+      if (Date.now() - snap.builtAt > maxAge && !(await env.SHARES?.get(LOCK(h)))) {
         // Stale: serve it now, rebuild behind the response. Best effort: waitUntil gets ~30s after the
         // response and a cold build can take longer — then the stale copy stays and the daily cron
         // (15-min limit) is what actually turns it over. KV locks are best-effort; worst case two rebuilds.
