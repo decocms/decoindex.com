@@ -359,7 +359,7 @@ function Composer({
             <span
               id="refine-hint"
               role="tooltip"
-              className="pointer-events-none absolute bottom-full right-0 mb-2 w-56 rounded-xl bg-ink px-3 py-2 text-left text-xs leading-snug text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-within:opacity-100"
+              className="pointer-events-none absolute bottom-full right-0 mb-2 w-56 rounded-xl bg-ink px-3 py-2 text-left text-xs leading-snug text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-has-[:focus-visible]:opacity-100"
             >
               Escreva um pouco mais (a ocasião, pra quem é, onde) e eu te ajudo a refinar antes de buscar.
             </span>
@@ -706,7 +706,8 @@ function RefineSheet({ text, dims, onSearch, onClose }: { text: string; dims: Re
                     onClick={() => toggle(d.key, o.label)}
                     className={`tap-scale rounded-full px-3 py-1.5 text-xs transition ${on ? "bg-ink text-white" : "bg-[#f2f2f2] text-ink hover:bg-[#e8e8e8]"}`}
                   >
-                    {o.label}
+                    {/* "Qual o seu papel?": the event is the same on every chip, show only the role */}
+                    {d.label === "Qual o seu papel?" ? (o.label.split(" — ")[1] ?? o.label) : o.label}
                   </button>
                 );
               })}
