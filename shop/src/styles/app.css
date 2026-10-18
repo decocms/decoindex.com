@@ -92,6 +92,12 @@
   button:not(:disabled), [role="button"], [role="radio"], summary { cursor: pointer; }
 }
 
+/* iOS Safari zooms into any field under 16px on focus, and the page stays zoomed. Phones get 16px
+   in every field; blocking zoom in the viewport would also take pinch-zoom from people who need it. */
+@media (max-width: 640px) {
+  input, textarea, select { font-size: 16px !important; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }

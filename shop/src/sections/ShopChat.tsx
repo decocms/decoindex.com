@@ -318,66 +318,86 @@ function Composer({
   large?: boolean;
 }) {
   const [text, setText] = useState(initialText);
+  const [hint, setHint] = useState(false);
   const ref = useRef<HTMLTextAreaElement>(null);
+  const short = text.trim().length < REFINE_MIN;
   const submit = () => {
     if (!text.trim() || busy) return;
     onSend(text.trim());
     setText("");
   };
-  const short = text.trim().length < REFINE_MIN;
+  const refine = () => {
+    if (busy || !onRefine) return;
+    // A tap on the greyed-out button says why, for a few seconds (phones have no hover).
+    if (short) {
+      setHint(true);
+      setTimeout(() => setHint(false), 3_000);
+      return;
+    }
+    onRefine(text.trim());
+    setText("");
+  };
   return (
     <form
       onSubmit={(e) => { e.preventDefault(); submit(); }}
-      className={`flex items-end gap-2 rounded-[28px] border border-line bg-card shadow-[0_8px_30px_-14px_rgba(0,0,0,0.25)] transition focus-within:border-ink/40 ${large ? "p-2.5 pl-6" : "p-1.5 pl-4"}`}
+      className={`flex flex-wrap items-end gap-2 rounded-[28px] border border-line bg-card shadow-[0_8px_30px_-14px_rgba(0,0,0,0.25)] transition focus-within:border-ink/40 sm:flex-nowrap ${large ? "p-2.5 pl-6" : "p-1.5 pl-4"}`}
     >
       <textarea
         ref={ref}
         value={text}
         rows={1}
         autoFocus={autoFocus}
+        enterKeyHint={onRefine && !short ? "next" : "search"}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
+          if (e.key !== "Enter" || e.shiftKey) return;
+          e.preventDefault();
+          // On the home, a real sentence goes through Refinar first; short ones search directly.
+          if (onRefine && !short) refine();
+          else submit();
         }}
         placeholder={placeholder}
         aria-label={placeholder}
-        className={`max-h-40 min-w-0 flex-1 resize-none bg-transparent outline-none placeholder:text-ink-soft/70 field-sizing-content ${large ? "py-3 text-lg" : "py-2.5 text-sm"}`}
+        // Phones: the text gets the full first row, the buttons sit under it (they used to cut the placeholder).
+        className={`max-h-40 min-w-0 resize-none bg-transparent outline-none placeholder:text-ink-soft/70 field-sizing-content ${onRefine ? "basis-full sm:basis-0" : ""} flex-1 ${large ? "py-3 text-lg" : "py-2.5 text-sm"}`}
       />
-      {onRefine && (
-        // Always there, so people learn it exists; until the request is a sentence it explains itself.
-        <span className="group relative shrink-0 self-center">
-          <button
-            type="button"
-            aria-disabled={short || busy}
-            aria-describedby={short ? "refine-hint" : undefined}
-            onClick={() => { if (short || busy) return; onRefine(text.trim()); setText(""); }}
-            className={`rounded-full border border-line px-3 font-medium transition ${large ? "py-2 text-sm" : "py-1.5 text-xs"} ${short || busy ? "cursor-default text-ink-soft/50" : "tap-scale text-ink hover:border-ink"}`}
-          >
-            Refinar ✨
-          </button>
-          {short && (
-            <span
-              id="refine-hint"
-              role="tooltip"
-              className="pointer-events-none absolute bottom-full right-0 mb-2 w-56 rounded-xl bg-ink px-3 py-2 text-left text-xs leading-snug text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-has-[:focus-visible]:opacity-100"
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        {onRefine && (
+          // Always there, so people learn it exists; until the request is a sentence it explains itself.
+          <span className="group relative">
+            <button
+              type="button"
+              aria-disabled={short || busy}
+              aria-describedby={short ? "refine-hint" : undefined}
+              onClick={refine}
+              className={`rounded-full border border-line px-3 font-medium transition ${large ? "py-2 text-sm" : "py-1.5 text-xs"} ${short || busy ? "cursor-default text-ink-soft/50" : "tap-scale text-ink hover:border-ink"}`}
             >
-              Escreva um pouco mais (a ocasião, pra quem é, onde) e eu te ajudo a refinar antes de buscar.
-            </span>
-          )}
-        </span>
-      )}
-      <button
-        type="submit"
-        disabled={!text.trim() || busy}
-        aria-label="Enviar"
-        className={`grid shrink-0 place-items-center rounded-full bg-ink text-white transition hover:bg-ink disabled:opacity-30 ${large ? "size-12" : "size-10"}`}
-      >
-        {busy ? (
-          <span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-        ) : (
-          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+              Refinar ✨
+            </button>
+            {short && (
+              <span
+                id="refine-hint"
+                role="tooltip"
+                className={`pointer-events-none absolute bottom-full right-0 z-10 mb-2 w-56 rounded-xl bg-ink px-3 py-2 text-left text-xs leading-snug text-white shadow-lg transition group-hover:opacity-100 ${hint ? "opacity-100" : "opacity-0"}`}
+              >
+                Escreva um pouco mais (a ocasião, pra quem é, onde) e eu te ajudo a refinar antes de buscar.
+              </span>
+            )}
+          </span>
         )}
-      </button>
+        <button
+          type="submit"
+          disabled={!text.trim() || busy}
+          aria-label="Buscar"
+          className={`grid shrink-0 place-items-center rounded-full bg-ink text-white transition hover:bg-ink disabled:opacity-30 ${large ? "size-12" : "size-10"}`}
+        >
+          {busy ? (
+            <span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+          ) : (
+            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+          )}
+        </button>
+      </div>
     </form>
   );
 }
@@ -494,9 +514,22 @@ function Results({
   }, [turn.products, turn.curated, hidden]);
 
   const shown = showAll ? [...picked, ...rest] : picked;
+  // The drifting photos play for at least MIN_DRIFT once the first ones arrive, even when the
+  // answer is quick (or cached): it is the part people like watching. Reopened links skip it.
+  const found = turn.products.filter((p) => p.images[0]);
+  const [held, setHeld] = useState(false);
+  const heldFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!turn.live || !found.length || heldFor.current === turn.key) return;
+    heldFor.current = turn.key;
+    setHeld(true);
+    const t = setTimeout(() => setHeld(false), MIN_DRIFT);
+    return () => clearTimeout(t);
+  }, [turn.key, turn.live, found.length > 0]);
   // Until the model has picked, show progress, not the raw search results:
   // showing them and then swapping in the curated set reads as a glitch.
-  const choosing = !turn.done && !turn.curated;
+  const choosing = (!turn.done && !turn.curated) || (held && !turn.error);
+  const rowCount = useDriftRows(found.length);
 
   if (turn.done && !shown.length) {
     return (
@@ -508,12 +541,11 @@ function Results({
   }
 
   if (choosing) {
-    const found = turn.products.filter((p) => p.images[0]);
     // Nothing found yet: the steps above say what is happening; no wall of grey boxes.
     if (!found.length) return null;
     const brands = new Set(found.map((p) => p.brand)).size;
-    // Two rows drifting in opposite directions, each its own half of what has arrived so far.
-    const rows = [found.filter((_, i) => i % 2 === 0), found.filter((_, i) => i % 2 === 1)].filter((r) => r.length);
+    // Rows drifting in alternating directions, each its own share of what has arrived so far.
+    const rows = Array.from({ length: rowCount }, (_, r) => found.filter((_, i) => i % rowCount === r)).filter((r) => r.length);
     return (
       <div aria-busy="true" className="animate-rise">
         <p className="mb-4 text-sm text-ink-soft">
@@ -521,7 +553,7 @@ function Results({
         </p>
         <div className="edge-fade -mx-4 flex flex-col gap-3 overflow-hidden lg:mx-0">
           {rows.map((row, r) => (
-            <Drift key={r} tiles={row.slice(0, 16)} reverse={r === 1} />
+            <Drift key={r} tiles={row.slice(0, 16)} reverse={r % 2 === 1} />
           ))}
         </div>
       </div>
@@ -649,6 +681,23 @@ function Steps({ steps }: { steps: string[] }) {
   );
 }
 
+const MIN_DRIFT = 3_000;
+
+/**
+ * How many drifting rows: 2 on phones, 3 on a desktop, 4 on a tall one, but never thinner than
+ * ~7 photos a row (a row of three repeats itself on screen).
+ */
+function useDriftRows(found: number): number {
+  const [max, setMax] = useState(2);
+  useEffect(() => {
+    const pick = () => setMax(matchMedia("(min-width: 1024px) and (min-height: 1000px)").matches ? 4 : matchMedia("(min-width: 1024px)").matches ? 3 : 2);
+    pick();
+    addEventListener("resize", pick);
+    return () => removeEventListener("resize", pick);
+  }, []);
+  return Math.max(1, Math.min(max, Math.floor(found / 7)));
+}
+
 /** One row of found photos sliding sideways forever (the list is doubled so the loop has no seam). */
 function Drift({ tiles, reverse }: { tiles: Tile[]; reverse?: boolean }) {
   const loop = [...tiles, ...tiles];
@@ -658,7 +707,7 @@ function Drift({ tiles, reverse }: { tiles: Tile[]; reverse?: boolean }) {
       style={{ animation: `drift ${Math.max(20, tiles.length * 4)}s linear infinite${reverse ? " reverse" : ""}` }}
     >
       {loop.map((t, i) => (
-        <figure key={`${t.id}:${i}`} className="w-32 shrink-0 sm:w-40" aria-hidden={i >= tiles.length}>
+        <figure key={`${t.id}:${i}`} className="w-32 shrink-0 sm:w-40 lg:w-44 2xl:w-52" aria-hidden={i >= tiles.length}>
           <img
             src={thumb(t.images[0], 320)}
             alt=""

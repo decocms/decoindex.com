@@ -24,6 +24,8 @@ export interface Turn {
   /** "Mais como este": the piece it started from, shown as a card in the thread. */
   seed?: Pick<Tile, "brand" | "title" | "images">;
   error?: string;
+  /** Streamed in this session (not reopened from a link): its loading view gets to play. */
+  live?: boolean;
   done: boolean;
   ms?: number;
 }
@@ -75,7 +77,7 @@ export function useShopChat() {
     if (keep === 0 || !chatId.current) chatId.current = newId();
     const key = newId();
     const patchLast = (fn: (t: Turn) => Turn) => setTurns((all) => all.map((t) => (t.key === key ? fn(t) : t)));
-    setTurns((all) => [...all.slice(0, keep), { key, user: label, seed, context, answer: "", products: [], done: false, status: "Pensando…" }]);
+    setTurns((all) => [...all.slice(0, keep), { key, user: label, seed, context, answer: "", products: [], done: false, live: true, status: "Pensando…" }]);
     try {
         const res = await fetch(endpoint, {
           method: "POST",
