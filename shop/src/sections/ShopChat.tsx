@@ -373,7 +373,7 @@ function DeptToggle({ value, onChange }: { value: Dept; onChange: (d: Dept) => v
           role="radio"
           aria-checked={value === d}
           onClick={() => onChange(d)}
-          className={`rounded-full px-3.5 py-1.5 capitalize transition ${value === d ? "bg-ink text-paper" : "text-ink-soft hover:text-ink"}`}
+          className={`rounded-full px-2.5 py-1.5 capitalize transition sm:px-3.5 ${value === d ? "bg-ink text-paper" : "text-ink-soft hover:text-ink"}`}
         >
           {d}
         </button>

@@ -103,8 +103,9 @@ export function SiteHeader({ onHome, right }: { onHome?: () => void; right?: Rea
           className="tap-scale flex shrink-0 items-center gap-3"
         >
           <img src="/deco-logo.png" alt="deco" width={67} height={28} className="h-7 w-auto" />
-          <span aria-hidden className="h-5 w-px bg-ink/20" />
-          <span className="text-sm tracking-[0.14em] text-ink/80">shop</span>
+          {/* On a phone with controls on the right, the wordmark doesn't fit: the logo alone goes home. */}
+          <span aria-hidden className={`h-5 w-px bg-ink/20 ${right ? "hidden sm:inline" : ""}`} />
+          <span className={`text-sm tracking-[0.14em] text-ink/80 ${right ? "hidden sm:inline" : ""}`}>shop</span>
           <span className={`rounded-full bg-[#d4f01f] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[#0b3d1c] ${right ? "hidden sm:inline" : ""}`}>beta</span>
         </a>
         {right}
