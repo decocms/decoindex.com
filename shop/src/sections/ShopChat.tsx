@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { RefineDim, Tile } from "~/types";
+import { useRouterState } from "@tanstack/react-router";
+import type { RefineDim, Share, Tile } from "~/types";
 import { ProductDrawer, ProductTile, outbound, thumb } from "~/components/Product";
 import { FavoritesButton, FavoritesDrawer } from "~/components/Favorites";
 import { HistoryButton, HistoryDrawer } from "~/components/History";
@@ -50,7 +51,9 @@ export default function ShopChat({
   suggestions = [],
   disclaimer = "Preços de catálogo. Estoque, frete e preço final são confirmados na loja.",
 }: Props) {
-  const { turns, model, chatId, send, similarTo, restore, reset } = useShopChat();
+  // /c/{id}: the route's loader already read the snapshot (for <head>); start from it.
+  const initial = useRouterState({ select: (st) => (st.matches.find((m) => m.routeId === "/")?.loaderData as { share?: Share | null } | undefined)?.share ?? null });
+  const { turns, model, chatId, send, similarTo, restore, reset } = useShopChat(initial);
   const { dept } = useBus();
   const setDept = (d: Dept) => bus.set({ dept: d });
   const [open, setOpen] = useState<Tile | null>(null);
@@ -62,7 +65,7 @@ export default function ShopChat({
    * question pushes a history entry, so Back steps through earlier answers
    * (already in memory, no new model call) and finally back to the home.
    */
-  const [view, setView] = useState(-1);
+  const [view, setView] = useState(initial ? 0 : -1);
   const started = view >= 0 && turns.length > 0;
   const turnsRef = useRef(turns);
   turnsRef.current = turns;
@@ -166,7 +169,11 @@ export default function ShopChat({
     setStore(s);
     const q = p.get("q");
     const snap = snapshotOf(location);
-    if (q || snap) {
+    if (initial && snap === initial.id) {
+      // Already on screen from the server's HTML.
+      history.replaceState({ turn: 0 }, "");
+      if (initial.dept) setDept(initial.dept);
+    } else if (q || snap) {
       history.replaceState({ turn: 0 }, "");
       setView(0);
       // ?s= is what someone saw and copied: show exactly that. Only a bare ?q= runs a new search.

@@ -56,9 +56,28 @@ export const myContext = {
 
 const newId = () => (globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2));
 
-export function useShopChat() {
-  const [turns, setTurns] = useState<Turn[]>([]);
-  const [model, setModel] = useState<string>();
+/** A frozen turn (snapshot) as the chat holds it. */
+export const turnFromShare = (s: Share): Turn => ({
+  key: newId(),
+  user: splitDetails(s.q).q,
+  context: splitDetails(s.q).context,
+  seed: s.seed,
+  answer: s.answer,
+  products: s.tiles,
+  curated: s.tiles.map((t) => t.id),
+  refinements: s.refinements,
+  shareId: s.id,
+  done: true,
+});
+
+/**
+ * `initial`: the snapshot the server already loaded for /c/{id}. Starting from it renders the turn in
+ * the server's HTML, with no client fetch: a tab opened from Studio's sandboxed iframe inherits the
+ * sandbox (opaque origin), its fetch to /api/share was blocked, and the link showed the home.
+ */
+export function useShopChat(initial?: Share | null) {
+  const [turns, setTurns] = useState<Turn[]>(() => (initial ? [turnFromShare(initial)] : []));
+  const [model, setModel] = useState<string | undefined>(initial?.model);
   const chatId = useRef<string>("");
   const abort = useRef<AbortController | null>(null);
 
@@ -158,10 +177,7 @@ export function useShopChat() {
     const s = (await res.json()) as Share;
     if (keep === 0 || !chatId.current) chatId.current = newId();
     setModel(s.model);
-    setTurns((all) => [
-      ...all.slice(0, keep),
-      { key: newId(), user: splitDetails(s.q).q, context: splitDetails(s.q).context, seed: s.seed, answer: s.answer, products: s.tiles, curated: s.tiles.map((t) => t.id), refinements: s.refinements, shareId: s.id, done: true },
-    ]);
+    setTurns((all) => [...all.slice(0, keep), turnFromShare(s)]);
     return s;
   }, []);
 

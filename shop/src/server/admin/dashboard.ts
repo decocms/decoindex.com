@@ -183,12 +183,13 @@ export const DASHBOARD_HTML = `<!doctype html>
         el("span", { text: when(r.ts) }),
         r.dept ? el("span", { class: "tag", text: r.dept }) : null,
         el("span", { text: short(r.model) }),
-        el("span", { text: fmtMs(r.ms) }),
-        el("span", { text: (r.hits || 0) + " resultados" }),
+        // A cached answer ran no search: say so, and count what it showed.
+        r.cached ? el("span", { class: "tag", text: "do cache" }) : el("span", { text: fmtMs(r.ms) }),
+        el("span", { text: r.cached ? (r.curated || 0) + " peças" : (r.hits || 0) + " resultados" }),
         r.clicks ? el("span", { class: "clicks", text: r.clicks + " clique" + (r.clicks > 1 ? "s" : "") }) : null,
         r.error ? el("span", { class: "err", text: "erro" }) : null,
         r.store ? el("span", { class: "tag", text: "via " + r.store }) : null,
-        r.share && /^[0-9A-Za-z]{8}$/.test(r.share) ? el("a", { href: "https://shop.decoindex.com/s/" + r.share, target: "_blank", rel: "noopener", text: "ver resultado ↗" }) : null,
+        r.share && /^[0-9A-Za-z]{8}$/.test(r.share) ? el("a", { href: "https://shop.decoindex.com/c/" + r.share, target: "_blank", rel: "noopener", text: "ver resultado ↗", onclick: function (e) { e.preventDefault(); openLink(this.href); } }) : null,
       ]);
       left.appendChild(el("div", { class: "row", style: "display:block" }, [el("div", { class: "q", text: r.q || "(sem texto)" }), meta]));
     });
@@ -259,6 +260,15 @@ export const DASHBOARD_HTML = `<!doctype html>
     }
     if (typeof m.method === "string" && m.method.indexOf("tool-result") !== -1) adopt(m.params);
   });
+
+  // Inside a host the iframe is sandboxed: a plain target=_blank tab inherits the sandbox (the shop
+  // then can't load its snapshot). Ask the host to open it (MCP Apps ui/open-link, Apps SDK
+  // openExternal); a plain new tab only when there is no host.
+  function openLink(url) {
+    if (window.openai && typeof window.openai.openExternal === "function") return window.openai.openExternal({ href: url });
+    if (!host) return window.open(url, "_blank", "noopener");
+    request("ui/open-link", { url: url }, function (res, err) { if (err) window.open(url, "_blank", "noopener"); });
+  }
 
   var q0 = new URLSearchParams(location.search);
   if (q0.get("q")) state.q = q0.get("q");

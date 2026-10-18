@@ -43,6 +43,8 @@ export interface QueryRow {
   ms: number | null;
   hits: number | null;
   curated: number | null;
+  /** Served from the day's answer cache: no search ran, so no `hits`. */
+  cached: number | null;
   error: string | null;
   share: string | null;
   store: string | null;
@@ -150,7 +152,7 @@ export async function queries(env: Env, days: number, limit = 50, search?: strin
     env,
     `SELECT e.ts, json_extract(e.meta,'$.q') AS q, json_extract(e.meta,'$.dept') AS dept,
             json_extract(e.meta,'$.model') AS model, e.ms, json_extract(e.meta,'$.hits') AS hits,
-            json_extract(e.meta,'$.curated') AS curated, NULLIF(json_extract(e.meta,'$.error'),'') AS error,
+            json_extract(e.meta,'$.curated') AS curated, json_extract(e.meta,'$.cached') AS cached, NULLIF(json_extract(e.meta,'$.error'),'') AS error,
             NULLIF(json_extract(e.meta,'$.share'),'') AS share, json_extract(e.meta,'$.store') AS store,
             (SELECT COUNT(*) FROM events c WHERE c.name = 'shop.click'
                AND json_extract(c.meta,'$.chat') = json_extract(e.meta,'$.chat')) AS clicks
