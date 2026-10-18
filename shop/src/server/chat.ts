@@ -532,23 +532,27 @@ function interleave(lists: Tile[][], keep: Tile[]): Tile[] {
 const GOOD = 1.2;
 
 /**
- * The grid: Jev's best first, 12 to 24 of them, no brand crowding the rest out, brands taking
- * turns. Without scores (Jev down) the order the stores returned them in.
+ * The grid: Jev's best first, 24 to 36 of them, no brand crowding the rest out, brands taking
+ * turns. Everything good goes in; short of 24, the "close enough" ones top it up, then the rest
+ * by score (ten picks out of 290 found looked broken). Without scores (Jev down), the stores' order.
  */
 export function curate(tiles: Tile[], scores: Map<string, number>): Tile[] {
   const s = (t: Tile) => scores.get(t.id) ?? -1;
   const ranked = scores.size ? [...tiles].sort((a, b) => s(b) - s(a)) : tiles;
-  // Everything good, topped up to 12 with the "close enough" ones.
-  const pool = scores.size ? ranked.filter((t, i) => s(t) >= GOOD || (i < 12 && s(t) >= 0.6)) : ranked;
-  const cap = Math.max(4, Math.ceil(24 / new Set(pool.map((t) => t.brand)).size));
+  const good = ranked.filter((t) => s(t) >= GOOD);
+  const close = ranked.filter((t) => s(t) < GOOD && s(t) >= 0.6);
+  const pool = !scores.size ? ranked : good.length >= MIN_GRID ? good : [...good, ...close, ...ranked.filter((t) => s(t) < 0.6)].slice(0, MIN_GRID);
+  const cap = Math.max(4, Math.ceil(MAX_GRID / new Set(pool.map((t) => t.brand)).size));
   const count = new Map<string, number>();
   const picked = pool.filter((t) => {
     const n = count.get(t.brand) ?? 0;
     count.set(t.brand, n + 1);
     return n < cap;
   });
-  return mixBrands(picked.slice(0, 24));
+  return mixBrands(picked.slice(0, MAX_GRID));
 }
+const MIN_GRID = 24;
+const MAX_GRID = 36;
 
 /** Why one more round in other brands is worth it, or "" when the good tiles already make a mixed grid. */
 export function anotherRound(tiles: Tile[], scores: Map<string, number>): string {

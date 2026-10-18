@@ -34,18 +34,42 @@ function Price({ t }: { t: Tile }) {
   );
 }
 
+/** The favorite toggle: outline when not saved, filled when saved. */
+export function Heart({ on, onClick, className = "" }: { on: boolean; onClick: () => void; className?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      aria-pressed={on}
+      aria-label={on ? "Remover dos favoritos" : "Favoritar"}
+      className={`grid place-items-center rounded-full glass-white transition ${on ? "text-sale" : "text-ink"} ${className}`}
+    >
+      <svg viewBox="0 0 24 24" className="size-4" fill={on ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} strokeLinejoin="round">
+        <path d="M12 20s-7-4.4-9.2-8.6C1.3 8.5 3 5 6.4 5c2 0 3.3 1.1 4.1 2.3h3c.8-1.2 2.1-2.3 4.1-2.3 3.4 0 5.1 3.5 3.6 6.4C19 15.6 12 20 12 20z" />
+      </svg>
+    </button>
+  );
+}
+
 export function ProductTile({
   t,
   index,
   onOpen,
   onMore,
   onDismiss,
+  fav,
+  onFav,
 }: {
   t: Tile;
   index: number;
   onOpen: () => void;
   onMore: () => void;
   onDismiss: () => void;
+  fav?: boolean;
+  onFav?: () => void;
 }) {
   const [a, b] = t.images;
   return (
@@ -67,11 +91,15 @@ export function ProductTile({
             -{Math.round((1 - t.priceMinor / t.listPriceMinor) * 100)}%
           </span>
         ) : null}
+        {onFav && (
+          // Saved: always shown. Not saved: on hover, and always on touch screens (no hover there).
+          <Heart on={!!fav} onClick={onFav} className={`absolute right-2 top-2 size-8 ${fav ? "" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"}`} />
+        )}
         <button
           type="button"
           onClick={onDismiss}
           aria-label="Mostrar menos como este"
-          className="absolute right-2 top-2 grid size-7 place-items-center rounded-full glass-white text-ink opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
+          className={`absolute top-2 grid size-7 place-items-center rounded-full glass-white text-ink opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 ${onFav ? "right-11" : "right-2"}`}
         >
           ×
         </button>
@@ -131,12 +159,16 @@ export function ProductDrawer({
   onClose,
   onMore,
   onChange,
+  fav,
+  onFav,
 }: {
   t: Tile;
   href: string;
   onClose: () => void;
   onMore: () => void;
   onChange: (what: string) => void;
+  fav?: boolean;
+  onFav?: () => void;
 }) {
   const [change, setChange] = useState("");
   const [shown, setShown] = useState<number | null>(null);
@@ -220,9 +252,21 @@ export function ProductDrawer({
             Comprar na {t.brand} ↗
           </a>
           <p className="-mt-2 text-center text-[11px] text-ink-soft">Preço e estoque finais na loja.</p>
-          <button type="button" onClick={onMore} className="tap-scale rounded-full border border-ink/15 px-5 py-3 text-sm font-medium transition hover:border-ink">
-            Mais como este
-          </button>
+          <div className="flex gap-2">
+            <button type="button" onClick={onMore} className="tap-scale flex-1 rounded-full border border-ink/15 px-5 py-3 text-sm font-medium transition hover:border-ink">
+              Mais como este
+            </button>
+            {onFav && (
+              <button
+                type="button"
+                onClick={onFav}
+                aria-pressed={fav}
+                className={`tap-scale rounded-full border px-5 py-3 text-sm font-medium transition ${fav ? "border-sale/40 text-sale" : "border-ink/15 hover:border-ink"}`}
+              >
+                {fav ? "♥ Favoritado" : "♡ Favoritar"}
+              </button>
+            )}
+          </div>
           <form
             onSubmit={(e) => {
               e.preventDefault();

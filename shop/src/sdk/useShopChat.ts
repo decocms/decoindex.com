@@ -186,7 +186,7 @@ export function useShopChat() {
 }
 
 /** Fire-and-forget event to /api/event. */
-export function track(name: "shop.feedback" | "shop.dismiss" | "shop.open" | "shop.share" | "shop.refine" | "shop.enrich.shown" | "shop.enrich.search", meta: Record<string, unknown>) {
+export function track(name: "shop.feedback" | "shop.dismiss" | "shop.open" | "shop.share" | "shop.refine" | "shop.enrich.shown" | "shop.enrich.search" | "shop.fav", meta: Record<string, unknown>) {
   fetch("/api/event", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, meta }), keepalive: true }).catch(() => {});
 }
 

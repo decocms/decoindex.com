@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { RefineDim, Tile } from "~/types";
 import { ProductDrawer, ProductTile, outbound, thumb } from "~/components/Product";
+import { FavoritesButton, FavoritesDrawer } from "~/components/Favorites";
 import { HistoryButton, HistoryDrawer } from "~/components/History";
+import { favorites, useFavorites } from "~/sdk/favorites";
 import { ShareButton, SiteHeader } from "~/components/Share";
 import { pastSearches, type Past } from "~/sdk/history";
 import { bus, useBus } from "~/sdk/bus";
@@ -126,6 +128,14 @@ export default function ShopChat({
   }, [turns]);
 
   const [showHistory, setShowHistory] = useState(false);
+  const [showFavs, setShowFavs] = useState(false);
+  const favLists = useFavorites();
+  const favIds = useMemo(() => new Set(favLists.flatMap((l) => l.items.map((t) => t.id))), [favLists]);
+  /** A piece goes into the list of the conversation it came from, named after its first question. */
+  const toggleFav = (t: Tile) => {
+    const on = favorites.toggle(t, turns[0]?.user ?? onScreen?.user ?? "");
+    track("shop.fav", { chat: chatId(), id: t.id, on });
+  };
   /**
    * Reopen a past search as a new conversation. The drawer's own history entry is replaced (not
    * popped), so Back from the reopened search goes to wherever the shopper was before the drawer.
@@ -231,6 +241,7 @@ export default function ShopChat({
         }}
         right={
           <span className="flex items-center gap-1">
+            <FavoritesButton onClick={() => setShowFavs(true)} />
             <HistoryButton onClick={() => setShowHistory(true)} />
             {started && <DeptToggle value={dept} onChange={setDept} />}
           </span>
@@ -281,11 +292,22 @@ export default function ShopChat({
               <Composer placeholder="Refine: mais barato, outra cor, só tênis…" onSend={ask} />
             </div>
           </aside>
-          <Results turn={turns[Math.min(view, turns.length - 1)]} hidden={hidden} onOpen={(t) => { setOpen(t); track("shop.open", { chat: chatId(), model, id: t.id }); }} onMore={more} onDismiss={dismiss} />
+          <Results turn={turns[Math.min(view, turns.length - 1)]} hidden={hidden} favIds={favIds} onFav={toggleFav} onOpen={(t) => { setOpen(t); track("shop.open", { chat: chatId(), model, id: t.id }); }} onMore={more} onDismiss={dismiss} />
         </div>
       )}
 
       {showHistory && <HistoryDrawer onOpen={openPast} onClose={() => setShowHistory(false)} />}
+      {showFavs && (
+        <FavoritesDrawer
+          onClose={() => setShowFavs(false)}
+          onOpenTile={(t) => {
+            // Hand the drawer's history entry over to the product view (same layer), so one Back closes it.
+            history.replaceState({ turn: history.state?.turn }, "");
+            setShowFavs(false);
+            setOpen(t);
+          }}
+        />
+      )}
       {refining && (
         <RefineSheet
           text={refining.text}
@@ -302,6 +324,8 @@ export default function ShopChat({
       )}
       {open && (
         <ProductDrawer
+          fav={favIds.has(open.id)}
+          onFav={() => toggleFav(open)}
           t={open}
           href={outbound(open, chatId(), model)}
           onClose={() => setOpen(null)}
@@ -525,8 +549,12 @@ function Results({
   onOpen,
   onMore,
   onDismiss,
+  favIds,
+  onFav,
 }: {
   turn: Turn;
+  favIds: Set<string>;
+  onFav: (t: Tile) => void;
   hidden: Set<string>;
   onOpen: (t: Tile) => void;
   onMore: (t: Tile) => void;
@@ -541,12 +569,18 @@ function Results({
     const visible = turn.products.filter((p) => !hidden.has(p.id));
     if (!turn.curated) return { picked: visible, rest: [] as Tile[] };
     const byId = new Map(visible.map((p) => [p.id, p]));
-    const picked = turn.curated.map((id) => byId.get(id)).filter((p): p is Tile => !!p);
+    // What the shopper hearted (while the photos drifted, or before) leads the grid.
+    const hearted = visible.filter((p) => favIds.has(p.id));
+    const picked = [...hearted, ...turn.curated.map((id) => byId.get(id)).filter((p): p is Tile => !!p && !favIds.has(p.id))];
     const chosen = new Set(picked.map((p) => p.id));
     return { picked, rest: visible.filter((p) => !chosen.has(p.id)) };
-  }, [turn.products, turn.curated, hidden]);
+  }, [turn.products, turn.curated, hidden, favIds]);
 
-  const shown = showAll ? [...picked, ...rest] : picked;
+  // The last row is always full: top it up from "ver mais" to a multiple of the columns on screen.
+  const cols = useGridCols();
+  const pad = rest.length ? (cols - (picked.length % cols)) % cols : 0;
+  const shown = showAll ? [...picked, ...rest] : [...picked, ...rest.slice(0, pad)];
+  const moreCount = rest.length - pad;
   // The drifting photos play for at least MIN_DRIFT once the first ones arrive, even when the
   // answer is quick (or cached): it is the part people like watching. Reopened links skip it.
   const found = turn.products.filter((p) => p.images[0]);
@@ -583,10 +617,12 @@ function Results({
       <div aria-busy="true" className="animate-rise">
         <p className="mb-4 text-sm text-ink-soft">
           <span className="font-medium text-ink tabular-nums">{found.length} peças</span> em {brands} {brands === 1 ? "marca" : "marcas"} até agora
+          <span className="sm:hidden"> · toque para favoritar</span>
+          <span className="hidden sm:inline"> · toque numa peça para favoritar, ela vem primeiro no resultado</span>
         </p>
         <div className="edge-fade -mx-4 flex flex-col gap-3 overflow-hidden lg:mx-0">
           {rows.map((row, r) => (
-            <Drift key={r} tiles={row.slice(0, 16)} reverse={r % 2 === 1} />
+            <Drift key={r} tiles={row.slice(0, 16)} reverse={r % 2 === 1} favIds={favIds} onFav={onFav} />
           ))}
         </div>
       </div>
@@ -597,13 +633,13 @@ function Results({
     <div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {shown.map((t, i) => (
-              <ProductTile key={t.id} t={t} index={i} onOpen={() => onOpen(t)} onMore={() => onMore(t)} onDismiss={() => onDismiss(t)} />
+              <ProductTile key={t.id} t={t} index={i} fav={favIds.has(t.id)} onFav={() => onFav(t)} onOpen={() => onOpen(t)} onMore={() => onMore(t)} onDismiss={() => onDismiss(t)} />
         ))}
       </div>
-      {rest.length > 0 && !showAll && (
+      {moreCount > 0 && !showAll && (
         <div className="mt-10 text-center">
           <button type="button" onClick={() => setShowAll(true)} className="tap-scale rounded-full border border-ink/15 px-5 py-2.5 text-sm transition hover:border-ink">
-            Ver mais {rest.length} resultados
+            Ver mais {moreCount} resultados
           </button>
         </div>
       )}
@@ -732,27 +768,56 @@ function useDriftRows(found: number): number {
 }
 
 /** One row of found photos sliding sideways forever (the list is doubled so the loop has no seam). */
-function Drift({ tiles, reverse }: { tiles: Tile[]; reverse?: boolean }) {
+function Drift({ tiles, reverse, favIds, onFav }: { tiles: Tile[]; reverse?: boolean; favIds: Set<string>; onFav: (t: Tile) => void }) {
   const loop = [...tiles, ...tiles];
   return (
     <div
-      className="flex w-max gap-3"
+      // Pauses under the mouse, so a photo can be caught and hearted.
+      className="flex w-max gap-3 hover:[animation-play-state:paused]"
       style={{ animation: `drift ${Math.max(20, tiles.length * 4)}s linear infinite${reverse ? " reverse" : ""}` }}
     >
-      {loop.map((t, i) => (
-        <figure key={`${t.id}:${i}`} className="w-32 shrink-0 sm:w-40 lg:w-44 2xl:w-52" aria-hidden={i >= tiles.length}>
-          <img
-            src={thumb(t.images[0], 320)}
-            alt=""
-            loading="lazy"
-            onError={(e) => (e.currentTarget.parentElement!.style.display = "none")}
-            className="aspect-[3/4] w-full rounded-sm bg-[#f4f4f4] object-cover"
-          />
-          <figcaption className="mt-1.5 truncate text-[11px] uppercase tracking-[0.06em] text-ink-soft">{t.brand}</figcaption>
-        </figure>
-      ))}
+      {loop.map((t, i) => {
+        const on = favIds.has(t.id);
+        return (
+          <button
+            type="button"
+            key={`${t.id}:${i}`}
+            onClick={() => onFav(t)}
+            aria-pressed={on}
+            aria-label={`${on ? "Remover dos favoritos" : "Favoritar"}: ${t.brand} ${t.title}`}
+            tabIndex={i >= tiles.length ? -1 : undefined}
+            className="relative w-32 shrink-0 text-left sm:w-40 lg:w-44 2xl:w-52"
+          >
+            <img
+              src={thumb(t.images[0], 320)}
+              alt=""
+              loading="lazy"
+              onError={(e) => (e.currentTarget.parentElement!.style.display = "none")}
+              className={`aspect-[3/4] w-full rounded-sm bg-[#f4f4f4] object-cover transition ${on ? "ring-2 ring-sale ring-offset-2" : "hover:brightness-95"}`}
+            />
+            {on && (
+              <span className="absolute right-2 top-2 grid size-7 animate-rise place-items-center rounded-full bg-white text-sale shadow">
+                <svg viewBox="0 0 24 24" className="size-4" fill="currentColor"><path d="M12 20s-7-4.4-9.2-8.6C1.3 8.5 3 5 6.4 5c2 0 3.3 1.1 4.1 2.3h3c.8-1.2 2.1-2.3 4.1-2.3 3.4 0 5.1 3.5 3.6 6.4C19 15.6 12 20 12 20z" /></svg>
+              </span>
+            )}
+            <span className="mt-1.5 block truncate text-[11px] uppercase tracking-[0.06em] text-ink-soft">{t.brand}</span>
+          </button>
+        );
+      })}
     </div>
   );
+}
+
+/** Columns of the product grid at this width (matches grid-cols-2 sm:3 xl:4 2xl:5). */
+function useGridCols(): number {
+  const [cols, setCols] = useState(2);
+  useEffect(() => {
+    const pick = () => setCols(innerWidth >= 1536 ? 5 : innerWidth >= 1280 ? 4 : innerWidth >= 640 ? 3 : 2);
+    pick();
+    addEventListener("resize", pick);
+    return () => removeEventListener("resize", pick);
+  }, []);
+  return cols;
 }
 
 /**
