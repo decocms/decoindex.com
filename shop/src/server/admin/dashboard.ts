@@ -38,6 +38,14 @@ export const DASHBOARD_HTML = `<!doctype html>
   .bar span { position:absolute; bottom:-18px; left:50%; transform: translateX(-50%); font-size: 10px; color: var(--soft); white-space: nowrap; }
   .legend { font-size: 11px; color: var(--soft); margin-top: 24px; }
   .cols { display:grid; grid-template-columns: 1.6fr 1fr; gap: 28px; }
+  .toggle { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:99px; padding:6px 12px 6px 8px; background:transparent; font:inherit; color:var(--soft); cursor:pointer; }
+  .toggle i { width:28px; height:16px; border-radius:99px; background:var(--line); position:relative; transition:background .15s; }
+  .toggle i::after { content:""; position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:#fff; transition:transform .15s; }
+  .toggle.on { color:var(--ink); } .toggle.on i { background:var(--ink); } .toggle.on i::after { transform:translateX(12px); }
+  .devlink { font-size:12px; color:var(--soft); }
+  .agent { display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--line); }
+  .agent b { font-weight:500; } .agent small { display:block; color:var(--soft); font-size:12px; margin-top:1px; }
+  .agent .tag { font-size:9px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--soft); border:1px solid var(--line); border-radius:99px; padding:1px 6px; margin-left:6px; vertical-align:2px; }
   .cols3 { display:grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
   @media (max-width: 820px) { .cols3 { grid-template-columns: 1fr; } }
   @media (max-width: 820px) { .cols { grid-template-columns: 1fr; } }
@@ -58,7 +66,7 @@ export const DASHBOARD_HTML = `<!doctype html>
 <script>
 (function () {
   var root = document.getElementById("root");
-  var state = { days: 7, q: "" };
+  var state = { days: 7, q: "", hideDev: true };
 
   function el(tag, attrs, kids) {
     var n = document.createElement(tag);
@@ -82,6 +90,9 @@ export const DASHBOARD_HTML = `<!doctype html>
 
   function render() {
     var d = data();
+    // The header reflects what the data was computed with, so adopt it before drawing the controls.
+    if (d && d.days) state.days = d.days;
+    if (d && typeof d.hideDev === "boolean") state.hideDev = d.hideDev;
     root.textContent = "";
     var wrap = el("div", { class: "wrap" });
     root.appendChild(wrap);
@@ -93,11 +104,16 @@ export const DASHBOARD_HTML = `<!doctype html>
     search.addEventListener("keydown", function (e) { if (e.key === "Enter") { state.q = search.value.trim(); load(); } });
     wrap.appendChild(el("header", null, [
       el("h1", null, ["deco shop", el("span", { class: "pill", text: "admin" })]),
-      el("div", { style: "display:flex;gap:10px;flex-wrap:wrap" }, [search, seg]),
+      el("div", { style: "display:flex;gap:10px;flex-wrap:wrap;align-items:center" }, [
+        search,
+        seg,
+        // Our own traffic (tests, browsers marked at /dev) out of every number below.
+        el("button", { class: "toggle" + (state.hideDev ? " on" : ""), onclick: function () { state.hideDev = !state.hideDev; load(); } }, [el("i"), "Esconder uso dev"]),
+        el("a", { class: "devlink", href: "https://shop.decoindex.com/dev", target: "_blank", rel: "noopener", text: "marcar meu navegador como dev ↗", onclick: function (e) { e.preventDefault(); openLink(this.href); } }),
+      ]),
     ]));
 
     if (!d) { wrap.appendChild(el("p", { class: "loading", text: "Carregando…" })); return; }
-    if (d.days) state.days = d.days;
 
     var t = d.totals || {};
     var models = d.models || [];
@@ -127,17 +143,29 @@ export const DASHBOARD_HTML = `<!doctype html>
       wrap.appendChild(el("div", { class: "kpis" }, [
         ["Visitas (pessoas)", tr.people], ["Home", tr.kinds.home], ["Links de busca abertos", tr.kinds.share],
         ["Visita → busca", pct(t.turns || 0, tr.people)], ["Previews de link", tr.previews], ["Bots", tr.bots],
-      ].map(function (k) { return el("div", { class: "kpi" }, [el("div", { class: "v", text: String(k[1]) }), el("div", { class: "l", text: k[0] })]); })));
+      ].concat(state.hideDev ? [] : [["Uso dev", tr.dev || 0]]).map(function (k) { return el("div", { class: "kpi" }, [el("div", { class: "v", text: String(k[1]) }), el("div", { class: "l", text: k[0] })]); })));
       var list = function (title, rows, label, empty) {
         var box = el("div", null, [el("h2", { text: title })]);
         if (!rows.length) box.appendChild(el("p", { class: "empty", text: empty }));
         rows.forEach(function (r) { box.appendChild(el("div", { class: "row" }, [el("span", { text: label(r) }), el("span", { class: "meta", text: String(r.n) })])); });
         return box;
       };
+      // Who the non-people are, by name, with what they are doing here.
+      var agents = function (rows) {
+        var box = el("div", null, [el("h2", { text: "Robôs e previews" })]);
+        if (!rows.length) box.appendChild(el("p", { class: "empty", text: "Nenhum no período." }));
+        rows.forEach(function (r) {
+          box.appendChild(el("div", { class: "agent" }, [
+            el("span", null, [el("b", { text: r.name }), el("span", { class: "tag", text: r.cls === "preview" ? "preview" : "robô" }), el("small", { text: r.what })]),
+            el("span", { class: "meta", text: String(r.n) }),
+          ]));
+        });
+        return box;
+      };
       wrap.appendChild(el("div", { class: "cols3" }, [
         list("De onde vêm", tr.refs || [], function (r) { return r.ref; }, "Sem visitas ainda."),
         list("Países", tr.countries || [], function (r) { return r.country || "?"; }, "–"),
-        list("Bots e previews", tr.botAgents || [], function (r) { return (r.cls === "preview" ? "preview · " : "bot · ") + String(r.ua || "(sem UA)").slice(0, 48); }, "Nenhum."),
+        agents(tr.botAgents || []),
       ]));
     }
 
@@ -218,7 +246,7 @@ export const DASHBOARD_HTML = `<!doctype html>
 
   // One call, three transports: Apps SDK, MCP Apps over postMessage, or the query string outside any host.
   function load() {
-    var args = { days: state.days };
+    var args = { days: state.days, hideDev: state.hideDev };
     if (state.q) args.q = state.q;
     window.__DATA__ = null;
     render();
@@ -229,6 +257,7 @@ export const DASHBOARD_HTML = `<!doctype html>
     } else {
       var u = new URL(location.href);
       u.searchParams.set("days", String(state.days));
+      u.searchParams.set("hideDev", state.hideDev ? "1" : "0");
       if (state.q) u.searchParams.set("q", state.q); else u.searchParams.delete("q");
       location.href = u.toString();
     }

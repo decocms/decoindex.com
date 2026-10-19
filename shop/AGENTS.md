@@ -95,6 +95,14 @@ the token rides as `?token=` because Studio stores only the URL). Tools:
 shows what shoppers typed. Code: `src/server/admin/*`, handshake rules copied
 from decoindex's `/mcp` (read its comments before changing the widget).
 
+**Our own traffic is "dev", and the admin hides it by default** (toggle "Esconder
+uso dev"). Every event from a request that `isDev()` recognises logs with
+`ua_class = 'dev'`: a user agent containing `decoshop-dev` (every test script
+sets it: Playwright `userAgent: "… decoshop-dev"`, curl `-A decoshop-dev`), the
+`decoshop_dev=1` cookie that `shop.decoindex.com/dev` sets (`/dev?off` clears
+it; the admin links to it), or `utm_source=test`. Older test runs are filtered
+by their tags (test- chat ids, utm_source=test, HeadlessChrome).
+
 ## Learning in production
 
 Every chat, click, open, dismiss and 👍/👎 lands in decoindex's `events` table

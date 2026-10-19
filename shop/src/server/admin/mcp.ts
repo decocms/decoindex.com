@@ -25,6 +25,8 @@ const RESOURCE = { name: "deco shop admin", description: "Queries, models, click
 
 type Args = Record<string, unknown>;
 const num = (v: unknown, d: number) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : d);
+/** Hide our own traffic unless told otherwise (false, or "0"/"false" from the /mcp/ui query string). */
+const hide = (v: unknown) => !(v === false || v === "0" || v === "false");
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 80) : undefined);
 
 const TOOLS = [
@@ -38,6 +40,7 @@ const TOOLS = [
       properties: {
         days: { type: "number", description: "Janela em dias (1–90). Padrão 7." },
         q: { type: "string", description: "Filtra as buscas recentes por texto." },
+        hideDev: { type: "boolean", description: "Esconde o uso dev (nossos testes e navegadores marcados em /dev). Padrão true." },
       },
       additionalProperties: false,
     },
@@ -45,13 +48,14 @@ const TOOLS = [
     _meta: { ui: { resourceUri: UI_MCP_APP }, "openai/outputTemplate": UI_SKYBRIDGE },
     execute: async (env: Env, a: Args) => {
       const days = num(a.days, 7);
+      const h = hide(a.hideDev);
       const [ov, recent, top, tr] = await Promise.all([
-        overview(env, days),
-        queries(env, days, 60, str(a.q)),
-        topQueries(env, days, 15),
-        traffic(env, days),
+        overview(env, days, h),
+        queries(env, days, 60, str(a.q), h),
+        topQueries(env, days, 15, h),
+        traffic(env, days, h),
       ]);
-      return { ...ov, q: str(a.q) ?? null, recent, top, traffic: tr };
+      return { ...ov, q: str(a.q) ?? null, hideDev: h, recent, top, traffic: tr };
     },
   },
   {
@@ -64,19 +68,20 @@ const TOOLS = [
         days: { type: "number" },
         limit: { type: "number", description: "Até 200. Padrão 50." },
         q: { type: "string", description: "Filtra por texto." },
+        hideDev: { type: "boolean", description: "Esconde o uso dev. Padrão true." },
       },
       additionalProperties: false,
     },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
-    execute: async (env: Env, a: Args) => ({ queries: await queries(env, num(a.days, 7), num(a.limit, 50), str(a.q)) }),
+    execute: async (env: Env, a: Args) => ({ queries: await queries(env, num(a.days, 7), num(a.limit, 50), str(a.q), hide(a.hideDev)) }),
   },
   {
     name: "shop_top_queries",
     title: "Buscas mais feitas",
     description: "As buscas mais repetidas no período (texto normalizado), com contagem e latência média.",
-    inputSchema: { type: "object", properties: { days: { type: "number" }, limit: { type: "number" } }, additionalProperties: false },
+    inputSchema: { type: "object", properties: { days: { type: "number" }, limit: { type: "number" }, hideDev: { type: "boolean" } }, additionalProperties: false },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
-    execute: async (env: Env, a: Args) => ({ top: await topQueries(env, num(a.days, 7), num(a.limit, 20)) }),
+    execute: async (env: Env, a: Args) => ({ top: await topQueries(env, num(a.days, 7), num(a.limit, 20), hide(a.hideDev)) }),
   },
 ] as const;
 

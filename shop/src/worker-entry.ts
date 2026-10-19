@@ -19,7 +19,7 @@ import { brandForUrl } from "./server/brands";
 import { logEvent } from "./server/events";
 import { EMBED_JS } from "./server/embed";
 import { handleMcp } from "./server/admin/mcp";
-import { fromOurPages, trackView } from "./server/traffic";
+import { fromOurPages, isDev, trackView } from "./server/traffic";
 import { refreshAllShowcases } from "./server/showcase.server";
 import type { Env, ExecutionContext } from "./server/env";
 
@@ -48,8 +48,20 @@ const decoWorker = createDecoWorkerEntry(createServerEntry({ fetch: handler.fetc
 const EVENT_NAMES = new Set(["shop.feedback", "shop.dismiss", "shop.open", "shop.share", "shop.refine", "shop.enrich.shown", "shop.enrich.search", "shop.enrich.inline", "shop.fav"]);
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, rawEnv: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    // Our own traffic (test scripts, a browser marked at /dev) logs as ua_class "dev". A copy per
+    // request: the env object is shared across concurrent requests.
+    const env: Env = isDev(request) ? { ...rawEnv, DEV: true } : rawEnv;
+
+    // /dev marks this browser as ours for a year (/dev?off unmarks it). Anyone may: it only hides
+    // their own visits from the admin numbers.
+    if (url.pathname === "/dev") {
+      const off = url.searchParams.has("off");
+      const cookie = `decoshop_dev=${off ? "0; Max-Age=0" : "1; Max-Age=31536000"}; Path=/; Secure; SameSite=Lax`;
+      const body = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>deco shop · dev</title><body style="font:16px system-ui;padding:40px;max-width:520px"><h1 style="font-size:22px">${off ? "Este navegador voltou a contar como visitante." : "Este navegador agora é dev."}</h1><p>${off ? "" : "Suas visitas e buscas ficam marcadas como uso dev e somem do admin com “Esconder uso dev”. "}<a href="/dev${off ? "" : "?off"}">${off ? "Marcar de novo" : "Desfazer"}</a> · <a href="/">Ir pro shop</a></p>`;
+      return new Response(body, { headers: { "content-type": "text/html; charset=utf-8", "set-cookie": cookie, "cache-control": "no-store" } });
+    }
 
     // Our POST APIs are only for our own pages (cheap bot filter; CHAT_LIMIT still applies).
     if (request.method === "POST" && url.pathname.startsWith("/api/") && !fromOurPages(request)) {
@@ -108,7 +120,7 @@ export default {
     }
 
     trackView(request, env, ctx);
-    return decoWorker.fetch(request, env as never, ctx as never);
+    return decoWorker.fetch(request, rawEnv as never, ctx as never);
   },
 
   // Cron (wrangler.jsonc): the home's showcase turns over once a day, before anyone wakes up.

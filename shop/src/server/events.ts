@@ -14,7 +14,7 @@ export async function logEvent(
     await env.DB.prepare(
       `INSERT INTO events (ts, name, domain, surface, ua_class, country, ms, meta) VALUES (?, ?, ?, 'shop', ?, ?, ?, ?)`,
     )
-      .bind(new Date().toISOString(), name, domain ?? null, client.uaClass ?? "browser", client.country ?? null, ms, JSON.stringify(meta))
+      .bind(new Date().toISOString(), name, domain ?? null, env.DEV ? "dev" : (client.uaClass ?? "browser"), client.country ?? null, ms, JSON.stringify(meta))
       .run();
   } catch (err) {
     console.error("logEvent failed", name, err);
