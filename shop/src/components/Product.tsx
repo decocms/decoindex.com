@@ -177,6 +177,22 @@ export function ProductDrawer({
   const [shown, setShown] = useState<number | null>(null);
   /** Desktop: the photo on the stage left of the drawer. Thumbs switch it; phones open the gallery instead. */
   const [stage, setStage] = useState(0);
+  /**
+   * Stage photos already in the browser at full size. Until one is, the stage shows the 480px copy
+   * the thumbs strip already loaded: a merchant CDN resizes 1200px on demand (~1s cold, sometimes an
+   * error), and the stage sat empty meanwhile. All of them are fetched as the drawer opens.
+   */
+  const [big, setBig] = useState<Set<number>>(new Set());
+  useEffect(() => {
+    if (!matchMedia("(min-width: 1024px)").matches) return; // phones have no stage
+    const imgs = t.images.map((src, i) => {
+      const im = new Image();
+      im.onload = () => setBig((b) => new Set(b).add(i));
+      im.src = thumb(src, 1200);
+      return im;
+    });
+    return () => imgs.forEach((im) => (im.onload = null));
+  }, [t.images]);
   const wide = () => matchMedia("(min-width: 1024px)").matches;
   const close = useBackToClose(1, onClose);
   useEffect(() => {
@@ -199,7 +215,7 @@ export function ProductDrawer({
         <div className="pointer-events-none relative hidden min-w-0 flex-1 items-center justify-center p-10 lg:flex">
           {/* The stage is the desktop gallery: thumbs and arrows switch it; full screen is for phones. */}
           <div className="pointer-events-auto h-full max-h-[min(100%,1100px)]">
-            <img key={stage} src={thumb(t.images[stage], 1200)} alt={t.title} className="h-full w-auto max-w-full animate-rise rounded-sm object-contain shadow-2xl" />
+            <img key={stage} src={thumb(t.images[stage], big.has(stage) ? 1200 : 480)} alt={t.title} className="h-full w-auto max-w-full animate-rise rounded-sm object-contain shadow-2xl" />
           </div>
           {t.images.length > 1 &&
             ([-1, 1] as const).map((d) => (
