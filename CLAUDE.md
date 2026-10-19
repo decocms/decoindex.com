@@ -44,6 +44,32 @@ dies, not through traffic cost.
 outbound product link carries the attribution param. The day a decoindex page
 outranks a merchant's own PDP is the day the commercial conversation ends.
 
+## `/check` is an agent-readiness report, not a storefront read
+
+`/check/{domain}` (and `.json`, and the public `check_site` tool) reports whether
+*any* site is ready for AI agents: can one read the home without JavaScript, does
+robots.txt let it in, can it understand the site from llms.txt / sitemap /
+JSON-LD. It is not a read of a catalog, so invariant 1's two-call bound does not
+describe it — it has its own, and it is just as hard:
+
+- **4 GETs**: home, robots.txt, llms.txt, one sitemap URL. Each has one 6s budget
+  covering its redirects (3 hops max, every hop re-checked: https only, public
+  hostname only — `checkTarget`/`isPublicHost` in `lib/check.ts` are the SSRF
+  guard). The one extra connection is the apex, and only when `www.` gave no
+  response at all.
+- **24h cache**: KV `check:{domain}:v{RENDER_VERSION}` *with* `expirationTtl`
+  (these are reports, not the index — they expire) plus the Cache API under
+  `checkCacheKey()`. A home that did not answer is cached 10 minutes. The route
+  and the tool render from the same cached report, so they share one entry.
+- Cold checks spend the same `READ_THROUGH` (per domain) and `CALLER_LIMIT`
+  (per IP) budgets as reads; a refusal is never cached. `noindex` on every
+  response; `BLOCKED_CRAWLERS` are refused by the same middleware as everywhere.
+- **Never renders JS, never enumerates**: the sitemap is fetched to see that it
+  exists (first 64 KB), and no URL inside it is ever followed.
+
+If a change to `/check` needs a fifth fetch or follows a link it found, it has
+become a crawler. Do not.
+
 ## Architecture in one screen
 
 ```
@@ -80,7 +106,7 @@ and an extension contradicts it.
 product; `/mcp` is the same reads for hosts that prefer a tool call. See "The MCP
 surface" below for the tiers and the rules a tool has to follow.
 
-Other routes: `/` (HTML for browsers, 302 to `/llms.txt` for agents), `/llms.txt`,
+Other routes: `/check/{domain}` (agent-readiness report — see above), `/` (HTML for browsers, 302 to `/llms.txt` for agents), `/llms.txt`,
 `/about`, `/opt-out`, `/benchmark` (static, from committed bench results),
 `/feedback` (public, unauthenticated, IP rate-limited), `/robots.txt`, `/og.png`,
 `/healthz`, `POST /e` (cookieless landing beacon). `/{domain}/llms.txt` 308s to

@@ -28,6 +28,7 @@ URL works immediately, and costs nothing the second time.
 | `?sort=price_asc` | Order the **whole catalog**, not just the page you were handed. Also `price_desc`, `name_asc`, `name_desc`, `discount`, `new`. |
 | `/{domain}/search?q=` | Search that storefront. `/busca/{words}` works too — it is the path the store itself uses. |
 | `....json` | Any of the above as structured JSON instead of Markdown |
+| `/check/{domain}` | Agent-readiness report for any site: readable without JS, allowed by robots.txt, understandable (llms.txt, sitemap, JSON-LD), out of 75. Four fetches, cached 24h; `.json` for structure. |
 | `/llms.txt` | Machine index: the convention, and the storefronts checked to work |
 | `/benchmark` | Measured cost of reading a storefront both ways |
 | `POST /feedback` | Tell us a document is wrong. Public, unauthenticated, rate-limited per IP. |
@@ -88,7 +89,8 @@ search and catalog endpoints rather than by an index of ours.
 `/mcp` serves the same reads over MCP, in two tiers off one URL. Anonymous
 callers get `navigate_storefront`, `search_storefront` and `list_storefronts` —
 each one resolves through the same `readThrough()` as a GET, so a tool call and
-its URL twin share a cache entry. A caller holding `MCP_AUTH_TOKEN` additionally
+its URL twin share a cache entry — plus `check_site`, which goes through the same
+`checkThrough()` and cache entry as `/check/{domain}`. A caller holding `MCP_AUTH_TOKEN` additionally
 gets the operator control plane (feedback triage, traffic stats). Tools a caller
 may not invoke are never advertised to it.
 

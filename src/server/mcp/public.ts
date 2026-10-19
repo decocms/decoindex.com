@@ -2,6 +2,8 @@ import type { Env } from "../env";
 import { normalizeDomain, parsePath, type Ext } from "../lib/url";
 import { readThrough } from "../lib/read";
 import { listActiveDomains } from "../lib/registry";
+import { checkTarget, checkThrough } from "../lib/check";
+import { renderCheck, renderProblem } from "../render/markdown";
 import type { ToolDefinition } from "./tools";
 import { rpcError } from "./tools";
 
@@ -34,6 +36,28 @@ const READ_OUTPUT = object({
   domain: { type: "string" },
   status: { type: "integer", description: "200 means a document; 404/415/502 mean the reason is in the text." },
   observed_at: { type: "string", description: "When these facts were read from the merchant." },
+});
+
+/** What check_site hands back: the report, structured. Same shape as /check/{domain}.json. */
+const CHECK_OUTPUT = object({
+  decoindex_url: { type: "string", description: "The same report as a URL; append .json for this structure." },
+  status: { type: "integer", description: "200 means a report; 429 means rate-limited, retry shortly." },
+  domain: { type: "string" },
+  checked_at: { type: "string", description: "When the site was fetched. Reports are cached 24h." },
+  subtotal: { type: "integer", description: "Out of 75: Legível + Permitido + Entendível. Citado is not scored here." },
+  pillars: object({
+    legivel: { type: "integer" },
+    permitido: { type: "integer" },
+    entendivel: { type: "integer" },
+  }),
+  home: { type: "object", description: "HTTP status, final URL, title and meta description of the home." },
+  robots: { type: "object", description: "robots.txt status and, per bot group, the bots it blocks from the home." },
+  llms_txt: { type: "object" },
+  sitemap: { type: "object" },
+  json_ld_types: { type: "array", items: { type: "string" } },
+  legivel: { type: "object", description: "Readable checks, 5 points each." },
+  entendivel: { type: "object", description: "Understandable checks, 5 points each." },
+  not_verified: { type: "array", items: { type: "string" } },
 });
 
 /**
@@ -216,6 +240,38 @@ export const publicTools: ToolDefinition[] = [
           decoindex_url: `${env.PUBLIC_ORIGIN}/${r.domain}`,
         })),
       };
+    },
+  },
+  {
+    name: "check_site",
+    title: "Check a site's agent readiness",
+    description:
+      "Deterministic agent-readiness report for any public website (not only storefronts): can an AI agent read the home without JavaScript (Legível), does robots.txt let search engines, AI search, AI agents and training crawlers in (Permitido), and can it understand the site from llms.txt, sitemap and JSON-LD (Entendível). Scored out of 75; whether assistants actually cite the site (Citado) needs an assistant and is not scored. Four fetches, no JavaScript, cached 24 hours, so calling it twice costs nothing.",
+    inputSchema: object(
+      {
+        domain: {
+          type: "string",
+          description: "A public domain or URL: `abacatepay.com`, `https://www.abacatepay.com/`. Only the host is used.",
+        },
+      },
+      ["domain"],
+    ),
+    outputSchema: CHECK_OUTPUT,
+    annotations: { readOnlyHint: true, openWorldHint: true, destructiveHint: false },
+    execute: async (env, input, ctx) => {
+      const domain = checkTarget(String(input.domain ?? ""));
+      if (!domain) throw rpcError(-32602, "Missing or invalid parameter: domain (a public domain, e.g. abacatepay.com)");
+      const rctx = {
+        publicOrigin: env.PUBLIC_ORIGIN,
+        attribution: { param: env.ATTRIBUTION_PARAM, value: env.ATTRIBUTION_VALUE },
+      };
+      // The same function and cache entry as GET /check/{domain}.
+      const { report } = await checkThrough(env, ctx, domain);
+      const decoindex_url = `${env.PUBLIC_ORIGIN}/check/${domain}`;
+      if (!report) {
+        return { markdown: renderProblem(domain, "/check", "rate-limited", rctx), decoindex_url, status: 429, domain };
+      }
+      return { markdown: renderCheck(report, rctx), decoindex_url, status: 200, ...report };
     },
   },
 ];

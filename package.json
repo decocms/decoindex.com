@@ -10,7 +10,8 @@
     "db:local": "wrangler d1 migrations apply decoindex --local",
     "db:remote": "wrangler d1 migrations apply decoindex --remote",
     "smoke": "node scripts/smoke.mjs",
-    "bench": "node bench/run.mjs"
+    "bench": "node bench/run.mjs",
+    "test": "node --import ./scripts/ts-hooks.mjs --test test/*.test.mjs"
   },
   "dependencies": {
     "hono": "^4.6.14"
