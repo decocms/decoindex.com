@@ -1,5 +1,7 @@
 /** Mirrors wrangler.jsonc by hand. Secrets are optional so dev degrades instead of crashing. */
 export interface Env {
+  /** Set per request (worker-entry) when the caller is us: events log with ua_class = "dev". Not a binding. */
+  DEV?: boolean;
   /** decoindex itself. Absent in plain `vite dev` — catalog.ts falls back to the public origin. */
   INDEX?: Fetcher;
   DB?: D1Database;

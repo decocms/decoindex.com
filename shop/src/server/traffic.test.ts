@@ -18,3 +18,25 @@ describe("clientClass", () => {
     expect(clientClass(null)).toBe("bot");
   });
 });
+
+describe("agentName", () => {
+  test("names who it is, not the raw UA", async () => {
+    const { agentName } = await import("./traffic");
+    expect(agentName("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/601.2.4 (KHTML, like Gecko) Version/9.0.1 Safari/601.2.4 facebookexternalhit/1.1 Facebot Twitterbot/1.0").name).toBe("iMessage");
+    expect(agentName("Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ChatGPT-User/1.0; +https://openai.com/bot").name).toBe("ChatGPT");
+    expect(agentName("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0 Safari/537.36").name).toBe("Navegador automatizado");
+    expect(agentName("Mozilla/5.0 (compatible; VarridaBot/1.0; +https://varrida.com/bot) Chrome/126").name).toBe("VarridaBot");
+    expect(agentName("TelegramBot (like TwitterBot)").name).toBe("Telegram");
+  });
+});
+
+describe("isDev", () => {
+  test("our UA, the /dev cookie, or the test tag", async () => {
+    const { isDev, DEV_UA } = await import("./traffic");
+    const r = (h: Record<string, string>, q = "") => new Request(`https://shop.decoindex.com/${q}`, { headers: h });
+    expect(isDev(r({ "user-agent": `Mozilla/5.0 HeadlessChrome ${DEV_UA}` }))).toBe(true);
+    expect(isDev(r({ cookie: "a=1; decoshop_dev=1" }))).toBe(true);
+    expect(isDev(r({}, "?utm_source=test"))).toBe(true);
+    expect(isDev(r({ "user-agent": "Mozilla/5.0 Safari", cookie: "decoshop_dev=0" }))).toBe(false);
+  });
+});
