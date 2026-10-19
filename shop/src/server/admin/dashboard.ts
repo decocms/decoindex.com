@@ -90,6 +90,9 @@ export const DASHBOARD_HTML = `<!doctype html>
 
   function render() {
     var d = data();
+    // The header reflects what the data was computed with, so adopt it before drawing the controls.
+    if (d && d.days) state.days = d.days;
+    if (d && typeof d.hideDev === "boolean") state.hideDev = d.hideDev;
     root.textContent = "";
     var wrap = el("div", { class: "wrap" });
     root.appendChild(wrap);
@@ -111,8 +114,6 @@ export const DASHBOARD_HTML = `<!doctype html>
     ]));
 
     if (!d) { wrap.appendChild(el("p", { class: "loading", text: "Carregando…" })); return; }
-    if (d.days) state.days = d.days;
-    if (typeof d.hideDev === "boolean") state.hideDev = d.hideDev;
 
     var t = d.totals || {};
     var models = d.models || [];
