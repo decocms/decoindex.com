@@ -197,8 +197,23 @@ function toTile(
     colors,
     category: p.categories?.at(-1),
     dept: deptOf((p.categories ?? []).join(" ")),
-    description: p.description?.slice(0, 400),
+    description: cleanText(p.description).slice(0, 1000) || undefined,
   };
+}
+
+/** Store descriptions arrive as HTML or with stray whitespace; Jev and the drawer want plain text. */
+function cleanText(s?: string): string {
+  return (s ?? "").replace(/<[^>]+>/g, " ").replace(/&nbsp;|&#?\w+;/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * What Jev scores: the model's line plus the store's description. Measured Oct 20 2026 (6 asks,
+ * 26–96 tiles each, a Sonnet judge over every tile that reached either top-24): judge score
+ * 1.51 → 1.83 of 3 with 900 chars (500: 1.42 → 1.67), Jev US$0.00026 → 0.00068 per search, same
+ * ~0.5s. "Leve e fresco", "não amassa", "segura bem" live in the description, not the title.
+ */
+export function jevLine(t: Tile): string {
+  return t.description ? `${tileLine(t)} | ${t.description.slice(0, 900)}` : tileLine(t);
 }
 
 /** What the model reads about a tile: one line, no images, no URLs. */

@@ -3,7 +3,7 @@ import { stepCountIs, streamText, tool } from "ai";
 import { z } from "zod";
 import type { ChatEvent, ChatRequest, Share, SimilarRequest, Tile } from "../types";
 import { BRANDS, type Brand, brandByDomain } from "./brands";
-import { newHealth, tileLine } from "./catalog";
+import { jevLine, newHealth, tileLine } from "./catalog";
 import type { Env, ExecutionContext } from "./env";
 import { logEvent } from "./events";
 import { findProducts, similar } from "./find";
@@ -30,7 +30,7 @@ interface CachedAnswer {
 async function answerKey(q: string, dept?: string, store?: string) {
   const norm = q.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9$]+/g, " ").trim();
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${norm}|${dept ?? ""}|${store ?? ""}`));
-  return `answer:v7:${[...new Uint8Array(buf)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("")}`;
+  return `answer:v8:${[...new Uint8Array(buf)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("")}`;
 }
 const SORTS = ["relevance", "price_asc", "price_desc", "new", "discount"] as const;
 
@@ -244,7 +244,7 @@ export async function handleChat(req: Request, env: Env, ctx: ExecutionContext):
               const how = found.map((f) => `- ${f.via}: ${f.tiles.length}`).join("\n");
               const asks = messages.filter((m) => m.role === "user").slice(-3).map((m) => m.content);
               // Every tile gets a Jev score, not only big rounds: the scores pick the grid at the end.
-              const scored = await scoreTiles(env, { asks, dept: body.dept, profile }, fresh, tileLine);
+              const scored = await scoreTiles(env, { asks, dept: body.dept, profile }, fresh, jevLine);
               if (scored) {
                 fresh.forEach((t, i) => scored.scores[i] >= 0 && scores.set(t.id, scored.scores[i]));
                 stats.cost += scored.cost;
@@ -479,7 +479,7 @@ export async function handleSimilar(req: Request, env: Env, ctx: ExecutionContex
       const nb = new Set(tiles.map((t) => t.brand)).size;
       await send({ type: "status", text: `Achei ${tiles.length} candidatas em ${nb} ${nb === 1 ? "marca" : "marcas"}. Comparando cada uma com a peça…` });
       const lookLine = look.length ? ` | aparência: ${look.join(", ")}` : "";
-      const byJev = await rankTiles(env, { asks: [`Peças parecidas com: ${seedLine}${lookLine}`], dept: body.dept }, tiles, tileLine, 24, 8);
+      const byJev = await rankTiles(env, { asks: [`Peças parecidas com: ${seedLine}${lookLine}`], dept: body.dept }, tiles, jevLine, 24, 8);
       if (byJev) {
         tiles = byJev.tiles;
         rank.jevMs = byJev.ms;
