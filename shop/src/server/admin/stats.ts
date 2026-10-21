@@ -112,7 +112,7 @@ export async function overview(env: Env, days: number, hideDev = true) {
     all<{ name: string; n: number }>(
       env,
       `SELECT name, COUNT(*) AS n FROM events
-        WHERE name IN ('shop.chat','shop.similar','shop.click','shop.open','shop.share','shop.feedback') AND ts > ?${nd} GROUP BY 1`,
+        WHERE name IN ('shop.chat','shop.similar','shop.click','shop.open','shop.share','shop.feedback','shop.vote') AND ts > ?${nd} GROUP BY 1`,
       from,
     ),
     // Fixed windows, whatever period is selected: what the shop costs today, this week, this month.
@@ -128,6 +128,14 @@ export async function overview(env: Env, days: number, hideDev = true) {
     ),
   ]);
 
+  // 👍 / 👎 on single pieces (shop.vote): the labelled pairs a ranking can learn from.
+  const [votes] = await all<{ up: number; down: number }>(
+    env,
+    `SELECT COALESCE(SUM(CASE WHEN json_extract(meta,'$.up') THEN 1 ELSE 0 END),0) AS up,
+            COALESCE(SUM(CASE WHEN json_extract(meta,'$.up') THEN 0 ELSE 1 END),0) AS down
+       FROM events WHERE name = 'shop.vote' AND ts > ?${nd}`,
+    from,
+  );
   const byModel = new Map<string, ModelRow>();
   for (const m of models) byModel.set(m.model, { ...m, chatsClicked: 0, clicks: 0, up: 0, down: 0 });
   // Clicks from shared links and shelves carry no chat model; keep them out of the comparison.
@@ -150,6 +158,8 @@ export async function overview(env: Env, days: number, hideDev = true) {
       opens: count("shop.open"),
       shares: count("shop.share"),
       feedback: count("shop.feedback"),
+      votesUp: votes?.up ?? 0,
+      votesDown: votes?.down ?? 0,
     },
     models: [...byModel.values()],
     spend: spend[0] ?? { d1: 0, d7: 0, d30: 0 },

@@ -62,7 +62,8 @@ export function ProductTile({
   index,
   onOpen,
   onMore,
-  onDismiss,
+  onVote,
+  vote,
   fav,
   onFav,
 }: {
@@ -70,7 +71,9 @@ export function ProductTile({
   index: number;
   onOpen: () => void;
   onMore: () => void;
-  onDismiss: () => void;
+  /** "Acertou" / "Não serve" for this search: training data, and a no hides the piece. */
+  onVote: (up: boolean) => void;
+  vote?: boolean;
   fav?: boolean;
   onFav?: () => void;
 }) {
@@ -98,14 +101,21 @@ export function ProductTile({
           // Saved: always shown. Not saved: on hover, and always on touch screens (no hover there).
           <Heart on={!!fav} onClick={onFav} className={`absolute right-2 top-2 size-8 ${fav ? "" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"}`} />
         )}
-        <button
-          type="button"
-          onClick={onDismiss}
-          aria-label="Mostrar menos como este"
-          className={`absolute top-2 grid size-7 place-items-center rounded-full bg-white/90 shadow-sm text-ink opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 ${onFav ? "right-11" : "right-2"}`}
-        >
-          ×
-        </button>
+        <div className={`absolute top-2 flex gap-1 ${onFav ? "right-11" : "right-2"} ${vote === true ? "" : "opacity-0 transition group-hover:opacity-100 focus-within:opacity-100"}`}>
+          {([true, false] as const).map((up) => (
+            <button
+              key={String(up)}
+              type="button"
+              onClick={() => onVote(up)}
+              aria-pressed={vote === up}
+              aria-label={up ? "Acertou pra essa busca" : "Não serve pra essa busca"}
+              title={up ? "Acertou" : "Não serve"}
+              className={`grid size-7 place-items-center rounded-full text-xs shadow-sm transition ${vote === up ? "bg-ink" : "bg-white/90 hover:bg-white"}`}
+            >
+              {up ? "👍" : "👎"}
+            </button>
+          ))}
+        </div>
         <button
           type="button"
           onClick={onMore}
@@ -164,6 +174,8 @@ export function ProductDrawer({
   onChange,
   fav,
   onFav,
+  vote,
+  onVote,
 }: {
   t: Tile;
   href: string;
@@ -172,6 +184,8 @@ export function ProductDrawer({
   onChange: (what: string) => void;
   fav?: boolean;
   onFav?: () => void;
+  vote?: boolean;
+  onVote?: (up: boolean) => void;
 }) {
   const [change, setChange] = useState("");
   const [shown, setShown] = useState<number | null>(null);
@@ -293,6 +307,22 @@ export function ProductDrawer({
               </button>
             )}
           </div>
+          {onVote && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-ink-soft">Pra essa busca:</span>
+              {([true, false] as const).map((up) => (
+                <button
+                  key={String(up)}
+                  type="button"
+                  onClick={() => onVote(up)}
+                  aria-pressed={vote === up}
+                  className={`tap-scale rounded-full border px-3.5 py-1.5 transition ${vote === up ? "border-ink bg-ink text-paper" : "border-ink/15 hover:border-ink"}`}
+                >
+                  {up ? "👍 Acertou" : "👎 Não serve"}
+                </button>
+              ))}
+            </div>
+          )}
           <form
             onSubmit={(e) => {
               e.preventDefault();

@@ -224,9 +224,26 @@ export default function ShopChat({
     pushTurn(keep, `Mais opções parecidas com "${t.title}" da ${t.brand}.`);
     similarTo(t, keep, dept);
   };
-  const dismiss = (t: Tile) => {
-    setHidden((h) => new Set(h).add(t.id));
-    track("shop.dismiss", { chat: chatId(), model, id: t.id });
+  /**
+   * 👍 / 👎 on a piece, for the search on screen: the labelled data a better ranking learns from
+   * ("for this ask, this SKU was wrong"). A 👎 also takes it off the grid.
+   */
+  const [votes, setVotes] = useState<Record<string, boolean>>({});
+  const vote = (t: Tile, up: boolean) => {
+    const again = votes[t.id] === up;
+    setVotes((v) => {
+      const n = { ...v };
+      if (again) delete n[t.id];
+      else n[t.id] = up;
+      return n;
+    });
+    if (again) return; // a second tap on the same thumb takes the vote back, unlogged
+    if (!up) {
+      setHidden((h) => new Set(h).add(t.id));
+      setOpen(null);
+    }
+    const turn = onScreen;
+    track("shop.vote", { chat: chatId(), model, id: t.id, up, q: turn?.user, context: turn?.context, pos: turn?.curated?.indexOf(t.id) ?? -1 });
   };
 
   // Cards in other sections (Showcase) ask through the bus; always run the latest `ask`.
@@ -331,7 +348,7 @@ export default function ShopChat({
             </div>
             {onScreen?.done && <InlineRefine key={`${onScreen.key}:${dept}`} text={onScreen.seed ? undefined : onScreen.user} dept={dept} context={onScreen.context} suggestions={onScreen.refinements} onSuggest={followUp} onPick={refineHere} />}
           </aside>
-          <Results turn={turns[Math.min(view, turns.length - 1)]} hidden={hidden} favIds={favIds} onFav={toggleFav} onOpen={(t) => { setOpen(t); track("shop.open", { chat: chatId(), model, id: t.id }); }} onMore={more} onDismiss={dismiss} />
+          <Results turn={turns[Math.min(view, turns.length - 1)]} hidden={hidden} favIds={favIds} onFav={toggleFav} onOpen={(t) => { setOpen(t); track("shop.open", { chat: chatId(), model, id: t.id }); }} onMore={more} votes={votes} onVote={vote} />
         </div>
       )}
 
@@ -366,6 +383,8 @@ export default function ShopChat({
         <ProductDrawer
           fav={favIds.has(open.id)}
           onFav={() => toggleFav(open)}
+          vote={votes[open.id]}
+          onVote={(up) => vote(open, up)}
           t={open}
           href={outbound(open, chatId(), model)}
           onClose={() => setOpen(null)}
@@ -589,7 +608,8 @@ function Results({
   hidden,
   onOpen,
   onMore,
-  onDismiss,
+  votes,
+  onVote,
   favIds,
   onFav,
 }: {
@@ -599,7 +619,8 @@ function Results({
   hidden: Set<string>;
   onOpen: (t: Tile) => void;
   onMore: (t: Tile) => void;
-  onDismiss: (t: Tile) => void;
+  votes: Record<string, boolean>;
+  onVote: (t: Tile, up: boolean) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
   useEffect(() => {
@@ -674,7 +695,7 @@ function Results({
     <div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {shown.map((t, i) => (
-              <ProductTile key={t.id} t={t} index={i} fav={favIds.has(t.id)} onFav={() => onFav(t)} onOpen={() => onOpen(t)} onMore={() => onMore(t)} onDismiss={() => onDismiss(t)} />
+              <ProductTile key={t.id} t={t} index={i} fav={favIds.has(t.id)} onFav={() => onFav(t)} onOpen={() => onOpen(t)} onMore={() => onMore(t)} vote={votes[t.id]} onVote={(up) => onVote(t, up)} />
         ))}
       </div>
       {moreCount > 0 && !showAll && (

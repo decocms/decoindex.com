@@ -123,7 +123,7 @@ export const DASHBOARD_HTML = `<!doctype html>
     var fb = models.reduce(function (s, m) { return s + (m.up || 0) + (m.down || 0); }, 0);
     wrap.appendChild(el("div", { class: "kpis" }, [
       ["Buscas", t.turns || 0], ["Conversas", chats], ["Conversas com clique", pct(clicked, chats)],
-      ["Cliques p/ lojas", t.clicks || 0], ["Mais como este", t.similar || 0], ["Compartilhados", t.shares || 0], ["👍", pct(up, fb)],
+      ["Cliques p/ lojas", t.clicks || 0], ["Mais como este", t.similar || 0], ["Compartilhados", t.shares || 0], ["👍 nas respostas", pct(up, fb)], ["Peças 👍 / 👎", (t.votesUp || 0) + " / " + (t.votesDown || 0)],
     ].map(function (k) { return el("div", { class: "kpi" }, [el("div", { class: "v", text: String(k[1]) }), el("div", { class: "l", text: k[0] })]); })));
 
     // Spend: fixed windows plus the selected period's cost per search, as OpenRouter billed it.
