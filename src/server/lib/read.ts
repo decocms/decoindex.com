@@ -2,7 +2,7 @@ import type { Env } from "../env";
 import type { Doc, Storefront } from "../lib/types";
 import { RENDER_VERSION, cacheKey, canonicalUrl, normalizedQuery, type Ext } from "./url";
 import { getDomain, upsertDomain } from "./registry";
-import { FRESH_SECONDS, docKey, isStale, readDoc, writeDoc, type StoredDoc } from "./store";
+import { ANCIENT_SECONDS, FRESH_SECONDS, ageSeconds, docKey, isStale, readDoc, writeDoc, type StoredDoc } from "./store";
 import { detectPlatform, resolve } from "../platform";
 import { fetchBrand } from "../platform/brand";
 import { vtexApiOrigin } from "../platform/vtex";
@@ -129,10 +129,30 @@ export async function readThrough(
   const stored = await readDoc(env, kvKey);
   if (stored) {
     const stale = isStale(stored);
-    if (stale) {
+    // A good document is never replaced by a transient failure: a 5xx or a throttle during the
+    // refresh is not the merchant's answer (a 404 is, and does replace it).
+    const keep = (fresh: StoredDoc) => fresh.status === 200 || (fresh.status < 500 && fresh.status !== 429);
+    // Ancient: resolve this one URL now, inside the same per-caller and per-domain limits as a
+    // cold read. Throttled or failing, the old document serves as before.
+    let tried = false;
+    if (stale && stored.status === 200 && ageSeconds(stored) > ANCIENT_SECONDS) {
+      const allowed = !caller || !env.CALLER_LIMIT || (await env.CALLER_LIMIT.limit({ key: caller })).success;
+      const fresh = allowed ? await build(env, domain, path, ext, query, rctx).catch(() => null) : null;
+      tried = !!fresh;
+      if (fresh?.status === 200) {
+        const response = toResponse(fresh, surface, env.PUBLIC_ORIGIN);
+        ctx.waitUntil(writeDoc(env, kvKey, fresh));
+        ctx.waitUntil(cache.put(cacheReq, response.clone()));
+        return { doc: fresh, cache: "miss", response };
+      }
+      if (fresh && keep(fresh)) ctx.waitUntil(writeDoc(env, kvKey, fresh));
+      if (fresh?.status === 404) return { doc: fresh, cache: "miss", response: toResponse(fresh, surface, env.PUBLIC_ORIGIN) };
+    }
+    // Throttled (or the live resolve threw): refresh behind the reader, as for any stale entry.
+    if (stale && !tried) {
       ctx.waitUntil(
         build(env, domain, path, ext, query, rctx)
-          .then((fresh) => writeDoc(env, kvKey, fresh))
+          .then((fresh) => (keep(fresh) ? writeDoc(env, kvKey, fresh) : undefined))
           .catch(() => {}),
       );
     }

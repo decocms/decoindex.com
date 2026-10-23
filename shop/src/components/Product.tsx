@@ -66,6 +66,7 @@ export function ProductTile({
   vote,
   fav,
   onFav,
+  onBroken,
 }: {
   t: Tile;
   index: number;
@@ -76,18 +77,37 @@ export function ProductTile({
   vote?: boolean;
   fav?: boolean;
   onFav?: () => void;
+  /** Every photo failed (the merchant deleted them; an old snapshot still points there): drop the card. */
+  onBroken?: () => void;
 }) {
-  const [a, b] = t.images;
+  // Photos that failed to load are skipped: the next one stands in, and with none left the card goes.
+  const [skip, setSkip] = useState(0);
+  const [noSecond, setNoSecond] = useState(false);
+  const a = t.images[skip];
+  const b = noSecond ? undefined : t.images[skip + 1];
+  const failed = () => (skip + 1 < t.images.length ? setSkip(skip + 1) : onBroken?.());
+  // A server-rendered <img> can fail before React hydrates and attaches onError: check once on mount.
+  const first = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    const im = first.current;
+    if (im?.complete && im.naturalWidth === 0) failed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skip]);
+  useEffect(() => {
+    if (t.images.length === 0) onBroken?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
     <article className="group animate-rise" style={{ animationDelay: `${Math.min(index, 16) * 35}ms` }}>
       <div className="relative aspect-[372/498] overflow-hidden rounded-sm bg-[#f0f0f0]">
         <button type="button" onClick={onOpen} className="block h-full w-full" aria-label={`Ver ${t.brand} ${t.title}`}>
-          {a && <img src={thumb(a)} alt="" loading={index < 8 ? "eager" : "lazy"} className="h-full w-full object-cover" />}
+          {a && <img ref={first} key={a} src={thumb(a)} alt="" loading={index < 8 ? "eager" : "lazy"} onError={failed} className="h-full w-full object-cover" />}
           {b && (
             <img
               src={thumb(b)}
               alt=""
               loading="lazy"
+              onError={() => setNoSecond(true)}
               className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100"
             />
           )}
