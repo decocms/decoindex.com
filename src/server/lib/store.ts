@@ -68,6 +68,19 @@ export async function writeDoc(env: Env, key: string, doc: StoredDoc): Promise<v
   await env.CACHE.put(key, JSON.stringify(doc), options);
 }
 
+/**
+ * Past this age a document is not served stale at all: the reader waits for one live resolve of
+ * that URL instead. Stale-while-revalidate is right for an hour-old price; for a listing nobody
+ * read in weeks it handed the shop product photos the merchant had already deleted (404 on the
+ * CDN) and prices from a past promotion. If the live resolve fails, the old document still serves.
+ */
+export const ANCIENT_SECONDS = 86_400;
+
+export function ageSeconds(doc: StoredDoc): number {
+  const age = (Date.now() - Date.parse(doc.renderedAt)) / 1000;
+  return Number.isFinite(age) ? age : Number.POSITIVE_INFINITY;
+}
+
 export function isStale(doc: StoredDoc): boolean {
   // A document written by an older renderer is stale no matter how fresh it is.
   // Versioning the KV *key* instead would strand every old entry forever, since

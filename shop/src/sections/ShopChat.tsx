@@ -348,7 +348,7 @@ export default function ShopChat({
             </div>
             {onScreen?.done && <InlineRefine key={`${onScreen.key}:${dept}`} text={onScreen.seed ? undefined : onScreen.user} dept={dept} context={onScreen.context} suggestions={onScreen.refinements} onSuggest={followUp} onPick={refineHere} />}
           </aside>
-          <Results turn={turns[Math.min(view, turns.length - 1)]} hidden={hidden} favIds={favIds} onFav={toggleFav} onOpen={(t) => { setOpen(t); track("shop.open", { chat: chatId(), model, id: t.id }); }} onMore={more} votes={votes} onVote={vote} />
+          <Results turn={turns[Math.min(view, turns.length - 1)]} hidden={hidden} favIds={favIds} onFav={toggleFav} onOpen={(t) => { setOpen(t); track("shop.open", { chat: chatId(), model, id: t.id }); }} onMore={more} votes={votes} onVote={vote} onBroken={(t) => setHidden((h) => new Set(h).add(t.id))} />
         </div>
       )}
 
@@ -610,6 +610,7 @@ function Results({
   onMore,
   votes,
   onVote,
+  onBroken,
   favIds,
   onFav,
 }: {
@@ -621,6 +622,7 @@ function Results({
   onMore: (t: Tile) => void;
   votes: Record<string, boolean>;
   onVote: (t: Tile, up: boolean) => void;
+  onBroken: (t: Tile) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
   useEffect(() => {
@@ -695,7 +697,7 @@ function Results({
     <div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {shown.map((t, i) => (
-              <ProductTile key={t.id} t={t} index={i} fav={favIds.has(t.id)} onFav={() => onFav(t)} onOpen={() => onOpen(t)} onMore={() => onMore(t)} vote={votes[t.id]} onVote={(up) => onVote(t, up)} />
+              <ProductTile key={t.id} t={t} index={i} fav={favIds.has(t.id)} onFav={() => onFav(t)} onOpen={() => onOpen(t)} onMore={() => onMore(t)} vote={votes[t.id]} onVote={(up) => onVote(t, up)} onBroken={() => onBroken(t)} />
         ))}
       </div>
       {moreCount > 0 && !showAll && (
