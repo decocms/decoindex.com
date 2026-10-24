@@ -239,7 +239,8 @@ export async function traffic(env: Env, days: number, hideDev = true) {
     `SELECT SUM(CASE WHEN name = 'shop.view' AND json_extract(meta,'$.cls') = 'browser' AND json_extract(meta,'$.back') THEN 1 ELSE 0 END) AS back,
             SUM(CASE WHEN name = 'shop.view' AND json_extract(meta,'$.cls') = 'browser' AND json_extract(meta,'$.new') AND json_extract(meta,'$.kind') != 'missing' THEN 1 ELSE 0 END) AS fresh,
             SUM(CASE WHEN name = 'shop.view' AND json_extract(meta,'$.kind') IN ('missing','other') THEN 1 ELSE 0 END) AS missing,
-            SUM(CASE WHEN name = 'shop.block' THEN 1 ELSE 0 END) AS blocked
+            -- one block can log a few times before its KV marker is visible: same minute, country and UA = one
+            COUNT(DISTINCT CASE WHEN name = 'shop.block' THEN substr(ts,1,16) || COALESCE(country,'') || COALESCE(json_extract(meta,'$.ua'),'') END) AS blocked
        FROM events WHERE name IN ('shop.view','shop.block') AND ts > ?${nd}`,
     from,
   );
