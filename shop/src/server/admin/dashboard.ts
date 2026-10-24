@@ -142,7 +142,8 @@ export const DASHBOARD_HTML = `<!doctype html>
       wrap.appendChild(el("h2", { text: "Tráfego" }));
       wrap.appendChild(el("div", { class: "kpis" }, [
         ["Visitas (pessoas)", tr.people], ["Home", tr.kinds.home], ["Links de busca abertos", tr.kinds.share],
-        ["Visita → busca", pct(t.turns || 0, tr.people)], ["Previews de link", tr.previews], ["Bots", tr.bots],
+        ["Visita → busca", pct(t.turns || 0, tr.people)], ["Navegadores novos", tr.fresh || 0], ["Visitas de quem voltou", tr.back || 0],
+        ["Previews de link", tr.previews], ["Bots", tr.bots], ["Páginas inexistentes", tr.missing || 0], ["IPs bloqueados", tr.blocked || 0],
       ].concat(state.hideDev ? [] : [["Uso dev", tr.dev || 0]]).map(function (k) { return el("div", { class: "kpi" }, [el("div", { class: "v", text: String(k[1]) }), el("div", { class: "l", text: k[0] })]); })));
       var list = function (title, rows, label, empty) {
         var box = el("div", null, [el("h2", { text: title })]);

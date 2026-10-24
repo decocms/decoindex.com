@@ -19,7 +19,7 @@ import { brandForUrl } from "./server/brands";
 import { logEvent } from "./server/events";
 import { EMBED_JS } from "./server/embed";
 import { handleMcp } from "./server/admin/mcp";
-import { fromOurPages, isDev, trackView } from "./server/traffic";
+import { SCAN, fromOurPages, isDev, isMissingPage, trackView } from "./server/traffic";
 import { refreshAllShowcases } from "./server/showcase.server";
 import type { Env, ExecutionContext } from "./server/env";
 
@@ -61,6 +61,25 @@ export default {
       const cookie = `decoshop_dev=${off ? "0; Max-Age=0" : "1; Max-Age=31536000"}; Path=/; Secure; SameSite=Lax`;
       const body = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>deco shop · dev</title><body style="font:16px system-ui;padding:40px;max-width:520px"><h1 style="font-size:22px">${off ? "Este navegador voltou a contar como visitante." : "Este navegador agora é dev."}</h1><p>${off ? "" : "Suas visitas e buscas ficam marcadas como uso dev e somem do admin com “Esconder uso dev”. "}<a href="/dev${off ? "" : "?off"}">${off ? "Marcar de novo" : "Desfazer"}</a> · <a href="/">Ir pro shop</a></p>`;
       return new Response(body, { headers: { "content-type": "text/html; charset=utf-8", "set-cookie": cookie, "cache-control": "no-store" } });
+    }
+
+    // Scanners: a bare 404, before anything renders or logs.
+    if (SCAN.test(url.pathname)) return new Response("Not found", { status: 404, headers: { "cache-control": "public, max-age=86400" } });
+
+    // A page that doesn't exist: fine once (a typo, an old link: the 404 page renders), but an IP
+    // walking dozens of them is a scanner. Past SCAN_LIMIT it is blocked for an hour, on every
+    // missing page; the block expires on its own and shows in the admin (shop.block).
+    if (request.method === "GET" && isMissingPage(url) && !env.DEV) {
+      const ip = request.headers.get("cf-connecting-ip") ?? "local";
+      if (await env.SHARES?.get(`block:${ip}`)) return new Response("Blocked", { status: 403 });
+      if (env.SCAN_LIMIT && !(await env.SCAN_LIMIT.limit({ key: ip })).success) {
+        const cf = (request as Request & { cf?: { country?: string } }).cf;
+        ctx.waitUntil(Promise.all([
+          env.SHARES?.put(`block:${ip}`, "1", { expirationTtl: 3600 }),
+          logEvent(env, "shop.block", null, { path: url.pathname.slice(0, 80), ua: request.headers.get("user-agent")?.slice(0, 160) }, undefined, { uaClass: "bot", country: cf?.country }),
+        ]));
+        return new Response("Blocked", { status: 403 });
+      }
     }
 
     // Our POST APIs are only for our own pages (cheap bot filter; CHAT_LIMIT still applies).
@@ -119,8 +138,12 @@ export default {
       return Response.redirect(to, 302);
     }
 
-    trackView(request, env, ctx);
-    return decoWorker.fetch(request, rawEnv as never, ctx as never);
+    const firstVisit = trackView(request, env, ctx);
+    const res = await decoWorker.fetch(request, rawEnv as never, ctx as never);
+    if (!firstVisit) return res;
+    const out = new Response(res.body, res);
+    out.headers.append("set-cookie", firstVisit);
+    return out;
   },
 
   // Cron (wrangler.jsonc): the home's showcase turns over once a day, before anyone wakes up.
