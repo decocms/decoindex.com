@@ -233,12 +233,29 @@ export async function traffic(env: Env, days: number, hideDev = true) {
       from,
     ),
   ]);
+  // Returning browsers (first-visit cookie older than the view), new ones, missing pages, blocks.
+  const [extra] = await all<{ back: number; fresh: number; missing: number; blocked: number }>(
+    env,
+    `SELECT SUM(CASE WHEN name = 'shop.view' AND json_extract(meta,'$.cls') = 'browser' AND json_extract(meta,'$.back') THEN 1 ELSE 0 END) AS back,
+            SUM(CASE WHEN name = 'shop.view' AND json_extract(meta,'$.cls') = 'browser' AND json_extract(meta,'$.new') AND json_extract(meta,'$.kind') != 'missing' THEN 1 ELSE 0 END) AS fresh,
+            SUM(CASE WHEN name = 'shop.view' AND json_extract(meta,'$.kind') IN ('missing','other') THEN 1 ELSE 0 END) AS missing,
+            SUM(CASE WHEN name = 'shop.block' THEN 1 ELSE 0 END) AS blocked
+       FROM events WHERE name IN ('shop.view','shop.block') AND ts > ?${nd}`,
+    from,
+  );
   const sum = (f: (r: { cls: string; kind: string }) => boolean) => byKind.filter(f).reduce((s, r) => s + r.n, 0);
+  // People are views of pages that exist. "other" (before Oct 24 2026) mixed /como-funciona with
+  // scanners walking made-up paths, so it is left out.
+  const real = (k: string) => ["home", "chat", "share", "about"].includes(k);
   return {
-    people: sum((r) => r.cls === "browser"),
+    people: sum((r) => r.cls === "browser" && real(r.kind)),
+    back: extra?.back ?? 0,
+    fresh: extra?.fresh ?? 0,
+    missing: extra?.missing ?? 0,
+    blocked: extra?.blocked ?? 0,
     previews: sum((r) => r.cls === "preview"),
     bots: sum((r) => r.cls === "bot"),
-    kinds: Object.fromEntries(["home", "chat", "share", "other"].map((k) => [k, sum((r) => r.cls === "browser" && r.kind === k)])),
+    kinds: Object.fromEntries(["home", "chat", "share", "about"].map((k) => [k, sum((r) => r.cls === "browser" && r.kind === k)])),
     refs,
     countries,
     dev: sum((r) => r.cls === "dev"),

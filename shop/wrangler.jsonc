@@ -30,7 +30,7 @@
   "triggers": { "crons": ["0 9 * * *"] },
 
   // Chat turns per shopper IP. Each turn is a paid LLM call; a shared link must not be a blank cheque.
-  "ratelimits": [{ "name": "CHAT_LIMIT", "namespace_id": "2001", "simple": { "limit": 12, "period": 60 } }],
+  "ratelimits": [{ "name": "CHAT_LIMIT", "namespace_id": "2001", "simple": { "limit": 12, "period": 60 } }, { "name": "SCAN_LIMIT", "namespace_id": "2002", "simple": { "limit": 20, "period": 60 } }],
 
   "vars": {
     "DECO_SITE_NAME": "decoshop",
@@ -63,7 +63,7 @@
     "services": [{ "binding": "INDEX", "service": "decoindex", "entrypoint": "FirstParty" }],
     "kv_namespaces": [{ "binding": "SHARES", "id": "56ff82663dd749efb3b4c653cbfa3fbf" }],
     "d1_databases": [{ "binding": "DB", "database_name": "decoindex", "database_id": "82dbbe9a-f533-44ca-bd4f-03d2c6a6ee0c" }],
-    "ratelimits": [{ "name": "CHAT_LIMIT", "namespace_id": "2001", "simple": { "limit": 12, "period": 60 } }]
+    "ratelimits": [{ "name": "CHAT_LIMIT", "namespace_id": "2001", "simple": { "limit": 12, "period": 60 } }, { "name": "SCAN_LIMIT", "namespace_id": "2002", "simple": { "limit": 20, "period": 60 } }]
   }
   // Secrets: wrangler secret put OPENROUTER_API_KEY   (optional with gateway BYOK)
   //          wrangler secret put CF_AI_GATEWAY_TOKEN  (only if the gateway is authenticated)

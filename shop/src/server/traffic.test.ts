@@ -40,3 +40,18 @@ describe("isDev", () => {
     expect(isDev(r({ "user-agent": "Mozilla/5.0 Safari", cookie: "decoshop_dev=0" }))).toBe(false);
   });
 });
+
+describe("scanners and missing pages", () => {
+  test("scanner paths are recognised, real pages are not missing", async () => {
+    const { SCAN, isMissingPage } = await import("./traffic");
+    for (const p of ["/.env", "/wp-login.php", "/wp-admin/", "/.git/config", "/phpmyadmin/", "/cgi-bin/x", "/backup.sql", "/admin"]) expect(SCAN.test(p)).toBe(true);
+    for (const p of ["/", "/c/AbCd1234", "/como-funciona", "/assets/app.css", "/deco-logo.png"]) expect(SCAN.test(p)).toBe(false);
+    const u = (p: string) => new URL(`https://shop.decoindex.com${p}`);
+    expect(isMissingPage(u("/"))).toBe(false);
+    expect(isMissingPage(u("/c/AbCd1234"))).toBe(false);
+    expect(isMissingPage(u("/como-funciona"))).toBe(false);
+    expect(isMissingPage(u("/dev"))).toBe(false);
+    expect(isMissingPage(u("/favicon.ico"))).toBe(false);
+    expect(isMissingPage(u("/blog/promo"))).toBe(true);
+  });
+});

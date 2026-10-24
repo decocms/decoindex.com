@@ -103,6 +103,14 @@ sets it: Playwright `userAgent: "… decoshop-dev"`, curl `-A decoshop-dev`), th
 it; the admin links to it), or `utm_source=test`. Older test runs are filtered
 by their tags (test- chat ids, utm_source=test, HeadlessChrome).
 
+**Scanners and missing pages.** Paths only scanners ask for (`SCAN` in
+`traffic.ts`: `.env`, `wp-*`, `.php`, `.git`…) get a bare 404 before anything
+renders or logs. Other missing pages render the 404 page, but an IP past
+`SCAN_LIMIT` (20/min) is blocked for an hour (KV `block:{ip}`, expires on its
+own, logged once as `shop.block`, counted in the admin). Visitors in the admin
+are views of pages that exist; missing pages are counted apart. Returning
+visitors: a `ds_first` cookie holds only the first-visit date (no identifier).
+
 ## Learning in production
 
 Every chat, click, open, dismiss and 👍/👎 lands in decoindex's `events` table

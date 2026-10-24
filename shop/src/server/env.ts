@@ -8,6 +8,8 @@ export interface Env {
   /** Shared searches: `s:{id}` → Share JSON. */
   SHARES?: KVNamespace;
   CHAT_LIMIT?: { limit(o: { key: string }): Promise<{ success: boolean }> };
+  /** Missing pages per IP per minute; past it the IP is blocked for an hour (worker-entry). */
+  SCAN_LIMIT?: { limit(o: { key: string }): Promise<{ success: boolean }> };
 
   CHAT_MODELS: string;
   /** Jev decision model that scores brands before the chat model runs (preselect.ts). */

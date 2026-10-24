@@ -73,18 +73,38 @@ export function clientClass(ua: string | null): ClientClass {
 function pageKind(url: URL): string {
   if (/^\/[cs]\//.test(url.pathname)) return "share";
   if (url.pathname === "/") return url.searchParams.has("q") ? "chat" : "home";
-  return "other";
+  if (/^\/como-funciona\/?$/.test(url.pathname)) return "about";
+  return "missing";
+}
+
+/**
+ * Paths only vulnerability scanners ask for. Answered with a bare 404 before anything renders or
+ * logs: one German IP walked 86 of them in a minute and counted as 86 visitors.
+ */
+export const SCAN =
+  /\.(php\d?|asp|aspx|jsp|cgi|env|ini|sql|bak|old|swp|git|svn|ds_store|log|yml|yaml|conf|config)(\/|$)|\/(wp-[\w-]*|wordpress|xmlrpc|phpmyadmin|pma|cgi-bin|vendor|node_modules|\.git|\.svn|\.aws|\.ssh|actuator|server-status|owa|boaform|hnap1|solr|telescope|debug|console|admin|administrator|backup|setup|install)(\/|$|\.)/i;
+
+/** Pages that exist. Anything else that asks for a document is a typo, an old link or a scanner. */
+export function isMissingPage(url: URL): boolean {
+  return pageKind(url) === "missing" && !/^\/(dev|mcp|api|go|embed\.js|robots\.txt|sitemap\.xml)(\/|$)/.test(url.pathname) && !SKIP.test(url.pathname);
 }
 
 const SKIP = /^\/(api|mcp|go|_serverFn|_build|assets|deco|\.well-known)(\/|$)|\.[a-z0-9]{2,5}$/i;
 
 /** Log a page view in the background. Only real document loads: not assets, APIs or prefetches. */
-export function trackView(req: Request, env: Env, ctx: ExecutionContext) {
-  if (req.method !== "GET") return;
+/**
+ * Returns the Set-Cookie to add to the page, if any. Returning visitors are counted with a cookie
+ * that holds only the date of the first visit (no identifier): a view whose date is older than
+ * today is someone who came back.
+ */
+export function trackView(req: Request, env: Env, ctx: ExecutionContext): string | null {
+  if (req.method !== "GET") return null;
   const url = new URL(req.url);
-  if (SKIP.test(url.pathname)) return;
-  if (!(req.headers.get("accept") ?? "").includes("text/html")) return;
-  if (req.headers.get("purpose") === "prefetch" || req.headers.get("sec-purpose")?.includes("prefetch")) return;
+  if (SKIP.test(url.pathname)) return null;
+  if (!(req.headers.get("accept") ?? "").includes("text/html")) return null;
+  if (req.headers.get("purpose") === "prefetch" || req.headers.get("sec-purpose")?.includes("prefetch")) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  const first = /(?:^|;\s*)ds_first=(\d{4}-\d{2}-\d{2})/.exec(req.headers.get("cookie") ?? "")?.[1];
 
   const ua = req.headers.get("user-agent");
   let ref: string | null = url.searchParams.get("utm_source");
@@ -108,12 +128,17 @@ export function trackView(req: Request, env: Env, ctx: ExecutionContext) {
         ref,
         cls,
         share: /^\/[cs]\//.test(url.pathname) ? url.pathname.slice(3, 11) : undefined,
+        path: pageKind(url) === "missing" ? url.pathname.slice(0, 80) : undefined,
+        back: first && first < today ? true : undefined,
+        new: first ? undefined : true,
         ua: cls === "browser" ? undefined : ua?.slice(0, 160), // keep bot UAs to see who they are
       },
       undefined,
       { uaClass: cls, country: cf?.country },
     ),
   );
+  if (first || cls !== "browser") return null;
+  return `ds_first=${today}; Max-Age=63072000; Path=/; Secure; SameSite=Lax`;
 }
 
 /**
