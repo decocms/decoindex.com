@@ -1,0 +1,17 @@
+{
+  "name": "decoindex-circulei",
+  "private": true,
+  "type": "module",
+  "description": "A storefront proposal for Circulei on top of decoindex: city-first, with Jev search",
+  "scripts": {
+    "dev": "wrangler dev --port 8798",
+    "check": "tsc --noEmit",
+    "test": "bun test src",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260828.1",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.72.0"
+  }
+}
