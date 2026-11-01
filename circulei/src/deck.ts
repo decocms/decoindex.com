@@ -284,7 +284,9 @@ const CSS = `
 .d-team{padding-top:clamp(72px,10vw,140px)}
 .founders{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,4vw,64px);margin:40px 0 0}
 .founders>div{display:grid;grid-template-columns:minmax(140px,.8fr) 1fr;gap:24px;align-items:start}
-.founders img{width:100%;aspect-ratio:3/4;object-fit:cover}
+.founders img{width:100%;aspect-ratio:3/4;object-fit:cover;object-position:50% 20%}
+.d-close .hero-art img{object-position:50% 0}
+.d-cover .hero-art img{object-position:50% 30%}
 .founders h3{font:800 clamp(1.6rem,2.4vw,2.2rem)/1.05 var(--sans);letter-spacing:-.02em}
 .founders .role{font-weight:700;margin:6px 0 14px;padding-bottom:14px;border-bottom:1px solid var(--line)}
 .founders p{margin:0;color:var(--ink-2)}
@@ -320,5 +322,7 @@ const CSS = `
   .angels ul{grid-template-columns:1fr 1fr;gap:24px 16px}
   .d-logo{margin-bottom:28px}
   .deck .hero{min-height:0}
+  .d-close .hero-art.one .f{aspect-ratio:4/5}
+  .d-close .hero-art img{object-position:50% 8%}
 }
 `;
