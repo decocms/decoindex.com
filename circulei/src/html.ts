@@ -33,6 +33,9 @@ export const kick = (t: string) => `<p class="k"><i aria-hidden="true"></i>${t}<
 export const PIN = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></svg>`;
 export const ARROW = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`;
 
+/** Hubs nearest first when we know where the visitor is, so "aqui" leads; else biggest first. */
+const hubsFor = (ctx: Ctx) => (ctx.here ? [...ctx.snap.hubs].sort((a, b) => km(ctx.here!, a) - km(ctx.here!, b)) : ctx.snap.hubs);
+
 /** Same city: "na sua cidade"; otherwise where it ships from. */
 function reach(p: Piece, ctx: Ctx): { near: boolean; label: string } {
   if (ctx.hub && p.hub === ctx.hub.city) return { near: true, label: p.city === ctx.hub.city ? "na sua cidade" : `${p.city} · pertinho` };
@@ -77,7 +80,7 @@ export function head(title: string, desc: string, image?: string): string {
 function header(ctx: Ctx, path = "/"): string {
   const label = ctx.hub ? ctx.hub.city : "Brasil todo";
   const where = ctx.here?.city && ctx.hub && ctx.here.city !== ctx.hub.city && !ctx.chosen ? `Você está em ${ctx.here.city}. ` : "";
-  const hubs = ctx.snap.hubs
+  const hubs = hubsFor(ctx)
     .map((h) => {
       const d = ctx.here ? Math.round(km(ctx.here, h)) : null;
       return `<a href="${path}?cidade=${h.slug}" ${ctx.hub?.slug === h.slug ? 'aria-current="true"' : ""}><span>${esc(h.city)} <small>${esc(h.uf)}</small></span><span class="n">${h.count} peças${d !== null ? ` · ${d < 30 ? "aqui" : `${d.toLocaleString("pt-BR")} km`}` : ""}</span></a>`;
@@ -125,7 +128,7 @@ const showcase = (ps: Piece[]) =>
 /** One card per city with its own page: its best photo, how many pieces, how far. */
 function cities(ctx: Ctx): string {
   const { snap } = ctx;
-  const cards = snap.hubs
+  const cards = hubsFor(ctx)
     .map((h) => {
       const cover = showcase(snap.pieces.filter((p) => p.hub === h.city))[0];
       const d = ctx.here ? Math.round(km(ctx.here, h)) : null;
