@@ -26,7 +26,7 @@ const ANGELS: [string, string, string, string][] = [
   ["rodrigo", "Rodrigo Cava", "CPO da Estoca", "Logística"],
   ["ana", "Ana Zucato", "CEO da Noh", "Produto B2C"],
   ["camila", "Camila Couto", "Diretora jurídica da SuperSim", "Jurídico e compliance"],
-  ["alexandre", "Alexandre Dubugras", "Fundador da Alude e da Akira ENEM", "Fundraising"],
+  ["alexandre", "Alexandre Dubugras", "Fundador da Alude e da Akira ENEM", "Captação"],
   ["guilherme", "Guilherme Rodrigues", "Cofundador da deco", "AI p/ ecommerce"],
 ];
 
@@ -40,7 +40,7 @@ const FALL: [string, string, number, number, string][] = [
 ];
 
 export function deck(): string {
-  return `${head("Circulei · A plataforma de investimento em moda", "O closet parado vira renda, e a peça vira ativo. Pré-seed, outubro de 2026.", "/deck/rack.jpg")}
+  return `${head("Circulei · A plataforma de investimento em moda", "Mulheres alugam as roupas de festa umas das outras, e a dona ganha a cada aluguel. Pré-seed, outubro de 2026.", "/deck/rack.jpg")}
 <body class="deck">
 <style>${CSS}</style>
 <main>
@@ -49,7 +49,7 @@ export function deck(): string {
     <a class="d-logo" href="/">${logo(true)}</a>
     ${kick("Moda como ativo")}
     <h1 class="hw">A plataforma de investimento em moda</h1>
-    <p class="lede"><b>O closet parado vira renda,</b> e a peça vira ativo.</p>
+    <p class="lede"><b>Mulheres alugam as roupas de festa umas das outras.</b> A dona ganha a cada aluguel.</p>
     <div class="hero-foot"><span>Pré-seed</span><span>Outubro de 2026</span></div>
   </div>
   <div class="hero-art one"><span class="f f0"><img src="/deck/rack.jpg" alt="Arara com vestidos de seda e sapatos, contra uma cortina iluminada" fetchpriority="high"></span></div>
@@ -57,19 +57,19 @@ export function deck(): string {
 
 <section class="d-sec wrap">
   ${k("02", "O que fazemos")}
-  <h2 class="hb">Toda mulher tem dinheiro parado no armário.<span class="dim">A Circulei faz ele render.</span></h2>
+  <h2 class="hb">Toda mulher tem dinheiro parado no armário.<span class="dim">A Circulei aluga essas peças e repassa o dinheiro pra dona.</span></h2>
   <div class="cols">
-    <div>${ib(ICON.wallet)}<div><p class="k2">Quem tem closet</p><b>Ganha renda com a peça parada.</b></div></div>
+    <div>${ib(ICON.wallet)}<div><p class="k2">Quem tem closet</p><b>Ganha toda vez que alguém aluga a peça dela.</b></div></div>
     <div>${ib(ICON.bag)}<div><p class="k2">Quem aluga</p><b>Veste a peça que quer por uma fração do preço.</b></div></div>
-    <div>${ib(ICON.trend)}<div><p class="k2">Quem investe</p><b>Compra as peças que mais rendem, pelo veículo.</b></div></div>
+    <div>${ib(ICON.trend)}<div><p class="k2">Quem investe</p><b>Compra, pelo veículo, as peças que mais alugam.</b></div></div>
   </div>
   <p class="tl-label">Como funciona</p>
   ${timeline([
-    ["Cadastro", "A lender manda fotos e medidas pelo formulário."],
-    ["Curadoria", "Só 1 em cada 3 peças entra, com preço por peças comparáveis."],
-    ["Reserva", "A renter reserva com até cinco meses de antecedência e paga na hora."],
-    ["Aluguel", "A peça viaja com nota fiscal do valor, pra todo o Brasil."],
-    ["Repasse", "A lender recebe no mês seguinte e a peça volta a girar."],
+    ["Cadastro", "A dona manda fotos e medidas pelo formulário."],
+    ["Curadoria", "Entra 1 em cada 3 peças. O preço sai de peças parecidas que já alugaram."],
+    ["Reserva", "A cliente reserva com até cinco meses de antecedência e paga na hora."],
+    ["Aluguel", "A peça viaja com nota fiscal do valor, pra qualquer cidade do Brasil."],
+    ["Repasse", "A dona recebe no mês seguinte, e a peça volta pro catálogo."],
   ])}
 </section>
 
@@ -77,11 +77,11 @@ export function deck(): string {
   <div class="m-img"><img src="/deck/tecido.jpg" alt="Seda estampada e sapatos de salto sobre o piso de madeira" loading="lazy"><div class="m-box"><b>US$ 32 tri</b><span>é o mercado de produtos e serviços para mulheres no mundo</span></div></div>
   <div class="m-copy">
     ${k("03", "O mercado")}
-    <h2 class="hb">Um mercado enorme.<span class="dim">E o modelo já provado lá fora.</span></h2>
+    <h2 class="hb">Lá fora, isso já é grande.<span class="dim">A Vinted movimentou € 10,8 bi em 2025.</span></h2>
     <dl class="stats-rows">
-      <div><dt>€ 10,8 bi</dt><dd><b>de GMV da Vinted,</b> o P2P de moda europeu, em 2025. Cresceu 47% no ano.</dd></div>
-      <div><dt>10x</dt><dd><b>cresceu o acervo da Pickle,</b> o P2P de aluguel de Nova York, em três anos: hoje são mais de 500 mil peças.</dd></div>
-      <div><dt>Asset light</dt><dd><b>O modelo escala</b> com a peça da lender e o capital do veículo, não com o caixa da Circulei.</dd></div>
+      <div><dt>€ 10,8 bi</dt><dd><b>foi o GMV da Vinted em 2025,</b> 47% acima do ano anterior. É o maior P2P de moda da Europa.</dd></div>
+      <div><dt>10x</dt><dd><b>foi quanto o acervo da Pickle cresceu em três anos.</b> O P2P de aluguel de Nova York tem hoje mais de 500 mil peças.</dd></div>
+      <div><dt>Sem estoque</dt><dd><b>A peça é da dona,</b> e o dinheiro pra comprar mais vem do veículo. Crescer não consome o caixa da Circulei.</dd></div>
     </dl>
     <p class="fine">Fontes: BCG, The $32 Trillion Opportunity, 2024. Vinted: resultados de 2025, publicados em abril de 2026. Pickle: TechCrunch (out/23) e site (out/26).</p>
   </div>
@@ -90,12 +90,12 @@ export function deck(): string {
 <section class="d-dark">
   <div class="wrap">
     ${k("04", "Onde estamos")}
-    <h2 class="hb">A rede já gira.<span class="dim">E a cliente volta.</span></h2>
-    <p class="lede">Uma rede nacional de closets, com cliente que volta e aquisição que se paga.</p>
+    <h2 class="hb">800 transações em 100 cidades.<span class="dim">Metade do volume vem de quem volta.</span></h2>
+    <p class="lede">A rede já é nacional, e cada real gasto pra trazer uma cliente volta sete vezes.</p>
     <div class="big-stats">
       <div><svg viewBox="0 0 24 24"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></svg><b>800+</b><span>transações em 100 cidades</span></div>
       <div><svg viewBox="0 0 24 24"><path d="m4 16 5-5 4 4 7-7M15 8h5v5"/></svg><b class="o">10,4x</b><span>o GMV de janeiro a setembro de 2026</span></div>
-      <div><svg viewBox="0 0 24 24"><path d="M4 11a7 7 0 0 1 12-4l2 2M20 13a7 7 0 0 1-12 4l-2-2M18 5v4h-4M6 19v-4h4"/></svg><b>~50%</b><span>de recorrência: o volume que vem de quem volta</span></div>
+      <div><svg viewBox="0 0 24 24"><path d="M4 11a7 7 0 0 1 12-4l2 2M20 13a7 7 0 0 1-12 4l-2-2M18 5v4h-4M6 19v-4h4"/></svg><b>Metade</b><span>do volume vem de quem já alugou antes</span></div>
       <div><svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="5"/><circle cx="16" cy="16" r="4"/></svg><b>7x</b><span>LTV sobre CAC</span></div>
     </div>
     <p class="fine">Dados operacionais da Circulei, de janeiro a setembro de 2026.</p>
@@ -104,7 +104,7 @@ export function deck(): string {
 
 <section class="d-sec wrap">
   ${k("05", "Modelo de negócio")}
-  <h2 class="hb">Margem alta. Pouco capital.<span class="dim">Feito pra escalar.</span></h2>
+  <h2 class="hb">De cada R$ 1.000, R$ 410 ficam com a Circulei.<span class="dim">Com 76,6% de margem bruta.</span></h2>
   <div class="model">
     <figure class="fall">
       <figcaption class="tl-label">De cada R$ 1.000 de GMV</figcaption>
@@ -113,7 +113,7 @@ export function deck(): string {
     <div class="take">
       <p class="tl-label">Take efetivo</p>
       <p class="take-n">41,1<span>%</span></p>
-      <p>medido em mais de 700 transações: 30% no P2P, 50% quando a Circulei faz a gestão da peça, e as peças da casa.</p>
+      <p>Medido em mais de 700 transações. A taxa é de 30% quando a peça é de uma dona e de 50% quando a Circulei faz a gestão. As peças da casa entram nessa média.</p>
       <dl class="mini"><div><dt>76,6%</dt><dd>de margem bruta</dd></div><div><dt>R$ 67</dt><dd>de CAC</dd></div><div><dt>+31%</dt><dd>no ticket, de julho a setembro</dd></div><div><dt>7x</dt><dd>LTV sobre CAC</dd></div></dl>
     </div>
   </div>
@@ -123,7 +123,7 @@ export function deck(): string {
   <div class="wrap y-grid">
     <div>
       ${k("06", "Moda como ativo")}
-      <h2 class="hb">A peça curada rende.<span class="dim">E o caixa entra antes do custo.</span></h2>
+      <h2 class="hb">As peças rendem 50,8% ao ano, em média.<span class="dim">Na carteira curada, 207%.</span></h2>
       <p class="tl-label">Rendimento anual sobre o custo da peça</p>
       <table class="bars">${(
         [
@@ -137,8 +137,8 @@ export function deck(): string {
       <p class="fine">Bruto, sobre o custo da peça. Não é promessa de retorno.</p>
     </div>
     <div class="cashbox">
-      <h3>O caixa entra antes do custo.</h3>
-      <p>A cliente paga na reserva e a dona só recebe no mês seguinte. Desse dinheiro em trânsito nasce o potencial de fintech: carteira e crédito na plataforma.</p>
+      <h3>A cliente paga um mês antes do repasse.</h3>
+      <p>Ela paga na reserva, e a dona só recebe no mês seguinte. Esse dinheiro no meio do caminho é a base pra uma carteira e pra crédito dentro da plataforma.</p>
       <ul>
         <li>${ib(ICON.cash)}A cliente paga na reserva</li>
         <li>${ib(ICON.truck)}A peça viaja e volta</li>
@@ -151,11 +151,11 @@ export function deck(): string {
 
 <section class="d-sec wrap">
   ${k("07", "Por que agora")}
-  <h2 class="hb">A IA faz o que antes<span class="dim">pedia um exército.</span></h2>
-  <p class="statement"><b>A Nina já atende, e o dado que só a Circulei tem vai ensinar a curadoria a aprovar e precificar.</b> A operação escala sem crescer em gente.</p>
+  <h2 class="hb">A Nina já atende as clientes sozinha.<span class="dim">A próxima IA aprova e dá preço às peças.</span></h2>
+  <p class="statement"><b>Temos 24 meses de aluguel de 1.756 peças.</b> Com esse histórico, a curadoria aprova e precifica sem contratar mais gente.</p>
   <div class="cols four">
-    <div>${ib(ICON.bot)}<div><b>Nina <em class="new">No ar</em></b><p>A atendente de IA que nós mesmas construímos: responde a cliente na hora, a qualquer hora.</p></div></div>
-    <div>${ib(ICON.brain)}<div><b>Curadoria com IA</b><p>O dado de 1.756 peças e 24 meses de giro para aprovar, sugerir o preço e montar a carteira do veículo.</p></div></div>
+    <div>${ib(ICON.bot)}<div><b>Nina <em class="new">No ar</em></b><p>A atendente de IA que nós mesmas construímos. Responde a cliente na hora, de dia ou de madrugada.</p></div></div>
+    <div>${ib(ICON.brain)}<div><b>Curadoria com IA</b><p>Usa o histórico de 1.756 peças pra aprovar cada peça nova, sugerir o preço e montar a carteira do veículo.</p></div></div>
     <div>${ib(ICON.spark)}<div><b>Personal stylist <em class="new">Protótipo</em></b><p>A cliente conta a ocasião, "casamento na praia, não curto decote", e recebe as peças certas no tamanho dela. <a href="/?q=casamento%20na%20praia%2C%20n%C3%A3o%20curto%20decote">Experimente ${ARROW}</a></p></div></div>
     <div>${ib(ICON.image)}<div><b>Prova virtual</b><p>A cliente vê como a peça fica no corpo dela antes de alugar.</p></div></div>
   </div>
@@ -164,10 +164,10 @@ export function deck(): string {
 <section class="d-team">
   <div class="wrap">
     ${k("08", "Time")}
-    <h2 class="hw">Skills complementares</h2>
+    <h2 class="hw">As fundadoras</h2>
     <div class="founders">
-      <div><img src="/deck/gabriele.jpg" alt="Gabriele Fischer" loading="lazy"><div><p class="k2">CEO</p><h3>Gabriele Fischer</h3><p class="role">Finanças e produto</p><p>Ex-VC na Quartzo e na Indicator. Geriu sozinha o fundo de US$ 4,5 milhões da Aliança IA para Educação, dos institutos Lemann, Telles e VélezReyes+, e viveu por dentro a captação de US$ 3 milhões da Hubii, liderada pela Headline. Professora de Produto na Link School of Business. Construiu o backend da Circulei.</p></div></div>
-      <div><img src="/deck/julia.jpg" alt="Julia Franco" loading="lazy"><div><p class="k2">CMO</p><h3>Julia Franco</h3><p class="role">Marca, growth e desenvolvimento da oferta</p><p>Lidera o posicionamento, a identidade e a distribuição orgânica da marca. Construiu uma comunidade de 30 mil seguidores para a Circulei sem mídia paga e tem audiência própria de mais de 33 mil no Instagram e TikTok. Designer, com experiência em marca para Hering, Intimissimi e Isdin.</p></div></div>
+      <div><img src="/deck/gabriele.jpg" alt="Gabriele Fischer" loading="lazy"><div><p class="k2">CEO</p><h3>Gabriele Fischer</h3><p class="role">Finanças e produto</p><p>Ex-VC na Quartzo e na Indicator. Geriu sozinha o fundo de US$ 4,5 milhões da Aliança IA para Educação, dos institutos Lemann, Telles e VélezReyes+, e participou da captação de US$ 3 milhões da Hubii, liderada pela Headline. Professora de Produto na Link School of Business. Construiu o backend da Circulei.</p></div></div>
+      <div><img src="/deck/julia.jpg" alt="Julia Franco" loading="lazy"><div><p class="k2">CMO</p><h3>Julia Franco</h3><p class="role">Marca, growth e desenvolvimento da oferta</p><p>Cuida da marca e do crescimento orgânico. Levou a Circulei a 30 mil seguidores sem gastar com mídia, e tem mais de 33 mil seguidores próprios no Instagram e no TikTok. Designer, com experiência em marca para Hering, Intimissimi e Isdin.</p></div></div>
     </div>
   </div>
   <div class="angels">
@@ -182,9 +182,9 @@ export function deck(): string {
   <div class="hero-copy">
     ${logo(true)}
     <h2 class="hw">A plataforma de investimento em moda</h2>
-    <p class="lede">O closet parado vira renda, e a peça vira ativo.</p>
+    <p class="lede">Mulheres alugam as roupas de festa umas das outras. A dona ganha a cada aluguel.</p>
     <div class="raise">
-      ${kick("Fundraising · Pré-seed")}
+      ${kick("Captação pré-seed")}
       <p class="raise-n">R$ 1,75 milhão</p>
       <div class="contacts"><p><b>Gabriele Fischer · CEO</b><a href="mailto:fischer@circulei.co">fischer@circulei.co</a></p><p><b>Site</b><a href="https://circulei.co">circulei.co</a></p></div>
     </div>
