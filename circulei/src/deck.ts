@@ -40,7 +40,7 @@ const FALL: [string, string, number, number, string][] = [
 ];
 
 export function deck(): string {
-  return `${head("Circulei · A plataforma de investimento em moda", "Mulheres alugam as roupas de festa umas das outras, e a dona ganha a cada aluguel. Pré-seed, outubro de 2026.", "/deck/rack.jpg")}
+  return `${head("Circulei · A plataforma de investimento em moda", "O closet parado vira renda, e a peça vira ativo. Pré-seed, outubro de 2026.", "/deck/rack.jpg")}
 <body class="deck">
 <style>${CSS}</style>
 <main>
@@ -49,7 +49,7 @@ export function deck(): string {
     <a class="d-logo" href="/">${logo(true)}</a>
     ${kick("Moda como ativo")}
     <h1 class="hw">A plataforma de investimento em moda</h1>
-    <p class="lede"><b>Mulheres alugam as roupas de festa umas das outras.</b> A dona ganha a cada aluguel.</p>
+    <p class="lede"><b>O closet parado vira renda,</b> e a peça vira ativo.</p>
     <div class="hero-foot"><span>Pré-seed</span><span>Outubro de 2026</span></div>
   </div>
   <div class="hero-art one"><span class="f f0"><img src="/deck/rack.jpg" alt="Arara com vestidos de seda e sapatos, contra uma cortina iluminada" fetchpriority="high"></span></div>
@@ -182,7 +182,7 @@ export function deck(): string {
   <div class="hero-copy">
     ${logo(true)}
     <h2 class="hw">A plataforma de investimento em moda</h2>
-    <p class="lede">Mulheres alugam as roupas de festa umas das outras. A dona ganha a cada aluguel.</p>
+    <p class="lede">O closet parado vira renda, e a peça vira ativo.</p>
     <div class="raise">
       ${kick("Captação pré-seed")}
       <p class="raise-n">R$ 1,75 milhão</p>
