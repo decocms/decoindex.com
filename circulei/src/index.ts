@@ -1,6 +1,7 @@
 import { rebuild, snapshot, type Piece, type Snapshot } from "./catalog";
 import type { Env } from "./env";
 import { km } from "./geo";
+import { deck } from "./deck";
 import { home, lender, notFound, pdp, resultsFragment, type Ctx } from "./html";
 import { keywordScores, scoreAll, sha, stylistNote } from "./search";
 
@@ -104,6 +105,10 @@ export default {
     if (path === "/") {
       ectx.waitUntil(log(env, req, "circulei.view", { page: "home", hub: ctx.hub?.city ?? "brasil", here: ctx.here?.city ?? null, chosen: ctx.chosen }));
       return html(home(ctx), setCookie);
+    }
+    if (path === "/deck" || path === "/deck/") {
+      ectx.waitUntil(log(env, req, "circulei.view", { page: "deck" }));
+      return html(deck());
     }
     if (path === "/seja-locadora") {
       ectx.waitUntil(log(env, req, "circulei.view", { page: "lender", here: ctx.here?.city ?? null }));

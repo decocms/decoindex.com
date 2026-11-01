@@ -28,7 +28,7 @@ their production site: `noindex`, every rental goes to circulei.co with
 ## Run, test, deploy
 
 ```
-bun run dev      # :8798, needs CF_AI_GATEWAY_TOKEN in .dev.vars
+bun run dev      # :8811, needs CF_AI_GATEWAY_TOKEN in .dev.vars
 bun test         # parser + hub grouping
 bun run check
 npx wrangler deploy   # not on Workers Builds; deploy by hand from this folder

@@ -8,6 +8,8 @@
   // A storefront proposal for circulei.co. Same account as decoindex and the shop.
   "routes": [{ "pattern": "circulei.decoindex.com", "custom_domain": true }],
   "workers_dev": true,
+  // Deck images (extracted from Circulei's PDF). Everything else falls through to the Worker.
+  "assets": { "directory": "./public" },
 
   // The catalog comes from decoindex over the first-party entrypoint, like the shop:
   // one hourly rebuild (~12 reads) into KV, never on a visitor's request.

@@ -4,7 +4,7 @@
   "type": "module",
   "description": "A storefront proposal for Circulei on top of decoindex: city-first, with Jev search",
   "scripts": {
-    "dev": "wrangler dev --port 8798",
+    "dev": "wrangler dev --port 8811",
     "check": "tsc --noEmit",
     "test": "bun test src",
     "deploy": "wrangler deploy"

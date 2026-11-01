@@ -14,20 +14,31 @@ export interface Ctx {
 export const esc = (s: unknown) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
-const brl = (cents: number) => `R$\u00a0${Math.round(cents / 100).toLocaleString("pt-BR")}`;
+const brl = (cents: number) => `R$ ${Math.round(cents / 100).toLocaleString("pt-BR")}`;
 const img = (u: string, w: number) => `${u}${u.includes("?") ? "&" : "?"}width=${w}`;
 const srcset = (u: string) => [360, 540, 800, 1100].map((w) => `${img(u, w)} ${w}w`).join(", ");
 const SHOP = "https://www.circulei.co";
 export const outbound = (handle: string) => `${SHOP}/products/${encodeURIComponent(handle)}?ref=decoindex`;
 const LENDER_FORM = "https://aporte-sua-peca.circulei.co/";
 const WHATSAPP = "https://wa.me/message/NFYDMJGPIXVEI1";
+// Circulei's own wordmark files, as their site serves them.
+const LOGO = "https://cdn.shopify.com/s/files/1/0954/5600/2352/files/";
+const LOGO_BLACK = `${LOGO}CIRCULEI_PRETA_PNG_627b741a-4770-4a43-b653-60b6f52139c1.png`;
+const LOGO_WHITE = `${LOGO}CIRCULEI_BRANCA_PNG_30bb6b18-8157-4532-9a05-bd0ddc5216b4.png`;
+export const logo = (white = false) => `<img src="${white ? LOGO_WHITE : LOGO_BLACK}" alt="Circulei" width="154" height="20">`;
 
-/** "motoboy" when the piece is in the city being shown; otherwise it ships. */
+/** The deck's label: an orange square, tracked caps. */
+export const kick = (t: string) => `<p class="k"><i aria-hidden="true"></i>${t}</p>`;
+
+export const PIN = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></svg>`;
+export const ARROW = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`;
+
+/** Same city: "na sua cidade"; otherwise where it ships from. */
 function reach(p: Piece, ctx: Ctx): { near: boolean; label: string } {
   if (ctx.hub && p.hub === ctx.hub.city) return { near: true, label: p.city === ctx.hub.city ? "na sua cidade" : `${p.city} · pertinho` };
   const pt = pointOf(p.city);
   const d = ctx.here && pt ? km(ctx.here, pt) : null;
-  return { near: false, label: d !== null && d < 60 ? "pertinho" : `${p.city} · envio` };
+  return { near: false, label: d !== null && d < 60 ? `${p.city} · pertinho` : `${p.city} · envio` };
 }
 
 const heightBand = (h?: number) => (!h ? "" : h < 1.6 ? "a" : h < 1.65 ? "b" : h < 1.7 ? "c" : "d");
@@ -50,16 +61,16 @@ export function card(p: Piece, ctx: Ctx, i = 0, tag = true): string {
 </a>`;
 }
 
-function head(title: string, desc: string, image?: string): string {
+export function head(title: string, desc: string, image?: string): string {
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${esc(title)}</title><meta name="description" content="${esc(desc)}">
-<meta name="robots" content="noindex"><meta name="theme-color" content="#1b2a8f">
+<meta name="robots" content="noindex"><meta name="theme-color" content="#ffffff">
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}">${image ? `<meta property="og:image" content="${esc(img(image, 1200))}">` : ""}
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.shopify.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,500;1,6..96,500;1,6..96,600&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="icon" href="data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="none" stroke="#2a3fd1" stroke-width="5"/></svg>')}">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="#000"/><rect x="11" y="11" width="10" height="10" fill="#e0560e"/></svg>')}">
 <style>${CSS}</style></head>`;
 }
 
@@ -73,12 +84,9 @@ function header(ctx: Ctx, path = "/"): string {
     })
     .join("");
   return `<header class="top">
-  <a class="logo" href="/" aria-label="Circulei, início">circulei<span class="dot" aria-hidden="true"></span></a>
-  <button class="city" popovertarget="cities" aria-label="Cidade: ${esc(label)}. Trocar">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></svg>
-    <span>${esc(label)}</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-  </button>
-  <nav><a href="/seja-locadora" class="lend">Seja locadora</a></nav>
+  <a class="logo" href="/" aria-label="Circulei, início">${logo()}</a>
+  <button class="city" popovertarget="cities" aria-label="Cidade: ${esc(label)}. Trocar">${PIN}<span>${esc(label)}</span></button>
+  <nav><a href="/seja-locadora" class="lend">Quero circular</a></nav>
   <div id="cities" popover class="cities">
     <p class="hint">${where}Mostramos primeiro as peças da cidade mais perto de você. Tudo também chega por envio, pra todo o Brasil.</p>
     ${hubs}
@@ -87,10 +95,10 @@ function header(ctx: Ctx, path = "/"): string {
 </header>`;
 }
 
-const footer = `<footer class="foot">
+export const footer = `<footer class="foot">
   <div class="wrap">
-    <a class="logo" href="/">circulei<span class="dot" aria-hidden="true"></span></a>
-    <p>Moda é ativo. Seu closet é patrimônio.</p>
+    <a class="logo" href="/">${logo(true)}</a>
+    <p class="tagline"><b>O closet parado vira renda,</b> e a peça vira ativo.</p>
     <nav>
       <a href="${SHOP}/pages/para-alugar">Como alugar</a>
       <a href="${SHOP}/pages/perguntas-frequentes">Perguntas frequentes</a>
@@ -106,7 +114,7 @@ const footer = `<footer class="foot">
 function occasions(): string[] {
   const m = new Date().getUTCMonth();
   const season = m >= 9 || m <= 0 ? ["formatura à noite", "festa de fim de ano", "réveillon na praia"] : m <= 3 ? ["carnaval", "casamento de dia"] : ["festa junina chique", "casamento no inverno"];
-  return [...season, "madrinha de casamento", "noiva no civil", "convidada de casamento no campo", "jantar de aniversário"];
+  return ["casamento na praia, não curto decote", ...season, "madrinha de casamento", "noiva no civil", "jantar de aniversário"];
 }
 
 const isBag = (p: Piece) => /^(bolsa|clutch)/i.test(p.title);
@@ -114,14 +122,36 @@ const isBag = (p: Piece) => /^(bolsa|clutch)/i.test(p.title);
 const showcase = (ps: Piece[]) =>
   [...ps].sort((a, b) => +isBag(a) - +isBag(b) || +!!b.height - +!!a.height || b.images.length - a.images.length);
 
+/** One card per city with its own page: its best photo, how many pieces, how far. */
+function cities(ctx: Ctx): string {
+  const { snap } = ctx;
+  const cards = snap.hubs
+    .map((h) => {
+      const cover = showcase(snap.pieces.filter((p) => p.hub === h.city))[0];
+      const d = ctx.here ? Math.round(km(ctx.here, h)) : null;
+      const current = ctx.hub?.slug === h.slug;
+      return `<a class="cc" href="/?cidade=${h.slug}#perto" ${current ? 'aria-current="true"' : ""}>
+  ${cover ? `<img src="${esc(img(cover.images[0]!, 540))}" alt="" loading="lazy" decoding="async">` : ""}
+  <span class="cc-t"><b>${esc(h.city)}</b><span>${h.count} peças${current ? " · você está aqui" : d !== null ? ` · ${d < 30 ? "aqui" : `${d.toLocaleString("pt-BR")} km`}` : ""}</span></span>
+</a>`;
+    })
+    .join("");
+  return `<section class="explore" aria-labelledby="explore-h">
+  <div class="wrap">
+    ${kick("Rede nacional de closets")}
+    <h2 class="hb" id="explore-h">Explore outras cidades.<span class="dim">${snap.cities.length} cidades, ${snap.pieces.length} peças.</span></h2>
+  </div>
+  <div class="rail cities-rail">${cards}<a class="cc all" href="/?cidade=brasil#perto"><span class="cc-t"><b>Brasil todo</b><span>${snap.pieces.length} peças, enviadas pra você</span></span></a></div>
+</section>`;
+}
+
 export function home(ctx: Ctx): string {
   const { snap, hub } = ctx;
   const local = showcase(hub ? snap.pieces.filter((p) => p.hub === hub.city) : snap.pieces);
   const away = showcase(hub ? snap.pieces.filter((p) => p.hub !== hub.city) : []);
-  // Hero shows the most photogenic: pieces with several photos and a stated height lead.
   const dresses = local.filter((p) => /^vestido/i.test(p.title));
   // Hero: dresses only, worn (a stated height means the owner is in the photo), the most photographed first.
-  const heroPicks = [...(dresses.length >= 5 ? dresses : local)].sort((a, b) => (b.height ? 1 : 0) - (a.height ? 1 : 0) || b.images.length - a.images.length || b.daily - a.daily).slice(0, 5);
+  const heroPicks = [...(dresses.length >= 3 ? dresses : local)].sort((a, b) => +!!b.height - +!!a.height || b.images.length - a.images.length || b.daily - a.daily).slice(0, 3);
   const fromRent = Math.min(...(dresses.length ? dresses : local).map((p) => p.daily * 4));
   const place = hub ? hub.city : "todo o Brasil";
   const occ = occasions();
@@ -132,18 +162,22 @@ ${header(ctx)}
 <main>
 <section class="hero">
   <div class="hero-copy">
-    <h1>Alugue roupas incríveis <em>perto de você.</em></h1>
-    <p class="lede">${local.length} peças nos closets de ${esc(place)} agora, vestidos a partir de <b>${brl(fromRent)}</b> por 4 dias.${hub ? " Na mesma cidade, a entrega é por motoboy." : ""}</p>
-    <label class="ask-label" for="q">O que você vai celebrar?</label>
-    <form class="ask" action="/" role="search">
-      <input id="q" name="q" autocomplete="off" enterkeyhint="search" placeholder="Ex.: ${esc(occ[0])}" data-ph='${esc(JSON.stringify(occ))}'>
-      <input type="hidden" name="cidade" value="${esc(hub?.slug ?? "brasil")}">
-      <button aria-label="Buscar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-    </form>
-    <div class="chips" aria-label="Ocasiões">${occ.slice(0, 5).map((o) => `<button type="button" data-q="${esc(o)}">${esc(o)}</button>`).join("")}</div>
+    ${kick(hub ? `Closets de ${esc(hub.city)}` : "Closets do Brasil todo")}
+    <h1 class="hw">Alugue roupas incríveis perto de você</h1>
+    <p class="lede"><b>${local.length} peças nos closets de ${esc(place)},</b> ${hub ? "com entrega por motoboy na mesma cidade." : "enviadas pra você."}</p>
+    <div class="stylist">
+      <label for="q"><span>Personal stylist</span><em class="new">Novo</em></label>
+      <form class="ask" action="/" role="search">
+        <input id="q" name="q" autocomplete="off" enterkeyhint="search" placeholder="Conte a ocasião: ${esc(occ[0])}" data-ph='${esc(JSON.stringify(occ))}'>
+        <input type="hidden" name="cidade" value="${esc(hub?.slug ?? "brasil")}">
+        <button aria-label="Buscar">${ARROW}</button>
+      </form>
+      <div class="chips" aria-label="Ocasiões">${occ.slice(1, 6).map((o) => `<button type="button" data-q="${esc(o)}">${esc(o)}</button>`).join("")}</div>
+    </div>
+    <div class="hero-foot"><span>${PIN}${esc(hub ? `${hub.city}, ${hub.uf}` : "Brasil")}</span><span>Vestidos a partir de ${brl(fromRent)}</span></div>
   </div>
   <div class="hero-art" aria-label="Peças em ${esc(place)}">
-    ${heroPicks.map((p, i) => `<a href="/p/${esc(p.handle)}" class="f f${i}"><img src="${esc(img(p.images[0]!, i === 0 ? 800 : 540))}" alt="${esc(p.title)}" ${i < 3 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async"><span>${esc(p.brand)} · ${brl(p.daily * 4)}</span></a>`).join("")}
+    ${heroPicks.map((p, i) => `<a href="/p/${esc(p.handle)}" class="f f${i}"><img src="${esc(img(p.images[0]!, i === 0 ? 900 : 600))}" alt="${esc(p.title)}" fetchpriority="${i === 0 ? "high" : "auto"}" decoding="async"><span>${esc(p.brand)} · ${brl(p.daily * 4)}</span></a>`).join("")}
   </div>
 </section>
 
@@ -151,8 +185,8 @@ ${header(ctx)}
 
 <section class="near wrap" id="perto">
   <div class="sec-head">
-    <h2>${hub ? `Nos closets de ${esc(hub.city)}` : "Nos closets do Brasil"}</h2>
-    <p>${hub ? "Peças que estão na sua cidade: dá pra provar, combinar a entrega e devolver sem frete longo." : "Escolha uma cidade no topo pra ver primeiro o que está perto."}</p>
+    ${kick("Perto de você")}
+    <h2 class="hb">${hub ? `Nos closets de ${esc(hub.city)}.` : "Nos closets do Brasil."}<span class="dim">${hub ? "Pra provar e receber aqui perto." : "Escolha uma cidade pra ver o que está perto."}</span></h2>
   </div>
   <div class="filters" role="group" aria-label="Filtrar">
     <span class="fl">Tamanho</span>${sizes.map((s) => `<button type="button" class="f-size" aria-pressed="false" data-v="${s}">${s}</button>`).join("")}
@@ -160,37 +194,47 @@ ${header(ctx)}
     <output class="count" aria-live="polite">${local.length} peças</output>
   </div>
   <div class="grid" id="grid">${local.map((p, i) => card(p, ctx, i, p.city !== hub?.city)).join("")}</div>
-  <p class="empty" hidden>Nenhuma peça com esse filtro aqui. <a href="/?cidade=brasil#perto">Ver o Brasil todo</a> — tudo chega por envio.</p>
+  <p class="empty" hidden>Nenhuma peça com esse filtro aqui. <a href="/?cidade=brasil#perto">Ver o Brasil todo</a>: tudo chega por envio.</p>
 </section>
 
 ${away.length ? `<section class="away">
-  <div class="wrap sec-head"><h2>De outros closets, pra você</h2><p>Enviamos pra todo o Brasil. ${away.length} peças em ${new Set(away.map((p) => p.city)).size} cidades.</p></div>
-  <div class="rail">${away.slice(0, 16).map((p, i) => card(p, ctx, i + 8)).join("")}<a class="more" href="/?cidade=brasil#perto">Ver todas<br>as ${snap.pieces.length} peças</a></div>
+  <div class="wrap sec-head">${kick("Envio pra todo o Brasil")}<h2 class="hb">De outros closets.<span class="dim">${away.length} peças em ${new Set(away.map((p) => p.city)).size} cidades.</span></h2></div>
+  <div class="rail">${away.slice(0, 16).map((p, i) => card(p, ctx, i + 8)).join("")}<a class="more" href="/?cidade=brasil#perto">Ver todas as ${snap.pieces.length} peças ${ARROW}</a></div>
 </section>` : ""}
 
 <section class="lend-cta">
   <div class="wrap lend-grid">
     <div>
-      <h2>Seu closet <em>rende.</em></h2>
-      <p>Aquele vestido que você usou duas vezes pode circular. Você aporta a peça, a Circulei cuida da vitrine, da curadoria e da conversa com quem aluga, e você recebe a cada aluguel.</p>
-      <a class="btn ink" href="/seja-locadora">Quero ser locadora</a>
+      ${kick("Moda como ativo")}
+      <h2 class="hb">Toda mulher tem dinheiro parado no armário.<span class="dim">A Circulei faz ele render.</span></h2>
+      <p class="lede"><b>Você aporta a peça,</b> a Circulei cuida da curadoria, da vitrine e de quem aluga, e você recebe no mês seguinte.</p>
+      <a class="btn light" href="/seja-locadora">Quero circular ${ARROW}</a>
     </div>
     ${calculator(snap)}
   </div>
 </section>
 
 <section class="how wrap">
-  <h2>Como funciona</h2>
-  <ol>
-    <li><b>Escolha perto de você.</b> Veja tamanho, medidas da dona e onde a peça está. Muitas aceitam prova.</li>
-    <li><b>Reserve 4 dias.</b> Escolha as datas no calendário da peça, na Circulei.</li>
-    <li><b>Receba, brilhe, devolva.</b> Motoboy na mesma cidade, envio para o resto do Brasil.</li>
-  </ol>
+  ${kick("Como funciona")}
+  <h2 class="hb">Alugar é simples.<span class="dim">E a peça volta a girar.</span></h2>
+  ${timeline([
+    ["Escolha", "Veja tamanho, medidas da dona e onde a peça está. Muitas aceitam prova."],
+    ["Reserve", "Escolha as datas no calendário da peça, com até cinco meses de antecedência."],
+    ["Receba", "Motoboy na mesma cidade. Pro resto do Brasil, a peça viaja com nota fiscal."],
+    ["Devolva", "Use, brilhe e devolva. A peça volta a girar."],
+  ])}
 </section>
+
+${cities(ctx)}
 </main>
 ${footer}
 <script>${CLIENT}</script>
 </body></html>`;
+}
+
+/** The deck's "como funciona": a rule with a square per step, the last one orange. */
+export function timeline(steps: [string, string][]): string {
+  return `<ol class="tl">${steps.map(([t, d], i) => `<li><i aria-hidden="true"></i><span class="n">${String(i + 1).padStart(2, "0")}</span><b>${t}</b><p>${d}</p></li>`).join("")}</ol>`;
 }
 
 function calculator(snap: Snapshot): string {
@@ -199,8 +243,8 @@ function calculator(snap: Snapshot): string {
   <label for="worth">Quanto custou sua peça?</label>
   <output class="worth" for="worth">R$ 1.500</output>
   <input id="worth" type="range" min="400" max="8000" step="100" value="1500">
-  <p class="res">Peças assim alugam por cerca de <b class="rent">${brl(150000 * snap.rentRatio)}</b> por 4 dias.<br>Em <b class="times">${Math.ceil(1 / snap.rentRatio)}</b> aluguéis, o valor da peça já circulou de volta.</p>
-  <p class="fine">Estimativa a partir do catálogo atual: o aluguel de 4 dias fica em torno de ${pct}% do preço da peça. Você define seu preço com a Circulei.</p>
+  <p class="res">Peças assim alugam por cerca de <b class="rent">${brl(150000 * snap.rentRatio)}</b> por 4 dias. Em <b class="times">${Math.ceil(1 / snap.rentRatio)}</b> aluguéis, o valor da peça já circulou de volta.</p>
+  <p class="fine">Estimativa a partir do catálogo de hoje: o aluguel de 4 dias fica em torno de ${pct}% do preço da peça. O preço final é definido com a curadoria.</p>
 </div>`;
 }
 
@@ -213,28 +257,35 @@ export function pdp(ctx: Ctx, p: Piece, similar: Piece[]): string {
     ["Veste este corpo", [p.height && `${p.height.toFixed(2).replace(".", ",")} m`, p.body].filter(Boolean).join(" · ")],
     ["Prova", p.prova === undefined ? "" : p.prova ? "aceita prova" : "não aceita prova"],
     ["Ajustes", p.ajuste === undefined ? "" : p.ajuste ? "permite ajustes, combinados com a Circulei" : "não permite ajustes"],
+    ["Valor da peça", p.retail ? brl(p.retail) : ""],
   ];
   return `${head(`${p.title} · ${p.brand} · Circulei`, `Alugue ${p.title} (${p.brand}) por ${brl(p.daily * 4)} por 4 dias. Do closet de ${p.owner}, ${p.city}.`, p.images[0])}
 <body class="pdp-page">
 ${header(ctx, `/p/${p.handle}`)}
 <main class="pdp wrap">
-  <div class="gallery" tabindex="0" aria-label="Fotos">${p.images.map((u, i) => `<img src="${esc(img(u, 900))}" srcset="${esc(srcset(u))}" sizes="(min-width: 900px) 50vw, 92vw" alt="${esc(p.title)}, foto ${i + 1}" ${i ? 'loading="lazy"' : 'fetchpriority="high"'} decoding="async">`).join("")}</div>
+  <div class="gallery" aria-label="Fotos">${p.images.map((u, i) => `<button type="button" class="zoom" data-i="${i}" aria-label="Ampliar foto ${i + 1} de ${p.images.length}"><img src="${esc(img(u, 900))}" srcset="${esc(srcset(u))}" sizes="(min-width: 900px) 50vw, 92vw" alt="${esc(p.title)}, foto ${i + 1}" ${i ? 'loading="lazy"' : 'fetchpriority="high"'} decoding="async"></button>`).join("")}</div>
+  <dialog class="lightbox" aria-label="Fotos de ${esc(p.title)}">
+    <div class="lb-track">${p.images.map((u, i) => `<img src="${esc(img(u, 1600))}" alt="${esc(p.title)}, foto ${i + 1}" loading="lazy" decoding="async">`).join("")}</div>
+    <p class="lb-n" aria-live="polite">1 / ${p.images.length}</p>
+    <button type="button" class="lb-x" aria-label="Fechar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    <button type="button" class="lb-prev" aria-label="Foto anterior"><svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
+    <button type="button" class="lb-next" aria-label="Próxima foto">${ARROW}</button>
+  </dialog>
   <div class="info">
-    <p class="brand">${esc(p.brand)}</p>
-    <h1>${esc(p.title)}</h1>
-    <p class="price"><b>${brl(p.daily * 4)}</b> por 4 dias <span>· ${brl(p.daily)} por dia${p.retail ? ` · peça de ${brl(p.retail)}` : ""}</span></p>
-    <p class="where${near ? " near" : ""}">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+    ${kick(esc(p.brand))}
+    <h1 class="hb">${esc(p.title)}</h1>
+    <p class="price"><b>${brl(p.daily * 4)}</b><span>por 4 dias · ${brl(p.daily)} por dia</span></p>
+    <p class="where${near ? " near" : ""}">${PIN}
       <span>Do closet de <b>${esc(p.owner)}</b>, ${esc(p.city)}, ${esc(p.uf)}${d !== null ? ` · ${d < 30 ? "na sua cidade" : `a ${d.toLocaleString("pt-BR")} km de você`}` : ""}.
-      <small>${near || (d !== null && d < 60) ? "Entrega por motoboy." : "Enviamos pra você."}</small></span>
+      <small>${near || (d !== null && d < 60) ? "Entrega por motoboy." : "Enviamos pra você, com nota fiscal."}</small></span>
     </p>
     <dl>${facts.filter(([, v]) => v).map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
-    <a class="btn rent" href="${esc(outbound(p.handle))}">Escolher datas na Circulei</a>
+    <a class="btn rent" href="${esc(outbound(p.handle))}">Escolher datas na Circulei ${ARROW}</a>
     <p class="fine">Reserva, pagamento e entrega acontecem em circulei.co.</p>
   </div>
 </main>
-<div class="buybar"><span><b>${brl(p.daily * 4)}</b> · 4 dias</span><a class="btn rent" href="${esc(outbound(p.handle))}">Escolher datas</a></div>
-${similar.length ? `<section class="wrap similar"><h2>Combina com você também</h2><div class="grid">${similar.map((s, i) => card(s, ctx, i)).join("")}</div></section>` : ""}
+<div class="buybar"><span><b>${brl(p.daily * 4)}</b> 4 dias</span><a class="btn rent" href="${esc(outbound(p.handle))}">Escolher datas</a></div>
+${similar.length ? `<section class="wrap similar">${kick("Pra você também")}<h2 class="hb">Combina com você.<span class="dim">No seu tamanho, perto de você.</span></h2><div class="grid">${similar.map((s, i) => card(s, ctx, i)).join("")}</div></section>` : ""}
 ${footer}
 <script>${CLIENT}</script>
 </body></html>`;
@@ -242,63 +293,75 @@ ${footer}
 
 export function lender(ctx: Ctx): string {
   const { snap } = ctx;
-  const max = Math.max(...snap.cities.map((c) => c.count));
-  // Every city with a closet, set in type sized by how many pieces it holds.
-  const flow = snap.cities
-    .map((c, i) => `<span class="${i < 3 ? "big" : ""}" style="--s:${(0.9 + 2.2 * Math.sqrt(c.count / max)).toFixed(2)}">${esc(c.city)}<sup>${c.count}</sup></span>`)
-    .join(" ");
   const owners = new Set(snap.pieces.map((p) => `${p.owner}|${p.city}`)).size;
-  const brands = [...new Set(snap.pieces.map((p) => p.brand).filter((b) => b && !/circulei|sob medida/i.test(b)))].slice(0, 14);
-  return `${head("Seja locadora · Circulei", "Seu closet é patrimônio. Aporte suas peças na Circulei e receba a cada aluguel.")}
+  const brands = [...new Set(snap.pieces.map((p) => p.brand).filter((b) => b && !/circulei|sob medida/i.test(b)))].slice(0, 16);
+  const cover = showcase(snap.pieces.filter((p) => /^vestido/i.test(p.title)))[0];
+  // Circulei's own yield comparison, from their deck (Oct 2026): gross, on the piece's cost.
+  const yields: [string, number, string][] = [
+    ["IFIX (fundos imobiliários)", 5.1, ""],
+    ["IMA-B (títulos IPCA+)", 13.8, ""],
+    ["CDI", 14.6, ""],
+    ["Média das peças do site", 50.8, "avg"],
+    ["Carteira curada da Circulei", 207, "top"],
+  ];
+  return `${head("Invista seu closet · Circulei", "O closet parado vira renda, e a peça vira ativo. Aporte suas peças na Circulei.", cover?.images[0])}
 <body class="lender-page">
 ${header(ctx, "/seja-locadora")}
 <main>
-<section class="l-hero">
-  <div class="wrap l-grid">
+<section class="hero l-hero">
+  <div class="hero-copy">
+    ${kick("Moda como ativo")}
+    <h1 class="hw">Invista seu closet</h1>
+    <p class="lede"><b>O closet parado vira renda,</b> e a peça vira ativo.</p>
+    <div class="l-actions"><a class="btn light" href="${LENDER_FORM}">Aportar minhas peças ${ARROW}</a><a class="btn ghost" href="${WHATSAPP}">Falar no WhatsApp</a></div>
+    <div class="hero-foot"><span>${owners} closets</span><span>${snap.cities.length} cidades</span><span>${snap.pieces.length} peças no ar</span></div>
+  </div>
+  <div class="hero-art one">${cover ? `<span class="f f0"><img src="${esc(img(cover.images[0]!, 1000))}" alt="${esc(cover.title)}" fetchpriority="high"><span>${esc(cover.brand)} · closet de ${esc(cover.owner)}</span></span>` : ""}</div>
+</section>
+
+<section class="wrap roles">
+  ${kick("O que fazemos")}
+  <h2 class="hb">Toda mulher tem dinheiro parado no armário.<span class="dim">A Circulei faz ele render.</span></h2>
+  <div class="cols">
+    <div><span class="ib"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="1"/><path d="M3 10h18M16 14h2"/></svg></span><div><p class="k2">Quem tem closet</p><b>Ganha renda com a peça parada.</b></div></div>
+    <div><span class="ib"><svg viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6L5 8Z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg></span><div><p class="k2">Quem aluga</p><b>Veste a peça que quer por uma fração do preço.</b></div></div>
+    <div><span class="ib"><svg viewBox="0 0 24 24"><path d="m4 16 5-5 4 4 7-7M15 8h5v5"/></svg></span><div><p class="k2">Você decide</p><b>Prova, ajustes e o tamanho que ela veste.</b></div></div>
+  </div>
+</section>
+
+<section class="yield">
+  <div class="wrap y-grid">
     <div>
-      <h1>Seu closet é <em>patrimônio.</em></h1>
-      <p class="lede">Peças paradas no armário não rendem nada. Na Circulei, elas circulam entre mulheres de ${snap.cities.length} cidades e voltam pra você como renda, aluguel após aluguel.</p>
-      <div class="l-actions"><a class="btn ink" href="${LENDER_FORM}">Aportar minhas peças</a><a class="btn ghost" href="${WHATSAPP}">Conversar no WhatsApp</a></div>
+      ${kick("Moda como ativo")}
+      <h2 class="hb">A peça curada rende.<span class="dim">Mais que o CDI.</span></h2>
+      <p class="tl-label">Rendimento anual sobre o custo da peça</p>
+      <table class="bars">${yields.map(([k, v, cls]) => `<tr class="y-${cls}"><th>${k}</th><td><i style="--w:${Math.max(1.5, (v / 207) * 100).toFixed(1)}%"></i></td><td class="v">${v.toLocaleString("pt-BR")}%</td></tr>`).join("")}</table>
+      <p class="fine">Bruto, sobre o custo da peça. Números da Circulei. Não é promessa de retorno.</p>
     </div>
-    <figure class="map">
-      <p class="flow" aria-label="Cidades com closets na Circulei e quantas peças cada uma tem">${flow}</p>
-      <figcaption>${owners} closets em ${snap.cities.length} cidades, hoje.</figcaption>
-    </figure>
-  </div>
-</section>
-
-<section class="wrap benefits">
-  <h2>Por que aportar</h2>
-  <div class="b-list">
-    <div><h3>Renda a cada aluguel</h3><p>Cada vez que alguém aluga sua peça, parte do valor volta pra você. O vestido de uma festa vira vários meses de retorno.</p></div>
-    <div><h3>Você decide as regras</h3><p>Se a peça aceita prova, se permite ajustes, qual o tamanho que ela veste. Tudo aparece pra quem aluga, com as suas medidas.</p></div>
-    <div><h3>A Circulei faz a ponte</h3><p>Vitrine, curadoria e a conversa com quem aluga ficam com a gente. Na mesma cidade, a entrega é por motoboy.</p></div>
-    <div><h3>Preço com dados</h3><p>A gente sabe o que aluga e por quanto. Você define o valor com uma sugestão baseada no catálogo real.</p></div>
-  </div>
-</section>
-
-<section class="lend-cta">
-  <div class="wrap lend-grid">
-    <div><h2>Quanto sua peça <em>rende?</em></h2><p>Mexa no valor da peça e veja quanto peças parecidas alugam hoje na Circulei.</p></div>
     ${calculator(snap)}
   </div>
 </section>
 
-<section class="wrap brands">
-  <h2>Já circulam por aqui</h2>
-  <p class="brand-list">${brands.map(esc).join("<span aria-hidden=\"true\"> · </span>")}</p>
+<section class="wrap how">
+  ${kick("Como funciona")}
+  <h2 class="hb">Do armário ao repasse.<span class="dim">Em cinco passos.</span></h2>
+  ${timeline([
+    ["Cadastro", "Você manda fotos e medidas pelo formulário."],
+    ["Curadoria", "Só 1 em cada 3 peças entra, com preço por peças comparáveis."],
+    ["Reserva", "A cliente reserva com até cinco meses de antecedência e paga na hora."],
+    ["Aluguel", "A peça viaja com nota fiscal do valor, pra todo o Brasil."],
+    ["Repasse", "Você recebe no mês seguinte, e a peça volta a girar."],
+  ])}
+  <div class="l-actions"><a class="btn dark" href="${LENDER_FORM}">Aportar minhas peças ${ARROW}</a><a class="btn line" href="${SHOP}/pages/criterios-de-curadoria">Critérios de curadoria</a></div>
 </section>
 
-<section class="wrap how">
-  <h2>Como aportar</h2>
-  <ol>
-    <li><b>Mande suas peças.</b> Fotos e medidas pelo formulário. A curadoria responde se elas entram.</li>
-    <li><b>Combine o preço.</b> Com sugestão a partir do que já aluga na Circulei.</li>
-    <li><b>Receba a cada aluguel.</b> Sua peça aparece pra quem está perto e pra todo o Brasil.</li>
-  </ol>
-  <a class="btn ink" href="${LENDER_FORM}">Aportar minhas peças</a>
-  <p class="fine"><a href="${SHOP}/pages/criterios-de-curadoria">Critérios de curadoria</a> · <a href="${SHOP}/pages/para-aportar-pecas">Como funciona para aportar</a></p>
+<section class="brands">
+  <div class="wrap">
+    ${kick("Já circulam por aqui")}
+    <p class="brand-list">${brands.map(esc).join('<i aria-hidden="true"></i>')}</p>
+  </div>
 </section>
+${cities(ctx)}
 </main>
 ${footer}
 <script>${CLIENT}</script>
@@ -306,237 +369,305 @@ ${footer}
 }
 
 export function notFound(ctx: Ctx): string {
-  return `${head("Circulei", "Página não encontrada")}<body>${header(ctx)}<main class="wrap nf"><h1>Essa peça já <em>circulou.</em></h1><p>Ela pode ter sido alugada ou saído do acervo.</p><a class="btn ink" href="/">Ver o que está perto de você</a></main>${footer}<script>${CLIENT}</script></body></html>`;
+  return `${head("Circulei", "Página não encontrada")}<body>${header(ctx)}<main class="wrap nf">${kick("404")}<h1 class="hb">Essa peça já circulou.<span class="dim">Ela pode ter sido alugada ou saído do acervo.</span></h1><a class="btn dark" href="/">Ver o que está perto de você ${ARROW}</a></main>${footer}<script>${CLIENT}</script></body></html>`;
 }
 
-const CSS = `
+export const CSS = `
 :root{
-  --ink:oklch(0.22 0.04 264);--ink-2:oklch(0.42 0.04 264);--bg:oklch(1 0 0);--mist:oklch(0.965 0.01 264);--line:oklch(0.9 0.015 264);
-  --cobalt:oklch(0.46 0.21 266);--cobalt-deep:oklch(0.3 0.16 266);--pink:oklch(0.66 0.24 356);--sun:oklch(0.9 0.17 100);--sun-ink:oklch(0.3 0.08 90);
-  --serif:"Bodoni Moda",ui-serif,Georgia,serif;--sans:Figtree,ui-sans-serif,system-ui,sans-serif;
-  --gut:clamp(16px,4vw,48px);--ease:cubic-bezier(.22,1,.36,1);
+  --ink:oklch(0.13 0 0);--ink-2:oklch(0.44 0 0);--dim:oklch(0.64 0 0);--bg:oklch(1 0 0);--stone:oklch(0.96 0.004 85);--line:oklch(0.88 0 0);
+  --black:oklch(0.08 0 0);--on-black-2:oklch(0.72 0 0);--on-black-dim:oklch(0.52 0 0);--rule-dark:oklch(0.3 0 0);
+  --orange:oklch(0.63 0.19 42);
+  --sans:Archivo,ui-sans-serif,system-ui,sans-serif;
+  --gut:clamp(16px,4vw,56px);--ease:cubic-bezier(.22,1,.36,1);
   color-scheme:light;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink)}
-body{font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{font:400 16px/1.55 var(--sans);font-stretch:100%;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 img{display:block;max-width:100%}
 a{color:inherit}
 h1,h2,h3{text-wrap:balance;margin:0}
 p{text-wrap:pretty}
-em{font-family:var(--serif);font-style:italic;font-weight:500}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-.wrap{max-width:1320px;margin:0 auto;padding:0 var(--gut)}
-.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 26px;border-radius:999px;font:600 15px var(--sans);text-decoration:none;border:0;cursor:pointer;transition:transform .3s var(--ease),background .2s}
-.btn:active{transform:scale(.98)}
-.btn.ink{background:var(--ink);color:#fff}.btn.ink:hover{background:var(--cobalt)}
-.btn.ghost{border:1.5px solid currentColor}
+svg{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.wrap{max-width:1360px;margin:0 auto;padding:0 var(--gut)}
+.k{display:flex;align-items:center;gap:10px;margin:0 0 18px;font:600 12px/1 var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+.k i{width:9px;height:9px;background:var(--orange);flex:none}
+.hero-copy,.wrap{container-type:inline-size}
+.hw{font:500 clamp(1.5rem,8cqi,3.7rem)/1.04 var(--sans);font-stretch:125%;letter-spacing:.01em;text-transform:uppercase}
+.hb{font:800 clamp(1.9rem,3.6vw,3.3rem)/1.02 var(--sans);letter-spacing:-.025em;text-transform:uppercase}
+.hb .dim{display:block;color:var(--dim)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:52px;padding:0 24px;font:600 14px var(--sans);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;border:1px solid transparent;cursor:pointer;transition:background .2s,color .2s,border-color .2s}
+.btn svg{width:18px;height:18px;stroke-width:2;transition:transform .3s var(--ease)}
+.btn:hover svg{transform:translateX(3px)}
+.btn.dark{background:var(--ink);color:#fff}.btn.dark:hover{background:var(--orange)}
+.btn.light{background:#fff;color:var(--ink)}.btn.light:hover{background:var(--orange);color:#fff}
+.btn.ghost{border-color:currentColor;color:#fff}.btn.ghost:hover{background:#fff;color:var(--ink)}
+.btn.line{border-color:var(--ink)}.btn.line:hover{background:var(--ink);color:#fff}
 .fine{font-size:13px;color:var(--ink-2)}
 
 /* header */
-.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:12px var(--gut);background:color-mix(in oklch,var(--cobalt-deep) 96%,transparent);color:#fff;backdrop-filter:saturate(1.4) blur(10px)}
-.logo{font:600 26px/1 var(--serif);font-style:italic;letter-spacing:-.01em;text-decoration:none;display:inline-flex;align-items:flex-start}
-.logo .dot{width:7px;height:7px;border-radius:50%;background:var(--pink);margin:3px 0 0 2px}
-.city{display:inline-flex;align-items:center;gap:6px;margin-left:auto;height:38px;padding:0 12px 0 10px;border-radius:999px;border:1px solid color-mix(in oklch,#fff 30%,transparent);background:transparent;color:inherit;font:600 14px var(--sans);cursor:pointer}
-.city:hover{background:color-mix(in oklch,#fff 12%,transparent)}
-.city svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}
-.city .chev{width:14px;height:14px;opacity:.7}
-.top nav a{font:600 14px var(--sans);text-decoration:none;padding:9px 14px;border-radius:999px;background:var(--sun);color:var(--sun-ink);white-space:nowrap}
-.cities{margin:0;inset:auto;top:64px;right:var(--gut);left:auto;position:fixed;width:min(360px,calc(100vw - 2*var(--gut)));max-height:min(70vh,560px);overflow:auto;padding:10px;border:0;border-radius:18px;background:#fff;color:var(--ink);box-shadow:0 24px 60px -12px oklch(0.2 0.1 266/.35)}
-.cities .hint{margin:6px 10px 10px;font-size:13px;color:var(--ink-2)}
-.cities a{display:flex;justify-content:space-between;gap:12px;padding:11px 12px;border-radius:12px;text-decoration:none;font-weight:600}
-.cities a:hover{background:var(--mist)}
-.cities a[aria-current]{background:var(--cobalt);color:#fff}
-.cities a[aria-current] .n{color:#fff}
-.cities small{font-weight:500;opacity:.6}
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;padding:0 var(--gut);height:68px;background:#fff;border-bottom:1px solid var(--line)}
+.logo img{width:132px;height:auto}
+.city{display:inline-flex;align-items:center;gap:8px;margin-left:auto;height:40px;padding:0 14px;border:1px solid var(--line);background:#fff;color:var(--ink);font:600 12px var(--sans);letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+.city:hover{border-color:var(--ink)}
+.city svg{width:16px;height:16px}
+.top nav a{display:inline-flex;align-items:center;height:40px;padding:0 16px;font:600 12px var(--sans);letter-spacing:.12em;text-transform:uppercase;text-decoration:none;background:var(--ink);color:#fff;white-space:nowrap}
+.top nav a:hover{background:var(--orange)}
+.cities{margin:0;inset:auto;top:76px;right:var(--gut);left:auto;position:fixed;width:min(380px,calc(100vw - 2*var(--gut)));max-height:min(72vh,600px);overflow:auto;padding:8px;border:1px solid var(--ink);background:#fff;color:var(--ink);box-shadow:0 30px 60px -20px oklch(0 0 0/.3)}
+.cities .hint{margin:8px 12px 12px;font-size:13px;color:var(--ink-2)}
+.cities a{display:flex;justify-content:space-between;gap:12px;padding:12px;text-decoration:none;font-weight:600;border-top:1px solid var(--line)}
+.cities a:hover{background:var(--stone)}
+.cities a[aria-current]{background:var(--ink);color:#fff}
+.cities a[aria-current] .n{color:var(--on-black-2)}
+.cities small{font-weight:500;color:var(--dim)}
 .cities .n{font-weight:500;color:var(--ink-2);font-size:14px}
 
-/* hero */
-.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:clamp(24px,4vw,64px);align-items:center;padding:clamp(28px,5vw,72px) var(--gut) clamp(40px,6vw,88px);background:var(--cobalt-deep);color:#fff;overflow:hidden}
-.hero h1{font:500 clamp(2.6rem,6.2vw,5.6rem)/.98 var(--sans);letter-spacing:-.035em}
-.hero h1 em{display:block;color:var(--sun);letter-spacing:-.02em;font-size:1.04em}
-.lede{font-size:clamp(17px,1.5vw,20px);max-width:44ch;margin:22px 0 28px;color:color-mix(in oklch,#fff 86%,var(--cobalt))}
-.hero .lede b{color:#fff}
-.ask-label{display:block;font:600 15px var(--sans);margin:0 0 10px 4px;color:var(--sun)}
-.ask{display:flex;align-items:center;max-width:560px;background:#fff;border-radius:999px;padding:6px 6px 6px 22px;box-shadow:0 18px 50px -18px oklch(0.1 0.1 266/.6)}
-.ask input{flex:1;min-width:0;border:0;outline:0;font:500 17px var(--sans);color:var(--ink);background:transparent;height:48px}
+/* hero: the deck's cover — black copy panel, photographs to the edge */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr);background:var(--black);color:#fff;min-height:min(calc(100svh - 68px),820px)}
+.hero-copy{display:flex;flex-direction:column;justify-content:center;padding:clamp(36px,5vw,80px) var(--gut)}
+.hero .k{color:var(--on-black-2)}
+.lede{font-size:clamp(18px,1.6vw,22px);line-height:1.4;max-width:34ch;margin:22px 0 0;color:var(--on-black-2)}
+.lede b{color:#fff;font-weight:600}
+.stylist{margin-top:clamp(28px,4vw,44px);padding-top:clamp(22px,3vw,30px);border-top:1px solid var(--rule-dark);max-width:600px}
+.stylist label{display:flex;align-items:center;gap:10px;font:600 12px var(--sans);letter-spacing:.16em;text-transform:uppercase;margin-bottom:12px}
+.new{font:700 10px var(--sans);font-style:normal;letter-spacing:.1em;background:var(--orange);color:#fff;padding:3px 6px}
+.ask{display:flex;align-items:stretch;background:#fff}
+.ask input{flex:1;min-width:0;border:0;outline:0;font:500 17px var(--sans);color:var(--ink);background:transparent;height:58px;padding:0 18px}
 .ask input::placeholder{color:var(--ink-2)}
-.ask button{flex:none;width:48px;height:48px;border-radius:50%;border:0;background:var(--pink);color:#fff;cursor:pointer;display:grid;place-items:center;transition:transform .3s var(--ease)}
-.ask button:hover{transform:translateX(2px)}
-.ask button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
-.ask:focus-within{box-shadow:0 0 0 3px var(--sun),0 18px 50px -18px oklch(0.1 0.1 266/.6)}
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;max-width:600px}
-.chips button{font:500 14px var(--sans);color:#fff;background:color-mix(in oklch,#fff 10%,transparent);border:1px solid color-mix(in oklch,#fff 22%,transparent);border-radius:999px;padding:8px 14px;cursor:pointer;transition:background .2s}
-.chips button:hover{background:color-mix(in oklch,#fff 22%,transparent)}
-.hero-art{position:relative;display:grid;grid-template-columns:1.25fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:12px;height:clamp(380px,46vw,620px)}
-.hero-art .f{position:relative;border-radius:20px;overflow:hidden;background:var(--cobalt);text-decoration:none;animation:rise .9s var(--ease) backwards}
-.hero-art .f img{width:100%;height:100%;object-fit:cover;transition:transform 1.2s var(--ease)}
-.hero-art .f:hover img{transform:scale(1.04)}
-.hero-art .f span{position:absolute;left:10px;bottom:10px;font:600 12px var(--sans);background:#fff;color:var(--ink);padding:5px 10px;border-radius:999px}
-.f0{grid-row:1/3}.f1{animation-delay:.08s!important}.f2{animation-delay:.16s!important;transform:translateY(28px)}.f3{animation-delay:.24s!important}.f4{animation-delay:.32s!important;transform:translateY(28px)}
-@keyframes rise{from{opacity:0;translate:0 24px}}
+.ask button{flex:none;width:58px;border:0;background:var(--orange);color:#fff;cursor:pointer;display:grid;place-items:center}
+.ask button svg{width:22px;height:22px;stroke-width:2.2;transition:transform .3s var(--ease)}
+.ask button:hover svg{transform:translateX(3px)}
+.ask:focus-within{outline:2px solid var(--orange);outline-offset:3px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chips button{font:500 14px var(--sans);color:#fff;background:transparent;border:1px solid var(--rule-dark);padding:8px 12px;cursor:pointer;transition:border-color .2s,background .2s}
+.chips button:hover{border-color:#fff}
+.hero-foot{display:flex;justify-content:space-between;gap:16px;margin-top:clamp(28px,4vw,48px);padding-top:16px;border-top:1px solid var(--rule-dark);font:600 12px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--on-black-2);max-width:600px}
+.hero-foot span{display:inline-flex;align-items:center;gap:8px}
+.hero-foot svg{width:15px;height:15px}
+.hero-art{display:grid;grid-template-columns:1.35fr 1fr;grid-template-rows:1fr 1fr;gap:2px;min-height:420px}
+.hero-art .f{position:relative;overflow:hidden;background:oklch(0.2 0 0);text-decoration:none;color:#fff}
+.hero-art .f img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform 1.4s var(--ease);animation:reveal 1.1s var(--ease) backwards}
+.hero-art a.f:hover img{transform:scale(1.035)}
+.hero-art .f>span{position:absolute;left:0;bottom:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:9px 12px;font:600 11px var(--sans);letter-spacing:.12em;text-transform:uppercase;background:var(--black)}
+.f0{grid-row:1/3}.f1 img{animation-delay:.12s}.f2 img{animation-delay:.24s}
+.hero-art.one{grid-template-columns:1fr;grid-template-rows:1fr}
+@keyframes reveal{from{clip-path:inset(0 0 100% 0);transform:scale(1.06)}}
+@keyframes rise{from{opacity:0;translate:0 18px}}
 
 /* sections */
-section{scroll-margin-top:72px}
-.sec-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 32px;margin:clamp(48px,7vw,96px) 0 20px}
-.sec-head h2,.how h2,.similar h2,.benefits h2,.brands h2{font:500 clamp(1.8rem,3.4vw,2.8rem)/1.05 var(--sans);letter-spacing:-.03em}
-.sec-head p{margin:0;max-width:52ch;color:var(--ink-2)}
-.filters{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 0 18px;position:sticky;top:62px;z-index:5;background:var(--bg)}
-.filters .fl{font:600 13px var(--sans);color:var(--ink-2);margin:0 2px 0 8px}.filters .fl:first-child{margin-left:0}
-.filters button{min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;font:500 14px var(--sans);color:var(--ink);cursor:pointer}
+section{scroll-margin-top:76px}
+.sec-head{margin-top:clamp(56px,8vw,112px);margin-bottom:24px}
+.sec-head .hb{max-width:22ch}
+.filters{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:12px 0;margin-bottom:18px;position:sticky;top:68px;z-index:5;background:var(--bg);border-top:1px solid var(--ink);border-bottom:1px solid var(--line)}
+.filters .fl{font:600 11px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);margin:0 4px 0 14px}.filters .fl:first-child{margin-left:0}
+.filters button{min-height:36px;min-width:40px;padding:0 12px;border:1px solid var(--line);background:#fff;font:500 14px var(--sans);color:var(--ink);cursor:pointer}
 .filters button:hover{border-color:var(--ink)}
 .filters button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
-.filters .count{margin-left:auto;font:500 14px var(--sans);color:var(--ink-2)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(220px,44vw),1fr));gap:clamp(12px,2vw,28px) clamp(10px,1.6vw,22px)}
-.card{text-decoration:none;display:block;animation:rise .7s var(--ease) backwards;animation-delay:calc(var(--i)*40ms)}
-.ph{position:relative;display:block;aspect-ratio:3/4;border-radius:16px;overflow:hidden;background:var(--mist)}
-.ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .5s var(--ease),transform 1s var(--ease)}
+.filters .count{margin-left:auto;font:600 11px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,44vw),1fr));gap:clamp(20px,2.4vw,36px) clamp(10px,1.4vw,20px)}
+.card{text-decoration:none;display:block;animation:rise .7s var(--ease) backwards;animation-delay:calc(var(--i)*35ms)}
+.ph{position:relative;display:block;aspect-ratio:3/4;overflow:hidden;background:var(--stone)}
+.ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .5s var(--ease),transform 1.2s var(--ease)}
 .ph .alt{opacity:0}
 @media (hover:hover){.card:hover .ph .alt{opacity:1}.card:hover .ph img{transform:scale(1.03)}}
-.tag{position:absolute;top:10px;left:10px;font:600 12px var(--sans);padding:5px 10px;border-radius:999px;background:#fff;color:var(--ink)}
-.tag.near{background:var(--sun);color:var(--sun-ink)}
-.meta{display:grid;gap:2px;padding:10px 2px 0}
-.brand{font:600 12px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--cobalt)}
+.tag{position:absolute;left:0;top:0;font:600 10.5px var(--sans);letter-spacing:.12em;text-transform:uppercase;padding:7px 10px;background:#fff;color:var(--ink)}
+.tag.near{background:var(--ink);color:#fff}
+.tag.near::before{content:"";display:inline-block;width:7px;height:7px;background:var(--orange);margin-right:7px;vertical-align:1px}
+.meta{display:grid;gap:3px;padding:12px 0 0}
+.brand{font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
 .title{font-size:15px;line-height:1.3}
 .row{display:flex;align-items:baseline;gap:6px;font-size:14px;color:var(--ink-2)}
-.row b{color:var(--ink);font-weight:700}
-.row .size{margin-left:auto;font-weight:600;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:0 6px;font-size:12px}
+.row b{color:var(--ink);font-weight:700;font-size:15px}
+.row .size{margin-left:auto;font-weight:600;color:var(--ink);border:1px solid var(--ink);padding:0 6px;font-size:12px}
 .card[hidden]{display:none}
 .empty{padding:32px 0;color:var(--ink-2)}
 
-.away{background:var(--mist);padding-bottom:clamp(40px,5vw,72px);margin-top:clamp(48px,7vw,96px)}
-.away .sec-head{padding-top:clamp(40px,5vw,64px);margin-top:0}
-.rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(200px,22vw);gap:16px;overflow-x:auto;padding:0 max(var(--gut),calc((100vw - 1320px)/2 + var(--gut))) 8px;scroll-padding-inline:max(var(--gut),calc((100vw - 1320px)/2 + var(--gut)));scroll-snap-type:x mandatory;scrollbar-width:thin}
-.rail .card{scroll-snap-align:start}
-.rail .more{display:grid;place-items:center;text-align:center;aspect-ratio:3/4;border-radius:16px;background:var(--ink);color:#fff;font:500 20px/1.2 var(--sans);text-decoration:none}
+.away{background:var(--stone);padding-bottom:clamp(48px,6vw,88px);margin-top:clamp(56px,8vw,112px)}
+.away .sec-head{padding-top:clamp(48px,6vw,88px);margin-top:0}
+.rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,21vw);gap:clamp(10px,1.4vw,20px);overflow-x:auto;padding:0 max(var(--gut),calc((100vw - 1360px)/2 + var(--gut))) 12px;scroll-padding-inline:max(var(--gut),calc((100vw - 1360px)/2 + var(--gut)));scroll-snap-type:x mandatory;scrollbar-width:thin}
+.rail>*{scroll-snap-align:start}
+.rail .more{display:flex;align-items:flex-end;aspect-ratio:3/4;padding:20px;background:var(--ink);color:#fff;font:800 22px/1.1 var(--sans);text-transform:uppercase;letter-spacing:-.01em;text-decoration:none}
+.rail .more svg{width:22px;height:22px;flex:none}
+.rail .more:hover{background:var(--orange)}
 
 /* results */
-.results{padding:clamp(32px,4vw,56px) var(--gut) 0;max-width:1320px;margin:0 auto}
-.results h2{font:500 clamp(1.6rem,3vw,2.4rem)/1.1 var(--sans);letter-spacing:-.03em}
-.results h2 em{color:var(--cobalt)}
-.note{font:500 clamp(18px,1.6vw,21px)/1.5 var(--serif);font-style:italic;max-width:64ch;margin:14px 0 26px;color:var(--ink);min-height:1.5em}
-.note:empty::before{content:"A curadora está olhando as peças…";color:var(--ink-2)}
-.results .kick{margin:0 0 4px;font:600 15px var(--sans);color:var(--ink-2)}
-.results .again,.results .close{font:600 14px var(--sans);background:none;border:0;color:var(--ink-2);cursor:pointer;padding:8px 0;text-decoration:underline}
-.skel{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(220px,44vw),1fr));gap:20px}
-.skel i{aspect-ratio:3/4;border-radius:16px;background:linear-gradient(100deg,var(--mist) 40%,#fff 50%,var(--mist) 60%) 0/300% 100%;animation:sh 1.2s linear infinite}
+.results{padding:clamp(40px,5vw,72px) var(--gut) 0;max-width:1360px;margin:0 auto}
+.results .hb{max-width:24ch}
+.note{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;max-width:72ch;margin:26px 0 30px;padding:20px 22px;background:var(--black);color:#fff;font:400 18px/1.5 var(--sans)}
+.note::before{content:"";width:9px;height:9px;background:var(--orange);margin-top:9px;grid-row:1/3}
+.note .by{font:600 11px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--on-black-2)}
+.note .tx:empty::before{content:"Olhando as peças com você…";color:var(--on-black-dim)}
+.results .meta-line{font:600 12px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin:14px 0 0}
+.results .again,.results .close{font:inherit;letter-spacing:inherit;text-transform:inherit;background:none;border:0;color:var(--ink);cursor:pointer;padding:6px 0;text-decoration:underline;text-underline-offset:3px}
+.skel{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,44vw),1fr));gap:20px;margin-top:26px}
+.skel i{aspect-ratio:3/4;background:linear-gradient(100deg,var(--stone) 40%,#fff 50%,var(--stone) 60%) 0/300% 100%;animation:sh 1.2s linear infinite}
 @keyframes sh{to{background-position:-150% 0}}
-.thinking{display:flex;align-items:center;gap:10px;color:var(--ink-2);margin:12px 0 22px}
-.thinking::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--pink);animation:pulse 1s var(--ease) infinite alternate}
-@keyframes pulse{to{transform:scale(1.6);opacity:.4}}
+.thinking{display:flex;align-items:center;gap:10px;color:var(--ink-2);margin:16px 0 0;font-weight:500}
+.thinking::before{content:"";width:9px;height:9px;background:var(--orange);animation:blink .8s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
 
-/* lend */
-.lend-cta{background:var(--sun);color:var(--sun-ink);margin-top:clamp(48px,7vw,96px);padding:clamp(48px,7vw,104px) 0}
-.lend-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(28px,5vw,80px);align-items:center}
-.lend-cta h2{font:500 clamp(2.4rem,5.2vw,4.6rem)/1 var(--sans);letter-spacing:-.035em;color:var(--ink)}
-.lend-cta h2 em{color:var(--pink)}
-.lend-cta p{max-width:46ch;font-size:18px;margin:18px 0 28px}
-.calc{background:#fff;color:var(--ink);border-radius:28px;padding:clamp(24px,3vw,40px);box-shadow:0 30px 60px -30px oklch(0.4 0.1 90/.5)}
-.calc label{font:600 15px var(--sans);color:var(--ink-2)}
-.calc .worth{display:block;font:500 clamp(2.4rem,4vw,3.4rem)/1.1 var(--sans);letter-spacing:-.03em;margin:4px 0 14px}
-.calc input{width:100%;accent-color:var(--pink);height:28px}
-.calc .res{font-size:17px;margin:18px 0 10px;color:var(--ink)}
-.calc .res b{color:var(--cobalt)}
+/* lender band */
+.lend-cta{background:var(--black);color:#fff;margin-top:clamp(56px,8vw,112px);padding:clamp(56px,8vw,112px) 0}
+.lend-cta .k{color:var(--on-black-2)}
+.lend-cta .hb .dim{color:var(--on-black-dim)}
+.lend-cta .lede{margin:22px 0 30px}
+.lend-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:clamp(32px,5vw,96px);align-items:center}
+.calc{background:#fff;color:var(--ink);padding:clamp(24px,3vw,40px);border:1px solid var(--ink)}
+.calc label{font:600 12px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+.calc .worth{display:block;font:800 clamp(2.6rem,4.6vw,4rem)/1.05 var(--sans);letter-spacing:-.03em;margin:8px 0 16px}
+.calc input{width:100%;accent-color:var(--orange);height:28px}
+.calc .res{font-size:17px;margin:18px 0 12px;padding-top:16px;border-top:1px solid var(--line)}
+.calc .res b{color:var(--orange)}
 .calc .fine{margin:0}
 
-.how{margin-top:clamp(56px,7vw,104px);margin-bottom:clamp(56px,7vw,104px)}
-.how ol{list-style:none;counter-reset:s;padding:0;margin:28px 0 0;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(16px,3vw,48px)}
-.how li{counter-increment:s;font-size:17px;color:var(--ink-2);padding-top:18px;border-top:2px solid var(--ink)}
-.how li::before{content:counter(s);display:block;font:500 44px/1 var(--serif);font-style:italic;color:var(--pink);margin-bottom:12px}
-.how li b{display:block;color:var(--ink);font-size:19px;margin-bottom:4px}
-.how .btn{margin-top:36px}
+/* timeline, after the deck */
+.how{margin-top:clamp(64px,9vw,128px);margin-bottom:clamp(64px,9vw,128px)}
+.tl{list-style:none;padding:0;margin:44px 0 0;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:28px}
+.tl li{position:relative;padding-top:30px;border-top:1px solid var(--ink);color:var(--ink-2)}
+.tl li i{position:absolute;top:-7px;left:0;width:13px;height:13px;background:var(--ink)}
+.tl li:last-child i{background:var(--orange)}
+.tl .n{display:block;font:600 13px var(--sans);color:var(--dim);margin-bottom:6px}
+.tl b{display:block;font:700 21px/1.2 var(--sans);color:var(--ink);margin-bottom:6px}
+.tl p{margin:0;font-size:16px;max-width:28ch}
+.how .l-actions{margin-top:44px}
+
+/* explore other cities */
+.explore{padding:clamp(56px,8vw,104px) 0;border-top:1px solid var(--line)}
+.explore .hb{margin-bottom:32px}
+.cities-rail{grid-auto-columns:minmax(220px,19vw)}
+.cc{position:relative;display:block;aspect-ratio:3/4;overflow:hidden;background:var(--black);color:#fff;text-decoration:none}
+.cc img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.8;transition:transform 1.2s var(--ease),opacity .4s}
+.cc:hover img{transform:scale(1.04);opacity:.65}
+.cc::after{content:"";position:absolute;inset:40% 0 0;background:linear-gradient(transparent,oklch(0 0 0/.75))}
+.cc-t{position:absolute;z-index:1;left:0;right:0;bottom:0;padding:18px;display:grid;gap:4px}
+.cc-t b{font:500 clamp(18px,1.7vw,24px)/1.1 var(--sans);font-stretch:125%;text-transform:uppercase;letter-spacing:.01em}
+.cc-t span{font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:oklch(0.85 0 0)}
+.cc[aria-current]{outline:3px solid var(--orange);outline-offset:-3px}
+.cc.all{background:var(--orange)}
+.cc.all::after{display:none}
+.cc.all:hover{background:var(--ink)}
 
 /* pdp */
-.pdp{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:clamp(24px,4vw,64px);padding-top:clamp(20px,3vw,40px);align-items:start}
-.gallery{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.gallery img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:16px;background:var(--mist)}
-.gallery img:first-child{grid-column:1/3}
-.info{position:sticky;top:90px}
-.info .brand{margin:0 0 8px}
-.info h1{font:500 clamp(2rem,3.6vw,3.2rem)/1.02 var(--sans);letter-spacing:-.03em}
-.price{font-size:18px;margin:16px 0}
-.price b{font-size:26px}
-.price span{color:var(--ink-2);font-size:15px}
-.where{display:grid;grid-template-columns:18px 1fr;gap:10px;align-items:start;padding:14px 16px;border-radius:14px;background:var(--mist);font-size:15px}
-.where.near{background:color-mix(in oklch,var(--sun) 55%,#fff)}
-.where svg{width:18px;height:18px;margin-top:3px;fill:none;stroke:var(--cobalt);stroke-width:2}
+.pdp{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:clamp(24px,4vw,72px);padding-top:clamp(20px,3vw,40px);align-items:start}
+.gallery{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+.zoom{display:block;padding:0;border:0;background:var(--stone);cursor:zoom-in}
+.gallery img{width:100%;aspect-ratio:3/4;object-fit:cover}
+.zoom:first-child{grid-column:1/3}
+.lightbox{width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:var(--black);color:#fff}
+.lightbox::backdrop{background:var(--black)}
+.lb-track{display:flex;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.lb-track img{flex:none;width:100%;height:100%;object-fit:contain;scroll-snap-align:center}
+.lightbox button{position:fixed;display:grid;place-items:center;width:52px;height:52px;border:1px solid oklch(1 0 0/.3);background:var(--black);color:#fff;cursor:pointer}
+.lightbox button:hover{border-color:#fff}
+.lightbox button svg{width:22px;height:22px;stroke-width:1.8}
+.lb-x{top:16px;right:16px}
+.lb-prev{left:16px;top:50%;translate:0 -50%}.lb-next{right:16px;top:50%;translate:0 -50%}
+.lb-n{position:fixed;top:16px;left:16px;margin:0;padding:15px 16px;background:var(--black);font:600 12px var(--sans);letter-spacing:.16em}
+.info{position:sticky;top:96px}
+.info .hb{font-size:clamp(1.8rem,3vw,2.7rem)}
+.price{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin:22px 0;padding:18px 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--line)}
+.price b{font:800 34px/1 var(--sans);letter-spacing:-.02em}
+.price span{color:var(--ink-2)}
+.where{display:grid;grid-template-columns:20px 1fr;gap:10px;align-items:start;margin:0;padding:16px;background:var(--stone);font-size:15px}
+.where.near{background:var(--ink);color:#fff}
+.where.near small{color:var(--on-black-2)}
+.where svg{width:20px;height:20px;margin-top:1px;color:var(--orange)}
 .where small{display:block;font-size:14px;color:var(--ink-2);margin-top:2px}
-.info dl{margin:20px 0;display:grid;gap:0}
+.info dl{margin:16px 0 24px}
 .info dl div{display:grid;grid-template-columns:150px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
-.info dt{color:var(--ink-2);font-size:14px}.info dd{margin:0;font-weight:500}
-.btn.rent{width:100%;background:var(--pink);color:#fff;font-size:16px;min-height:56px}
-.btn.rent:hover{background:var(--cobalt)}
+.info dt{font:600 11px/1.9 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
+.info dd{margin:0;font-weight:500}
+.btn.rent{width:100%;background:var(--ink);color:#fff;min-height:60px}
+.btn.rent:hover{background:var(--orange)}
 .buybar{display:none}
-.similar{margin:clamp(56px,7vw,104px) auto}
-.similar h2{margin-bottom:24px}
+.similar{margin:clamp(64px,8vw,112px) auto}
+.similar .hb{margin-bottom:28px}
 
-/* lender */
-.l-hero{background:var(--cobalt-deep);color:#fff;padding:clamp(40px,6vw,96px) 0}
-.l-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:clamp(24px,5vw,80px);align-items:center}
-.l-hero h1{font:500 clamp(2.6rem,6vw,5.4rem)/.98 var(--sans);letter-spacing:-.035em}
-.l-hero h1 em{color:var(--sun);display:block}
-.l-actions{display:flex;flex-wrap:wrap;gap:12px}
-.l-hero .btn.ink{background:var(--sun);color:var(--sun-ink)}
-.l-hero .btn.ink:hover{background:#fff}
-.map{margin:0}
-.flow{margin:0;font:500 16px/1.15 var(--serif);font-style:italic;color:color-mix(in oklch,#fff 78%,var(--cobalt))}
-.flow span{display:inline-block;font-size:calc(var(--s)*1em);margin:0 .28em .12em 0;animation:rise .8s var(--ease) backwards}
-.flow span.big{color:var(--sun)}
-.flow sup{font:600 .38em var(--sans);font-style:normal;color:var(--pink);margin-left:.15em;vertical-align:.9em}
-.map figcaption{font-size:14px;color:color-mix(in oklch,#fff 80%,var(--cobalt));margin-top:8px}
-.benefits{margin-top:clamp(56px,7vw,104px)}
-.b-list{display:grid;grid-template-columns:repeat(2,1fr);gap:clamp(24px,4vw,56px) clamp(24px,5vw,80px);margin-top:32px}
-.b-list h3{font:500 22px/1.2 var(--sans);letter-spacing:-.01em;margin-bottom:8px}
-.b-list h3::before{content:"";display:block;width:28px;height:4px;border-radius:2px;background:var(--pink);margin-bottom:14px}
-.b-list p{margin:0;color:var(--ink-2);max-width:48ch}
-.brands{margin-top:clamp(56px,7vw,104px)}
-.brand-list{font:500 clamp(22px,2.6vw,34px)/1.4 var(--serif);font-style:italic;margin-top:20px}
-.brand-list span{color:var(--pink)}
-.nf{min-height:60vh;padding-top:80px}.nf h1{font:500 clamp(2.4rem,5vw,4rem)/1 var(--sans);letter-spacing:-.03em}.nf h1 em{color:var(--pink)}
+/* lender page */
+.l-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.roles{margin-top:clamp(64px,9vw,128px)}
+.roles .hb{max-width:22ch}
+.cols{display:grid;grid-template-columns:repeat(3,1fr);margin-top:44px;border-top:1px solid var(--ink)}
+.cols>div{display:flex;gap:18px;padding:28px 28px 8px 0}
+.cols>div+div{padding-left:28px;border-left:1px solid var(--line)}
+.ib{flex:none;display:grid;place-items:center;width:54px;height:54px;border:1px solid var(--ink)}
+.ib svg{width:24px;height:24px}
+.k2{margin:0 0 6px;font:600 11px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+.cols b{font:700 21px/1.25 var(--sans)}
+.yield{background:var(--stone);margin-top:clamp(64px,9vw,128px);padding:clamp(56px,8vw,104px) 0}
+.y-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:clamp(32px,5vw,96px);align-items:end}
+.tl-label{margin:40px 0 0;font:600 12px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+.bars{width:100%;border-collapse:collapse;margin:12px 0 14px}
+.bars th{text-align:left;font-weight:400;font-size:16px;color:var(--ink-2);padding:13px 12px 13px 0;width:46%}
+.bars td{padding:13px 0;border-top:1px solid var(--line)}
+.bars th{border-top:1px solid var(--line)}
+.bars td i{display:block;height:14px;width:var(--w);background:oklch(0.72 0 0)}
+.bars .v{text-align:right;font-weight:700;width:76px;font-variant-numeric:tabular-nums}
+.bars .y-avg th{color:var(--ink);font-weight:700}.bars .y-avg i{background:var(--ink)}
+.bars .y-top th,.bars .y-top td{border-top:1px solid var(--ink)}
+.bars .y-top th{color:var(--ink);font-weight:800}
+.bars .y-top i{background:var(--orange);height:26px}
+.bars .y-top .v{font-size:28px;font-weight:600}
+.brands{background:var(--black);color:#fff;padding:clamp(56px,8vw,104px) 0}
+.brands .k{color:var(--on-black-2)}
+.brand-list{margin:0;font:500 clamp(22px,2.8vw,40px)/1.35 var(--sans);font-stretch:125%;text-transform:uppercase}
+.brand-list i{display:inline-block;width:.32em;height:.32em;background:var(--orange);margin:0 .5em;vertical-align:.18em}
+.lender-page .explore{border-top:0}
+.nf{min-height:60vh;padding-top:80px}.nf .btn{margin-top:32px}
 
 /* footer */
-.foot{background:var(--ink);color:#fff;padding:56px 0 40px}
-.foot p{max-width:60ch}
-.foot nav{display:flex;flex-wrap:wrap;gap:8px 22px;margin:20px 0}
-.foot nav a{text-decoration:none;color:color-mix(in oklch,#fff 80%,var(--ink))}
+.foot{background:var(--black);color:#fff;padding:64px 0 44px}
+.foot .logo img{width:150px}
+.tagline{font-size:20px;color:var(--on-black-2);margin:22px 0 0}.tagline b{color:#fff;font-weight:600}
+.foot nav{display:flex;flex-wrap:wrap;gap:10px 26px;margin:30px 0;padding-top:22px;border-top:1px solid var(--rule-dark)}
+.foot nav a{font:600 12px var(--sans);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--on-black-2)}
 .foot nav a:hover{color:#fff}
-.foot .fine{color:color-mix(in oklch,#fff 62%,var(--ink))}
+.foot .fine{color:var(--on-black-dim)}
 
-@media (max-width:900px){
-  .hero{grid-template-columns:1fr;padding-top:24px;gap:24px}
-  .hero-art{order:-1;display:flex;height:auto;gap:10px;overflow-x:auto;margin:0 calc(-1*var(--gut));padding:0 var(--gut);scroll-snap-type:x mandatory;scrollbar-width:none}
-  .hero-art .f{flex:none;width:42vw;aspect-ratio:3/4;scroll-snap-align:start;transform:none!important}
-  .hero-art .f0{width:56vw}
-  .lede{margin:14px 0 20px}
-  .lend-grid,.l-grid,.pdp{grid-template-columns:1fr}
-  .how ol{grid-template-columns:1fr}
-  .b-list{grid-template-columns:1fr}
+@media (max-width:960px){
+  .hero{grid-template-columns:1fr;min-height:0}
+  .hero-art{order:-1;display:flex;gap:2px;overflow-x:auto;min-height:0;scroll-snap-type:x mandatory;scrollbar-width:none}
+  .hero-art .f{flex:none;width:44vw;aspect-ratio:4/5;scroll-snap-align:start}
+  .hero-art .f0{width:44vw}
+  .hero-art.one .f{width:100%;aspect-ratio:4/3}
+  .hero-copy{padding-top:28px;padding-bottom:36px}
+  .lend-grid,.y-grid,.pdp{grid-template-columns:1fr}
+  .tl{grid-auto-flow:row;grid-auto-columns:auto;gap:0;border-left:1px solid var(--ink);margin-left:6px}
+  .tl li{border-top:0;padding:0 0 26px 26px}
+  .tl li i{top:4px;left:-7px}
+  .cols{grid-template-columns:1fr}
+  .cols>div+div{padding-left:0;border-left:0;border-top:1px solid var(--line)}
   .info{position:static}
   .pdp-page{padding-bottom:84px}
-  .buybar{display:flex;align-items:center;justify-content:space-between;gap:12px;position:fixed;left:0;right:0;bottom:0;z-index:15;padding:12px var(--gut) calc(12px + env(safe-area-inset-bottom));background:#fff;box-shadow:0 -10px 30px -12px oklch(0.2 0.05 264/.25);font-size:15px}
-  .buybar b{font-size:20px}
-  .buybar .btn.rent{width:auto;min-height:48px}
-  .note{font-size:17px}
-  .gallery{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 calc(-1*var(--gut));padding:0 var(--gut);gap:8px;scrollbar-width:none}
-  .gallery img{flex:none;width:82vw;scroll-snap-align:center}
+  .buybar{display:flex;align-items:center;justify-content:space-between;gap:12px;position:fixed;left:0;right:0;bottom:0;z-index:15;padding:10px var(--gut) calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--ink);font-size:14px;color:var(--ink-2)}
+  .buybar b{font-size:22px;color:var(--ink);margin-right:4px}
+  .buybar .btn.rent{width:auto;min-height:50px}
+  .gallery{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 calc(-1*var(--gut));scrollbar-width:none}
+  .zoom{flex:none;width:86vw;scroll-snap-align:center}
+  .lb-prev,.lb-next{display:none!important}
   .rail{grid-auto-columns:46vw}
-  .filters{top:58px;flex-wrap:nowrap;overflow-x:auto;margin:0 calc(-1*var(--gut));padding:10px var(--gut);scrollbar-width:none}
+  .cities-rail{grid-auto-columns:58vw}
+  .filters{flex-wrap:nowrap;overflow-x:auto;margin:0 calc(-1*var(--gut)) 18px;padding:10px var(--gut);scrollbar-width:none}
   .filters button{flex:none}
   .filters .count{display:none}
+  .note{font-size:16px}
 }
-@media (max-width:520px){
-  .logo{font-size:23px}
-  .top{gap:8px}
-  .top nav a{padding:8px 11px;font-size:13px}
-  .city{padding:0 10px 0 8px;font-size:13px;max-width:44vw}
+@media (max-width:560px){
+  .top{gap:8px;height:60px}
+  .filters{top:60px}
+  .logo img{width:104px}
+  .city{padding:0 10px;letter-spacing:.06em;max-width:42vw}
   .city span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .top nav a{padding:0 11px;letter-spacing:.06em;font-size:11px}
+  .hero-foot{flex-direction:column;gap:8px}
   .info dl div{grid-template-columns:120px 1fr}
+  .bars th{width:52%;font-size:14px}
 }
 @media (prefers-reduced-motion:reduce){*,*::before{animation:none!important;transition:none!important}}
 `;
 
-/** The only client code: filters, the ask box, the placeholder, the calculator. No framework. */
-const CLIENT = `
+/** The only client code: filters, the stylist box, the placeholder, the calculator. No framework. */
+export const CLIENT = `
 (()=>{
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const grid=$('#grid');
@@ -556,7 +687,7 @@ if(grid){
 const form=$('.ask'),box=$('#busca');
 if(form&&box){
   const input=$('#q'),ph=JSON.parse(input.dataset.ph||'[]');let k=0;
-  const tick=setInterval(()=>{if(document.activeElement===input||input.value)return;k=(k+1)%ph.length;input.placeholder='Ex.: '+ph[k]},3200);
+  const tick=setInterval(()=>{if(document.activeElement===input||input.value)return;k=(k+1)%ph.length;input.placeholder='Conte a ocasião: '+ph[k]},3200);
   const city=form.cidade.value;
   let seq=0;
   const run=async q=>{
@@ -564,18 +695,18 @@ if(form&&box){
     clearInterval(tick);input.value=q;
     const u=new URL(location.href);u.searchParams.set('q',q);history.replaceState(null,'',u);
     box.hidden=false;
-    box.innerHTML='<p class="kick">Separando peças para</p><h2><em>“'+q.replace(/[<&]/g,'')+'”</em></h2><p class="thinking">Procurando nos closets…</p><div class="skel">'+'<i></i>'.repeat(8)+'</div>';
+    box.innerHTML='<p class="k"><i></i>Personal stylist</p><h2 class="hb">'+q.replace(/[<&]/g,'')+'</h2><p class="thinking">Procurando nos closets…</p><div class="skel">'+'<i></i>'.repeat(8)+'</div>';
     box.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
     try{
       const r=await fetch('/api/busca?q='+encodeURIComponent(q)+'&cidade='+city);
       if(my!==seq)return;
       if(r.status===429){box.querySelector('.thinking').textContent='Muitas buscas seguidas. Tenta de novo em um minuto?';return}
       box.innerHTML=await r.text();
-      const note=$('.note',box);
-      if(note){const n=await fetch('/api/nota?q='+encodeURIComponent(q)+'&cidade='+city).then(r=>r.ok?r.text():'').catch(()=>'');if(my===seq)note.textContent=n||'';if(!n)note.remove()}
       const a=$('.again',box);if(a)a.onclick=()=>{scrollTo({top:0,behavior:'smooth'});input.select();input.focus({preventScroll:true})};
       const x=$('.close',box);if(x)x.onclick=()=>{box.hidden=true;const u=new URL(location.href);u.searchParams.delete('q');history.replaceState(null,'',u)};
-    }catch{box.querySelector('.thinking').textContent='Não consegui buscar agora. Tenta de novo?'}
+      const note=$('.note .tx',box);
+      if(note){const n=await fetch('/api/nota?q='+encodeURIComponent(q)+'&cidade='+city).then(r=>r.ok?r.text():'').catch(()=>'');if(my!==seq)return;if(n)note.textContent=n;else note.parentElement.remove()}
+    }catch{const t=box.querySelector('.thinking');if(t)t.textContent='Não consegui buscar agora. Tenta de novo?'}
   };
   form.onsubmit=e=>{e.preventDefault();run(input.value)};
   $$('.chips button').forEach(b=>b.onclick=()=>run(b.dataset.q));
@@ -586,16 +717,28 @@ for(const c of $$('.calc')){
   const up=()=>{const v=+inp.value;$('.worth',c).textContent=f(v);$('.rent',c).textContent=f(v*r);$('.times',c).textContent=Math.ceil(1/r)};
   inp.oninput=up;up();
 }
+const lb=$('.lightbox');
+if(lb){
+  const tr=$('.lb-track',lb),n=tr.children.length,at=()=>Math.round(tr.scrollLeft/tr.clientWidth);
+  const go=i=>tr.scrollTo({left:Math.max(0,Math.min(n-1,i))*tr.clientWidth,behavior:'smooth'});
+  $$('.zoom').forEach(b=>b.onclick=()=>{lb.showModal();tr.scrollLeft=+b.dataset.i*tr.clientWidth});
+  tr.onscroll=()=>{$('.lb-n',lb).textContent=(at()+1)+' / '+n};
+  $('.lb-x',lb).onclick=()=>lb.close();
+  $('.lb-prev',lb).onclick=()=>go(at()-1);$('.lb-next',lb).onclick=()=>go(at()+1);
+  lb.addEventListener('keydown',e=>{if(e.key==='ArrowRight')go(at()+1);if(e.key==='ArrowLeft')go(at()-1)});
+  lb.addEventListener('close',()=>$$('.zoom')[at()]?.focus());
+}
 const pop=$('#cities');if(pop)pop.addEventListener('toggle',e=>{if(e.newState==='open')$('a[aria-current]',pop)?.focus()});
 })();
 `;
 
 export function resultsFragment(q: string, picks: Piece[], ctx: Ctx, fallback: boolean): string {
+  const head = `${kick("Personal stylist")}<h2 class="hb">${esc(q)}`;
   if (!picks.length)
-    return `<p class="kick">Busquei por</p><h2><em>“${esc(q)}”</em></h2><p class="note">Não achei nada que combine de verdade. Tenta descrever a ocasião, a cor ou o clima da festa.</p><button class="close" type="button">Fechar busca</button>`;
+    return `${head}<span class="dim">Nada combinou de verdade.</span></h2><p class="meta-line">Tenta descrever a ocasião, a cor ou o clima da festa · <button class="close" type="button">fechar</button></p>`;
   const near = ctx.hub ? picks.filter((p) => p.hub === ctx.hub!.city).length : 0;
-  return `<p class="kick">Separei para</p><h2><em>“${esc(q)}”</em></h2>
-<p class="fine">${picks.length} peças${ctx.hub && near ? `, ${near} em ${esc(ctx.hub.city)}` : ""}${fallback ? " · busca simples, a curadoria está fora do ar" : ""} · <button class="again" type="button">nova busca</button> · <button class="close" type="button">fechar</button></p>
-${fallback ? "" : '<p class="note"></p>'}
+  return `${head}<span class="dim">${picks.length} peças${ctx.hub && near ? `, ${near} em ${esc(ctx.hub.city)}` : ""}.</span></h2>
+<p class="meta-line">${fallback ? "Busca simples, a stylist está fora do ar · " : ""}<button class="again" type="button">Nova busca</button> · <button class="close" type="button">Fechar</button></p>
+${fallback ? "" : '<div class="note"><span class="by">Nina · stylist da Circulei</span><span class="tx"></span></div>'}
 <div class="grid">${picks.map((p, i) => card(p, ctx, i)).join("")}</div>`;
 }
