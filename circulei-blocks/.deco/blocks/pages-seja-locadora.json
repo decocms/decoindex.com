@@ -1,0 +1,162 @@
+{
+  "name": "Seja locadora",
+  "__resolveType": "website/pages/Page.tsx",
+  "path": "/seja-locadora",
+  "seo": {
+    "__resolveType": "website/sections/Seo/SeoV2.tsx",
+    "title": "Invista seu closet · Circulei",
+    "description": "O closet parado vira renda, e a peça vira ativo. Aporte suas peças na Circulei.",
+    "type": "website",
+    "noIndexing": true
+  },
+  "sections": [
+    {
+      "__resolveType": "site/sections/Header.tsx",
+      "cta": "Quero circular",
+      "ctaHref": "/seja-locadora"
+    },
+    {
+      "__resolveType": "site/sections/LenderHero.tsx",
+      "kicker": "Moda como ativo",
+      "title": "Invista seu closet",
+      "ledeStrong": "O closet parado vira renda,",
+      "lede": "e a peça vira ativo.",
+      "cta": "Aportar minhas peças",
+      "ctaHref": "https://aporte-sua-peca.circulei.co/",
+      "cta2": "Falar no WhatsApp",
+      "cta2Href": "https://wa.me/message/NFYDMJGPIXVEI1"
+    },
+    {
+      "__resolveType": "site/sections/Roles.tsx",
+      "kicker": "O que fazemos",
+      "title": "Toda mulher tem dinheiro parado no armário.",
+      "dim": "A Circulei faz ele render.",
+      "roles": [
+        {
+          "label": "Quem tem closet",
+          "text": "Ganha renda com a peça parada.",
+          "icon": "carteira"
+        },
+        {
+          "label": "Quem aluga",
+          "text": "Veste a peça que quer por uma fração do preço.",
+          "icon": "sacola"
+        },
+        {
+          "label": "Você decide",
+          "text": "Prova, ajustes e o tamanho que ela veste.",
+          "icon": "grafico"
+        }
+      ]
+    },
+    {
+      "__resolveType": "site/sections/Yield.tsx",
+      "kicker": "Moda como ativo",
+      "title": "A peça curada rende.",
+      "dim": "Mais que o CDI.",
+      "caption": "Rendimento anual sobre o custo da peça",
+      "rows": [
+        {
+          "label": "IFIX (fundos imobiliários)",
+          "value": 5.1
+        },
+        {
+          "label": "IMA-B (títulos IPCA+)",
+          "value": 13.8
+        },
+        {
+          "label": "CDI",
+          "value": 14.6
+        },
+        {
+          "label": "Média das peças do site",
+          "value": 50.8,
+          "emphasis": "média"
+        },
+        {
+          "label": "Carteira curada da Circulei",
+          "value": 207,
+          "emphasis": "principal"
+        }
+      ],
+      "fine": "Bruto, sobre o custo da peça. Números da Circulei. Não é promessa de retorno."
+    },
+    {
+      "__resolveType": "site/sections/HowItWorks.tsx",
+      "kicker": "Como funciona",
+      "title": "Do armário ao repasse.",
+      "dim": "Em cinco passos.",
+      "steps": [
+        {
+          "title": "Cadastro",
+          "text": "Você manda fotos e medidas pelo formulário."
+        },
+        {
+          "title": "Curadoria",
+          "text": "Só 1 em cada 3 peças entra, com preço por peças comparáveis."
+        },
+        {
+          "title": "Reserva",
+          "text": "A cliente reserva com até cinco meses de antecedência e paga na hora."
+        },
+        {
+          "title": "Aluguel",
+          "text": "A peça viaja com nota fiscal do valor, pra todo o Brasil."
+        },
+        {
+          "title": "Repasse",
+          "text": "Você recebe no mês seguinte, e a peça volta a girar."
+        }
+      ],
+      "actions": [
+        {
+          "label": "Aportar minhas peças",
+          "href": "https://aporte-sua-peca.circulei.co/",
+          "style": "dark"
+        },
+        {
+          "label": "Critérios de curadoria",
+          "href": "https://www.circulei.co/pages/criterios-de-curadoria",
+          "style": "line"
+        }
+      ]
+    },
+    {
+      "__resolveType": "site/sections/Brands.tsx",
+      "kicker": "Já circulam por aqui"
+    },
+    {
+      "__resolveType": "site/sections/ExploreCities.tsx",
+      "kicker": "Rede nacional de closets",
+      "title": "Explore outras cidades."
+    },
+    {
+      "__resolveType": "site/sections/Footer.tsx",
+      "taglineStrong": "O closet parado vira renda,",
+      "tagline": "e a peça vira ativo.",
+      "links": [
+        {
+          "label": "Como alugar",
+          "href": "https://www.circulei.co/pages/para-alugar"
+        },
+        {
+          "label": "Perguntas frequentes",
+          "href": "https://www.circulei.co/pages/perguntas-frequentes"
+        },
+        {
+          "label": "Política de danos",
+          "href": "https://www.circulei.co/policies/refund-policy"
+        },
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/circulei"
+        },
+        {
+          "label": "WhatsApp",
+          "href": "https://wa.me/message/NFYDMJGPIXVEI1"
+        }
+      ],
+      "fine": "Protótipo de vitrine feito pela deco sobre o catálogo público da Circulei. Reservas e pagamentos acontecem em circulei.co."
+    }
+  ]
+}

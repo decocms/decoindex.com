@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "decoindex-circulei",
+  "main": "./src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "observability": { "enabled": true },
+
+  // A storefront proposal for circulei.co. Same account as decoindex and the shop.
+  "routes": [{ "pattern": "circulei.decoindex.com", "custom_domain": true }],
+  "workers_dev": true,
+  // Deck images (extracted from Circulei's PDF), served by the Worker behind the deck password.
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
+
+  // The catalog comes from decoindex over the first-party entrypoint, like the shop:
+  // one hourly rebuild (~12 reads) into KV, never on a visitor's request.
+  "services": [{ "binding": "INDEX", "service": "decoindex", "entrypoint": "FirstParty", "remote": true }],
+  // The shop's KV namespace, keys prefixed `circulei:` (snapshot, search scores, notes).
+  "kv_namespaces": [{ "binding": "KV", "id": "56ff82663dd749efb3b4c653cbfa3fbf" }],
+  // decoindex's events table, surface = 'circulei'.
+  "d1_databases": [{ "binding": "DB", "database_name": "decoindex", "database_id": "82dbbe9a-f533-44ca-bd4f-03d2c6a6ee0c" }],
+  "triggers": { "crons": ["17 * * * *"] },
+  // Each search is a paid Jev call (+ one Haiku note): a per-IP budget in front.
+  "ratelimits": [{ "name": "SEARCH_LIMIT", "namespace_id": "2003", "simple": { "limit": 12, "period": 60 } }],
+
+  "vars": {
+    "AI_GATEWAY_ACCOUNT_ID": "55dd6d847f366735ef6e0f860c7bdc51",
+    "AI_GATEWAY_NAME": "default",
+    "PRESELECT_MODEL": "~typesafe/jev-latest",
+    "NOTE_MODEL": "anthropic/claude-haiku-5.5"
+  }
+  // Secrets: wrangler secret put CF_AI_GATEWAY_TOKEN
+  //          wrangler secret put DECK_PASSWORD   (unset = /deck stays locked)
+}
