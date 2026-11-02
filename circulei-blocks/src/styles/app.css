@@ -327,7 +327,7 @@ section{scroll-margin-top:76px}
 .feature-copy .ask span{display:flex;border-bottom:1px solid var(--line)}
 .feature-copy .ask:focus-within span{border-bottom-color:var(--ink)}
 .feature-copy .ask:focus-within{outline:none}
-.feature-copy .ask input{height:42px;padding:0;font-size:15px}
+.feature-copy .ask input{height:42px;padding:0;font-size:16px}
 .feature-copy .ask button{width:36px;background:none;color:var(--ink-2)}
 @media (max-width:900px){
   .feature{grid-template-columns:1fr;padding-top:0}
