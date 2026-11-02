@@ -15,7 +15,7 @@ import { createDecoWorkerEntry } from "@decocms/tanstack";
 import { handleMeta, handleDecofileRead, handleDecofileReload, handleRender, corsHeaders } from "@decocms/blocks-admin";
 import circulei, { search } from "../../circulei/src/index";
 import type { Env } from "../../circulei/src/env";
-import { card, ctxFor } from "./server/view.server";
+import { card, ctxFor, pdp } from "./server/view.server";
 
 const decoWorker = createDecoWorkerEntry(createServerEntry({ fetch: handler.fetch }), {
   admin: { handleMeta, handleDecofileRead, handleDecofileReload, handleRender, corsHeaders },
@@ -51,6 +51,13 @@ export default {
       const { picks, fallback } = await search(env, c, q);
       const near = c.hub ? picks.filter((p) => p.hub === c.hub!.city).length : 0;
       return Response.json({ picks: picks.map((p) => card(p, c)), near, fallback, hub: c.hub?.city ?? null }, { headers: { "cache-control": "private, no-store" } });
+    }
+    // A piece's details for the drawer (the list stays on screen underneath).
+    if (path === "/api/peca") {
+      const site = req.headers.get("sec-fetch-site");
+      if (site && site !== "same-origin") return new Response("forbidden", { status: 403 });
+      const d = pdp(await ctxFor(req), url.searchParams.get("handle") ?? "");
+      return d ? Response.json(d.piece, { headers: { "cache-control": "private, max-age=60" } }) : new Response("not found", { status: 404 });
     }
     if (path.startsWith("/api/") || path === "/deck" || path.startsWith("/deck/") || path === "/robots.txt") return circulei.fetch(req, env, ctx);
 

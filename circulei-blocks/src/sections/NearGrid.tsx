@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card } from "~/components/ui";
+import { useQuietHistory } from "~/components/quietHistory";
 import type { CardData, Place } from "~/types";
 
 export interface Props {
@@ -25,11 +26,12 @@ export default function NearGrid({ pageSize = 12, place, sizes = [], cards = [],
   const [sz, setSz] = useState<string[]>(selected?.sizes ?? []);
   const [hs, setHs] = useState<string[]>(selected?.heights ?? []);
   const [limit, setLimit] = useState(Math.max(pageSize, shown0 ?? 0));
+  const quiet = useQuietHistory();
   const setUrl = (key: string, v: string | null) => {
     const u = new URL(location.href);
     if (v) u.searchParams.set(key, v);
     else u.searchParams.delete(key);
-    history.replaceState(history.state, "", u);
+    quiet(() => history.replaceState(history.state, "", u));
   };
   // Kept in the URL, so a piece's page and back (or a shared link) keep the same list.
   const toggle = (list: string[], set: (v: string[]) => void, v: string, key: string) => {

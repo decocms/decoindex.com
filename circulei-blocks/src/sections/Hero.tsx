@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Arrow, Card, brl, img, srcset } from "~/components/ui";
+import { openPiece } from "~/components/PieceDrawer";
+import { useQuietHistory } from "~/components/quietHistory";
 import type { CardData, Place } from "~/types";
 
 export interface Props {
@@ -43,6 +45,7 @@ export default function Hero({
   const seq = useRef(0);
   const box = useRef<HTMLElement>(null);
   const input = useRef<HTMLInputElement>(null);
+  const quiet = useQuietHistory();
 
   const run = async (text: string) => {
     const ask = text.trim();
@@ -54,7 +57,7 @@ export default function Hero({
     setNote(undefined);
     const u = new URL(location.href);
     u.searchParams.set("q", ask);
-    history.replaceState(history.state, "", u);
+    quiet(() => history.replaceState(history.state, "", u));
     requestAnimationFrame(() => box.current?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }));
     const qs = `q=${encodeURIComponent(ask)}&cidade=${hub?.slug ?? "brasil"}`;
     try {
@@ -82,7 +85,7 @@ export default function Hero({
     setRes(null);
     const u = new URL(location.href);
     u.searchParams.delete("q");
-    history.replaceState(history.state, "", u);
+    quiet(() => history.replaceState(history.state, "", u));
   };
 
   return (
@@ -90,7 +93,15 @@ export default function Hero({
       {/* One photo and a few words: the pieces are the hero. The stylist is offered, not shouted. */}
       <section className="feature">
         {feature ? (
-          <a className="feature-img" href={`/p/${feature.handle}`}>
+          <a
+            className="feature-img"
+            href={`/p/${feature.handle}`}
+            onClick={(e) => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+              const c = { ...feature, sizes: "", size: "", h: "", tag: null };
+              if (openPiece(c)) e.preventDefault();
+            }}
+          >
             <img src={img(feature.img, 1100)} srcSet={srcset(feature.img)} sizes="(min-width: 900px) 46vw, 100vw" alt={`${feature.title}, ${feature.brand}`} fetchPriority="high" decoding="async" />
           </a>
         ) : null}

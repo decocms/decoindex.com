@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import type { CardData } from "~/types";
+import { openPiece } from "~/components/PieceDrawer";
 
 export const brl = (cents: number) => `R$ ${Math.round(cents / 100).toLocaleString("pt-BR")}`;
 export const img = (u: string, w: number) => `${u}${u.includes("?") ? "&" : "?"}width=${w}`;
@@ -45,7 +46,16 @@ export const Arrow = () => (
 
 export function Card({ c, i = 0 }: { c: CardData; i?: number }) {
   return (
-    <a className="card" href={`/p/${c.handle}`} style={{ ["--i" as string]: i % 12 }}>
+    <a
+      className="card"
+      href={`/p/${c.handle}`}
+      style={{ ["--i" as string]: i % 12 }}
+      onClick={(e) => {
+        // A new tab or window keeps the plain link; otherwise the piece opens over the list.
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        if (openPiece(c)) e.preventDefault();
+      }}
+    >
       <span className="ph">
         <img
           src={img(c.img, 540)}
