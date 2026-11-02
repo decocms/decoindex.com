@@ -78,9 +78,8 @@ export function head(title: string, desc: string, image?: string): string {
 <title>${esc(title)}</title><meta name="description" content="${esc(desc)}">
 <meta name="robots" content="noindex"><meta name="theme-color" content="#ffffff">
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}">${image ? `<meta property="og:image" content="${esc(img(image, 1200))}">` : ""}
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="/fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preconnect" href="https://cdn.shopify.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&display=swap" rel="stylesheet">
 <link rel="icon" href="data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="#000"/><rect x="11" y="11" width="10" height="10" fill="#e0560e"/></svg>')}">
 <style>${CSS}</style></head>`;
 }
@@ -384,6 +383,7 @@ export function notFound(ctx: Ctx): string {
 }
 
 export const CSS = `
+@font-face{font-family:Archivo;font-style:normal;font-weight:300 900;font-stretch:62% 125%;font-display:swap;src:url(/fonts/archivo-latin.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 :root{
   --ink:oklch(0.13 0 0);--ink-2:oklch(0.44 0 0);--dim:oklch(0.64 0 0);--bg:oklch(1 0 0);--stone:oklch(0.96 0.004 85);--line:oklch(0.88 0 0);
   --black:oklch(0.08 0 0);--on-black-2:oklch(0.72 0 0);--on-black-dim:oklch(0.52 0 0);--rule-dark:oklch(0.3 0 0);
