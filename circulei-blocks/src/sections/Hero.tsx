@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Arrow, Card, brl, img, srcset } from "~/components/ui";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Arrow, CARD_SIZES, Card, brl, img, srcset } from "~/components/ui";
 import { openPiece } from "~/components/PieceDrawer";
 import { useQuietHistory } from "~/components/quietHistory";
 import type { CardData, Place } from "~/types";
@@ -22,6 +22,23 @@ export interface Props {
   count?: number;
 }
 
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** The first row's photos, fetched at the size the grid will ask for, so they land with the grid (capped). */
+const preload = (picks: CardData[]) =>
+  Promise.race([
+    Promise.all(
+      picks.slice(0, 4).map((c) => {
+        const im = new Image();
+        im.sizes = CARD_SIZES;
+        im.srcset = srcset(c.img);
+        im.src = img(c.img, 540);
+        return im.decode().catch(() => {});
+      }),
+    ),
+    wait(1200),
+  ]);
+
 interface Result {
   picks: CardData[];
   near: number;
@@ -40,7 +57,7 @@ export default function Hero({
   const where = hub ? hub.city : "todo o Brasil";
   const [q, setQ] = useState("");
   const [asked, setAsked] = useState<string | null>(null);
-  const [res, setRes] = useState<Result | "loading" | "error" | "busy" | null>(null);
+  const [res, setRes] = useState<Result | "loading" | "writing" | "error" | "busy" | null>(null);
   const [note, setNote] = useState<string | null | undefined>(undefined);
   const seq = useRef(0);
   const box = useRef<HTMLElement>(null);
@@ -65,18 +82,28 @@ export default function Hero({
       if (my !== seq.current) return;
       if (r.status === 429) return setRes("busy");
       const data = (await r.json()) as Result;
-      setRes(data);
-      if (data.fallback || !data.picks.length) return setNote(null);
-      const n = (await fetch(`/api/nota?${qs}&format=json`)
-        .then((x) => (x.status === 200 ? x.json() : null))
-        .catch(() => null)) as { text: string; cited: string[] } | null;
-      if (my !== seq.current) return;
-      setNote(n?.text || null);
-      // The pieces the note names go first, in the order it names them.
-      if (n?.cited.length) {
-        const rank = (h: string) => (n.cited.includes(h) ? n.cited.indexOf(h) : n.cited.length);
-        setRes({ ...data, picks: [...data.picks].sort((a, b) => rank(a.handle) - rank(b.handle)) });
+      if (data.fallback || !data.picks.length) {
+        await preload(data.picks);
+        if (my !== seq.current) return;
+        setNote(null);
+        return setRes(data);
       }
+      setRes("writing");
+      // The grid waits (a little) for the note, so it lands once, already in the order the note
+      // names its pieces: no second reshuffle under the visitor's eyes.
+      const nota = fetch(`/api/nota?${qs}&format=json`)
+        .then((x) => (x.status === 200 ? x.json() : null))
+        .catch(() => null) as Promise<{ text: string; cited: string[] } | null>;
+      const n = await Promise.race([nota, wait(4500).then(() => "late" as const)]);
+      const cited = n && n !== "late" ? n.cited : [];
+      const rank = (h: string) => (cited.includes(h) ? cited.indexOf(h) : cited.length);
+      const picks = [...data.picks].sort((a, b) => rank(a.handle) - rank(b.handle));
+      await preload(picks);
+      if (my !== seq.current) return;
+      setRes({ ...data, picks });
+      if (n !== "late") setNote(n?.text || null);
+      // Too slow: the grid shows as ranked and the words follow when they come, without reordering.
+      else nota.then((x) => my === seq.current && setNote(x?.text || null));
     } catch {
       if (my === seq.current) setRes("error");
     }
@@ -95,6 +122,34 @@ export default function Hero({
     u.searchParams.delete("q");
     quiet(() => history.replaceState(history.state, "", u));
   };
+
+  const pending = res === "loading" || res === "writing";
+
+  // The note box eases to its new height when the words change, so the grid under it glides instead of jumping.
+  const noteBox = useRef<HTMLDivElement>(null);
+  const noteH = useRef(0);
+  useLayoutEffect(() => {
+    const el = noteBox.current;
+    if (!el) return void (noteH.current = 0);
+    const h = el.offsetHeight;
+    if (noteH.current && noteH.current !== h && !matchMedia("(prefers-reduced-motion: reduce)").matches)
+      el.animate([{ height: `${noteH.current}px` }, { height: `${h}px` }], { duration: 450, easing: "cubic-bezier(.22,1,.36,1)" });
+    noteH.current = h;
+  });
+  const waiting = pending || note === undefined;
+  // What the note box says when it isn't the note itself (null = the note).
+  const say =
+    res === "loading"
+      ? "Procurando nos closets…"
+      : waiting
+        ? "Escolhendo as peças pra você…"
+        : note
+          ? null
+          : typeof res === "object" && res && !res.picks.length
+            ? "Nada combinou de verdade. Conta de outro jeito?"
+            : typeof res === "object" && res?.fallback
+              ? "A stylist está fora do ar agora. Estas são as peças que mais combinam com as palavras do pedido."
+              : "Estas são as peças que mais combinam com o pedido.";
 
   return (
     <>
@@ -147,60 +202,59 @@ export default function Hero({
         </div>
       </section>
 
-      <section id="busca" className="results" hidden={!asked} aria-live="polite" ref={box}>
+      {/* One frame from submit to answer: heading, a line of status, the note box and a row of
+          blank tiles hold their places; the answer fills them instead of replacing them. */}
+      <section id="busca" className="results" hidden={!asked} aria-live="polite" aria-busy={pending} ref={box}>
         {asked ? (
           <>
-            <h2 className="hb">
-              {asked}
-              {typeof res === "object" && res ? (
-                <span className="dim">
-                  {res.picks.length ? `${res.picks.length} peças${hub && res.near ? `, ${res.near} em ${hub.city}` : ""}.` : "Nada combinou de verdade."}
+            <h2 className="hb">{asked}</h2>
+            <p className="meta-line">
+              <button
+                className="again"
+                type="button"
+                onClick={() => {
+                  scrollTo({ top: 0, behavior: "smooth" });
+                  input.current?.select();
+                  input.current?.focus({ preventScroll: true });
+                }}
+              >
+                Nova busca
+              </button>{" "}
+              ·{" "}
+              <button className="close" type="button" onClick={close}>
+                Fechar
+              </button>
+            </p>
+            {res === "busy" || res === "error" ? (
+              <p className="note">
+                <span className="tx">{res === "busy" ? "Muitas buscas seguidas. Tenta de novo em um minuto?" : "Não consegui buscar agora. Tenta de novo?"}</span>
+              </p>
+            ) : (
+              <div className={`note${waiting ? " wait" : ""}`} ref={noteBox}>
+                <span className="by">
+                  Nina · {typeof res === "object" && res?.picks.length ? `${res.picks.length} peças${hub && res.near ? `, ${res.near} em ${hub.city}` : ""}` : "stylist da Circulei"}
                 </span>
-              ) : null}
-            </h2>
-            {res === "loading" ? (
-              <>
-                <p className="thinking">Procurando nos closets…</p>
-                <div className="skel">
-                  {Array.from({ length: 8 }, (_, i) => (
-                    <i key={i} />
-                  ))}
-                </div>
-              </>
-            ) : res === "busy" || res === "error" ? (
-              <p className="thinking">{res === "busy" ? "Muitas buscas seguidas. Tenta de novo em um minuto?" : "Não consegui buscar agora. Tenta de novo?"}</p>
-            ) : res ? (
-              <>
-                <p className="meta-line">
-                  {res.fallback ? "Busca simples, a stylist está fora do ar · " : ""}
-                  <button
-                    className="again"
-                    type="button"
-                    onClick={() => {
-                      scrollTo({ top: 0, behavior: "smooth" });
-                      input.current?.select();
-                      input.current?.focus({ preventScroll: true });
-                    }}
-                  >
-                    Nova busca
-                  </button>{" "}
-                  ·{" "}
-                  <button className="close" type="button" onClick={close}>
-                    Fechar
-                  </button>
-                </p>
-                {note !== null && res.picks.length && !res.fallback ? (
-                  <div className="note">
-                    <span className="by">Nina · stylist da Circulei</span>
-                    <span className="tx">{note ?? ""}</span>
+                <span className="tx" key={say ?? "nota"}>
+                  {say ?? note}
+                </span>
+              </div>
+            )}
+            {pending ? (
+              <div className="grid skel" aria-hidden="true">
+                {Array.from({ length: 4 }, (_, i) => (
+                  <div key={i} style={{ ["--i" as string]: i }}>
+                    <i />
+                    <b />
+                    <b />
                   </div>
-                ) : null}
-                <div className="grid">
-                  {res.picks.map((c, i) => (
-                    <Card key={c.handle} c={c} i={i} list={asked} />
-                  ))}
-                </div>
-              </>
+                ))}
+              </div>
+            ) : typeof res === "object" && res?.picks.length ? (
+              <div className="grid" key={asked}>
+                {res.picks.map((c, i) => (
+                  <Card key={c.handle} c={c} i={i} list={asked} />
+                ))}
+              </div>
             ) : null}
           </>
         ) : null}

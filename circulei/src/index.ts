@@ -128,7 +128,7 @@ export default {
       }
       if (path === "/api/nota") {
         // { text, cited }: cited = the handles the note names, in order, which the grid puts first.
-        const key = `circulei:note:v2:${await sha(`${q.toLowerCase()}|${ctx.hub?.city ?? ""}`)}`;
+        const key = `circulei:note:v3:${await sha(`${q.toLowerCase()}|${ctx.hub?.city ?? ""}`)}`;
         let note = await env.KV.get<{ text: string; cited: string[] }>(key, "json");
         if (!note) {
           const { picks, fallback } = await search(env, ctx, q);
