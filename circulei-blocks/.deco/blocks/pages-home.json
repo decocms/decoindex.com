@@ -1,0 +1,109 @@
+{
+  "name": "Home",
+  "__resolveType": "website/pages/Page.tsx",
+  "path": "/",
+  "seo": {
+    "__resolveType": "website/sections/Seo/SeoV2.tsx",
+    "title": "Circulei · Alugue roupas incríveis perto de você",
+    "description": "Peças de closets de mulheres de 40 cidades, pra alugar por 4 dias. A dona ganha a cada aluguel.",
+    "type": "website",
+    "noIndexing": true
+  },
+  "sections": [
+    {
+      "__resolveType": "site/sections/Header.tsx",
+      "cta": "Quero circular",
+      "ctaHref": "/seja-locadora"
+    },
+    {
+      "__resolveType": "site/sections/Hero.tsx",
+      "headline": "Alugue roupas incríveis perto de você",
+      "stylistLabel": "Personal stylist",
+      "occasions": [
+        "casamento na praia, não curto decote",
+        "formatura à noite",
+        "festa de fim de ano",
+        "réveillon na praia",
+        "madrinha de casamento",
+        "noiva no civil",
+        "jantar de aniversário"
+      ]
+    },
+    {
+      "__resolveType": "site/sections/NearGrid.tsx",
+      "kicker": "Perto de você"
+    },
+    {
+      "__resolveType": "site/sections/AwayRail.tsx",
+      "kicker": "Envio pra todo o Brasil",
+      "title": "De outros closets."
+    },
+    {
+      "__resolveType": "site/sections/LenderBand.tsx",
+      "kicker": "Moda como ativo",
+      "title": "Toda mulher tem dinheiro parado no armário.",
+      "dim": "A Circulei faz ele render.",
+      "ledeStrong": "Você aporta a peça,",
+      "lede": "a Circulei cuida da curadoria, da vitrine e de quem aluga, e você recebe no mês seguinte.",
+      "cta": "Quero circular",
+      "ctaHref": "/seja-locadora"
+    },
+    {
+      "__resolveType": "site/sections/HowItWorks.tsx",
+      "kicker": "Como funciona",
+      "title": "Alugar é simples.",
+      "dim": "E a peça volta a girar.",
+      "steps": [
+        {
+          "title": "Escolha",
+          "text": "Veja tamanho, medidas da dona e onde a peça está. Muitas aceitam prova."
+        },
+        {
+          "title": "Reserve",
+          "text": "Escolha as datas no calendário da peça, com até cinco meses de antecedência."
+        },
+        {
+          "title": "Receba",
+          "text": "Motoboy na mesma cidade. Pro resto do Brasil, a peça viaja com nota fiscal."
+        },
+        {
+          "title": "Devolva",
+          "text": "Use, brilhe e devolva. A peça volta a girar."
+        }
+      ]
+    },
+    {
+      "__resolveType": "site/sections/ExploreCities.tsx",
+      "kicker": "Rede nacional de closets",
+      "title": "Explore outras cidades."
+    },
+    {
+      "__resolveType": "site/sections/Footer.tsx",
+      "taglineStrong": "O closet parado vira renda,",
+      "tagline": "e a peça vira ativo.",
+      "links": [
+        {
+          "label": "Como alugar",
+          "href": "https://www.circulei.co/pages/para-alugar"
+        },
+        {
+          "label": "Perguntas frequentes",
+          "href": "https://www.circulei.co/pages/perguntas-frequentes"
+        },
+        {
+          "label": "Política de danos",
+          "href": "https://www.circulei.co/policies/refund-policy"
+        },
+        {
+          "label": "Instagram",
+          "href": "https://www.instagram.com/circulei"
+        },
+        {
+          "label": "WhatsApp",
+          "href": "https://wa.me/message/NFYDMJGPIXVEI1"
+        }
+      ],
+      "fine": "Protótipo de vitrine feito pela deco sobre o catálogo público da Circulei. Reservas e pagamentos acontecem em circulei.co."
+    }
+  ]
+}
