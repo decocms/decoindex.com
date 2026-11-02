@@ -28,7 +28,7 @@ const html = (body: string, extra: Record<string, string> = {}, status = 200) =>
     headers: { "content-type": "text/html; charset=utf-8", "x-robots-tag": "noindex", "cache-control": "private, max-age=0", ...extra },
   });
 
-async function log(env: Env, req: Request, name: string, meta: Record<string, unknown>) {
+export async function log(env: Env, req: Request, name: string, meta: Record<string, unknown>) {
   if (!env.DB) return;
   const ua = req.headers.get("user-agent") ?? "";
   const cls = /decoshop-dev/i.test(ua) || new URL(req.url).searchParams.get("utm_source") === "test" ? "dev" : /bot|crawl|spider|preview|fetch/i.test(ua) ? "bot" : "browser";
@@ -127,13 +127,16 @@ export default {
         return html(resultsFragment(q, picks, ctx, fallback));
       }
       if (path === "/api/nota") {
-        const key = `circulei:note:v1:${await sha(`${q.toLowerCase()}|${ctx.hub?.city ?? ""}`)}`;
-        const cached = await env.KV.get(key);
-        if (cached !== null) return new Response(cached, { headers: { "content-type": "text/plain; charset=utf-8" } });
-        const { picks, fallback } = await search(env, ctx, q);
-        const note = fallback || !picks.length ? null : await stylistNote(env, q, ctx.hub?.city ?? "algum lugar do Brasil", picks);
-        if (note) ectx.waitUntil(env.KV.put(key, note, { expirationTtl: 86_400 }));
-        return new Response(note ?? "", { status: note ? 200 : 204, headers: { "content-type": "text/plain; charset=utf-8" } });
+        // { text, cited }: cited = the handles the note names, in order, which the grid puts first.
+        const key = `circulei:note:v2:${await sha(`${q.toLowerCase()}|${ctx.hub?.city ?? ""}`)}`;
+        let note = await env.KV.get<{ text: string; cited: string[] }>(key, "json");
+        if (!note) {
+          const { picks, fallback } = await search(env, ctx, q);
+          note = fallback || !picks.length ? null : await stylistNote(env, q, ctx.hub?.city ?? "algum lugar do Brasil", picks);
+          if (note) ectx.waitUntil(env.KV.put(key, JSON.stringify(note), { expirationTtl: 86_400 }));
+        }
+        if (url.searchParams.get("format") === "json") return note ? Response.json(note) : new Response(null, { status: 204 });
+        return new Response(note?.text ?? "", { status: note ? 200 : 204, headers: { "content-type": "text/plain; charset=utf-8" } });
       }
       return new Response("not found", { status: 404 });
     }

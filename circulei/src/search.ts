@@ -56,25 +56,27 @@ export function keywordScores(ask: string, pieces: Piece[]): Record<string, numb
   );
 }
 
-/** Two or three sentences from a stylist who has just looked at the picks. Null on any failure: the grid stands alone. */
-export async function stylistNote(env: Env, ask: string, city: string, picks: Piece[]): Promise<string | null> {
+/**
+ * Two short sentences from a stylist who has just looked at the picks, plus which of them she cites,
+ * in the order she cites them: the grid puts those first, so the pieces named in the text are the
+ * ones on top. Null on any failure: the grid stands alone.
+ */
+export async function stylistNote(env: Env, ask: string, city: string, picks: Piece[]): Promise<{ text: string; cited: string[] } | null> {
   try {
-    const list = picks
-      .slice(0, 6)
-      .map((p) => `- ${p.title} (${p.brand}, tam ${p.size || "?"}, ${p.city}, R$ ${Math.round((p.daily * 4) / 100)} por 4 dias)`)
-      .join("\n");
+    const top = picks.slice(0, 8);
+    const list = top.map((p, i) => `${i + 1}. ${p.title} (${p.brand}, tam ${p.size || "?"}, ${p.city})`).join("\n");
     const res = await fetch(`${GATEWAY(env)}/chat/completions`, {
       method: "POST",
       headers: { "content-type": "application/json", "cf-aig-metadata": JSON.stringify({ app: "circulei" }), ...auth(env) },
       body: JSON.stringify({
         model: env.NOTE_MODEL || "anthropic/claude-haiku-5.5",
         reasoning: { enabled: false },
-        max_tokens: 220,
+        max_tokens: 300,
         temperature: 0.6,
         messages: [
           {
             role: "user",
-            content: `Você é a curadora da Circulei, aluguel de roupas entre mulheres. Uma cliente em ${city} pediu: "${ask.slice(0, 300)}".\nEstas são as peças que separei:\n${list}\n\nEscreva no máximo 2 frases curtas (até 45 palavras no total), calorosas e específicas, em português do Brasil, comentando a escolha (cite 1 ou 2 peças pelo nome e por que funcionam pra ocasião). Sem saudação, sem emoji, sem preço, sem markdown.`,
+            content: `Você é a curadora da Circulei, aluguel de roupas entre mulheres. Uma cliente em ${city} pediu: "${ask.slice(0, 300)}".\nEstas são as peças que separei:\n${list}\n\nEscreva no máximo 2 frases curtas (até 45 palavras no total), calorosas e específicas, em português do Brasil, comentando a escolha: cite 1 ou 2 peças pelo nome e por que funcionam pra ocasião. Sem saudação, sem emoji, sem preço, sem markdown.\nResponda só JSON: {"nota":"...","citadas":[números das peças citadas, na ordem em que aparecem na nota]}`,
           },
         ],
       }),
@@ -82,8 +84,14 @@ export async function stylistNote(env: Env, ask: string, city: string, picks: Pi
     });
     if (!res.ok) throw new Error(`note ${res.status}`);
     const out = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-    const text = out.choices?.[0]?.message?.content?.trim();
-    return text ? text.slice(0, 500) : null;
+    const raw = out.choices?.[0]?.message?.content?.trim() ?? "";
+    const json = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "null") as { nota?: unknown; citadas?: unknown } | null;
+    const text = typeof json?.nota === "string" ? json.nota.trim() : "";
+    if (!text) return null;
+    const cited = (Array.isArray(json?.citadas) ? json.citadas : [])
+      .map((n) => top[Number(n) - 1]?.handle)
+      .filter((h, i, a): h is string => !!h && a.indexOf(h) === i);
+    return { text: text.slice(0, 500), cited };
   } catch (err) {
     console.error("note failed", String(err).slice(0, 200));
     return null;

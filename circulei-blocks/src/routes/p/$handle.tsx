@@ -136,7 +136,7 @@ function Pdp() {
           <Hb dim="No seu tamanho, perto de você.">Combina com você.</Hb>
           <div className="grid">
             {similar.map((c, i) => (
-              <Card key={c.handle} c={c} i={i} />
+              <Card key={c.handle} c={c} i={i} list={`Parecidas com ${p.title}`} />
             ))}
           </div>
         </section>

@@ -61,15 +61,19 @@ export function hubs(ctx: Ctx, covers = false): HubLink[] {
 export const local = (ctx: Ctx) => showcase(ctx.hub ? ctx.snap.pieces.filter((p) => p.hub === ctx.hub!.city) : ctx.snap.pieces);
 export const away = (ctx: Ctx) => showcase(ctx.hub ? ctx.snap.pieces.filter((p) => p.hub !== ctx.hub!.city) : []);
 
-export function hero(ctx: Ctx) {
+/**
+ * One photo on top. The first piece from `featured` (picked in Studio) that is in this city; else
+ * the city's most luxurious worn dress. A mix of backgrounds side by side read as amateur.
+ */
+export function hero(ctx: Ctx, featured: string[] = []) {
   const l = local(ctx);
-  const dresses = l.filter((p) => /^vestido/i.test(p.title));
-  const picks = [...(dresses.length >= 3 ? dresses : l)]
-    .sort((a, b) => +!!b.height - +!!a.height || b.images.length - a.images.length || b.daily - a.daily)
-    .slice(0, 3)
-    .map((p) => ({ handle: p.handle, title: p.title, brand: p.brand, img: p.images[0] ?? "", price4: p.daily * 4 }));
-  const fromRent = Math.min(...(dresses.length ? dresses : l).map((p) => p.daily * 4));
-  return { place: place(ctx), count: l.length, fromRent, picks };
+  const dresses = l.filter((p) => /^vestido/i.test(p.title) && p.height && p.images.length > 1);
+  const p = featured.map((h) => l.find((x) => x.handle === h)).find(Boolean) ?? [...(dresses.length ? dresses : l)].sort((a, b) => b.daily - a.daily)[0];
+  return {
+    place: place(ctx),
+    count: l.length,
+    feature: p ? { handle: p.handle, title: p.title, brand: p.brand, img: p.images[0] ?? "", price4: p.daily * 4 } : null,
+  };
 }
 
 export function near(ctx: Ctx) {

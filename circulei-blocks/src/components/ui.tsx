@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from "react";
 import type { CardData } from "~/types";
+import { openPiece } from "~/components/PieceDrawer";
+import { toggleFav, useIsFav } from "~/sdk/favorites";
 
 export const brl = (cents: number) => `R$ ${Math.round(cents / 100).toLocaleString("pt-BR")}`;
 export const img = (u: string, w: number) => `${u}${u.includes("?") ? "&" : "?"}width=${w}`;
@@ -43,31 +45,66 @@ export const Arrow = () => (
   </svg>
 );
 
-export function Card({ c, i = 0 }: { c: CardData; i?: number }) {
+/** The favorite toggle, as in the shop: outline when not saved, filled when saved. */
+export function Heart({ c, list, className = "" }: { c: CardData; list: string; className?: string }) {
+  const on = useIsFav(c.handle);
   return (
-    <a className="card" href={`/p/${c.handle}`} style={{ ["--i" as string]: i % 12 }}>
-      <span className="ph">
-        <img
-          src={img(c.img, 540)}
-          srcSet={srcset(c.img)}
-          sizes="(min-width: 1100px) 22vw, (min-width: 700px) 30vw, 46vw"
-          alt={`${c.title}, ${c.brand}`}
-          loading={i < 4 ? "eager" : "lazy"}
-          decoding="async"
-        />
-        {c.alt ? <img className="alt" src={img(c.alt, 540)} alt="" loading="lazy" decoding="async" /> : null}
-        {c.tag ? <span className={`tag${c.tag.near ? " near" : ""}`}>{c.tag.label}</span> : null}
-      </span>
-      <span className="meta">
-        <span className="brand">{c.brand}</span>
-        <span className="title">{c.title}</span>
-        <span className="row">
-          <b>{brl(c.price4)}</b>
-          <span>4 dias</span>
-          {c.size ? <span className="size">{c.size}</span> : null}
+    <button
+      type="button"
+      className={`heart${on ? " on" : ""} ${className}`}
+      aria-pressed={on}
+      aria-label={on ? "Remover dos favoritos" : "Favoritar"}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleFav(c, list);
+      }}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 20s-7-4.4-9.2-8.6C1.3 8.5 3 5 6.4 5c2 0 3.3 1.1 4.1 2.3h3c.8-1.2 2.1-2.3 4.1-2.3 3.4 0 5.1 3.5 3.6 6.4C19 15.6 12 20 12 20z" />
+      </svg>
+    </button>
+  );
+}
+
+/** `list`: where a heart pressed here saves the piece (the search, or the city on screen). */
+export function Card({ c, i = 0, list = "Favoritos" }: { c: CardData; i?: number; list?: string }) {
+  return (
+    <div className="card" style={{ ["--i" as string]: i % 12 }}>
+      <a
+        className="card-link"
+        href={`/p/${c.handle}`}
+        onClick={(e) => {
+          // A new tab or window keeps the plain link; otherwise the piece opens over the list.
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+          if (openPiece(c, list)) e.preventDefault();
+        }}
+      >
+        <span className="ph">
+          <img
+            src={img(c.img, 540)}
+            srcSet={srcset(c.img)}
+            sizes="(min-width: 1100px) 24vw, (min-width: 700px) 32vw, 48vw"
+            alt={`${c.title}, ${c.brand}`}
+            loading={i < 4 ? "eager" : "lazy"}
+            decoding="async"
+          />
+          {c.alt ? <img className="alt" src={img(c.alt, 540)} alt="" loading="lazy" decoding="async" /> : null}
         </span>
-      </span>
-    </a>
+        <span className="meta">
+          <span className="title">{c.title}</span>
+          <span className="row">
+            {c.brand} · {brl(c.price4)} / 4 dias
+          </span>
+          <span className="loc">
+            {c.size ? `Tam. ${c.size}` : ""}
+            {c.size && c.tag ? " · " : ""}
+            {c.tag?.label ?? ""}
+          </span>
+        </span>
+      </a>
+      <Heart c={c} list={list} />
+    </div>
   );
 }
 

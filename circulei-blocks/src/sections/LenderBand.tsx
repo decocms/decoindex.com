@@ -39,7 +39,7 @@ export default function LenderBand({
           <p className="lede">
             <b>{ledeStrong}</b> {lede}
           </p>
-          <a className="btn light" href={ctaHref}>
+          <a className="btn dark" href={ctaHref}>
             {cta} <Arrow />
           </a>
         </div>

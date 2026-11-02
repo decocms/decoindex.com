@@ -19,14 +19,8 @@
       "__resolveType": "site/sections/Hero.tsx",
       "headline": "Alugue roupas incríveis perto de você",
       "stylistLabel": "Personal stylist",
-      "occasions": [
-        "casamento na praia, não curto decote",
-        "formatura à noite",
-        "festa de fim de ano",
-        "réveillon na praia",
-        "madrinha de casamento",
-        "noiva no civil",
-        "jantar de aniversário"
+      "featured": [
+        "vestido-corset-zimmermann"
       ]
     },
     {

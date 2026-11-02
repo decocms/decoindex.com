@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext } from "@tanstack/react-router";
 import { DecoRootLayout } from "@decocms/tanstack";
+import { PieceDrawer } from "~/components/PieceDrawer";
 // Inlined: one less render-blocking request (the plain Worker inlines it too).
 // @ts-ignore Vite ?inline import
 import appCss from "../styles/app.css?inline";
@@ -49,5 +50,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 // browser's own restoration is the right one: STILL puts it back to "auto" on pagehide, which is when
 // the browser records it for the entry being left.
 function Root() {
-  return <DecoRootLayout siteName="circulei" lang="pt-BR" />;
+  return (
+    <DecoRootLayout siteName="circulei" lang="pt-BR">
+      <PieceDrawer />
+    </DecoRootLayout>
+  );
 }
