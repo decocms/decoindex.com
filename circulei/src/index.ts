@@ -2,13 +2,13 @@ import { rebuild, snapshot, type Piece, type Snapshot } from "./catalog";
 import type { Env } from "./env";
 import { km } from "./geo";
 import { deck, deckLogin } from "./deck";
-import { home, lender, notFound, pdp, resultsFragment, type Ctx } from "./html";
+import { home, lender, notFound, pdp, reach, resultsFragment, type Ctx } from "./html";
 import { keywordScores, scoreAll, sha, stylistNote } from "./search";
 
 const COOKIE = "circulei_cidade";
 
 /** The visitor's city: their own pick (query, then cookie), else the hub nearest to where Cloudflare places them. */
-function context(req: Request, snap: Snapshot): Ctx {
+export function context(req: Request, snap: Snapshot): Ctx {
   const url = new URL(req.url);
   const cf = (req as { cf?: IncomingRequestCfProperties }).cf;
   const lat = Number(cf?.latitude), lng = Number(cf?.longitude);
@@ -42,7 +42,7 @@ async function log(env: Env, req: Request, name: string, meta: Record<string, un
 }
 
 /** Jev scores, cached per ask (they do not depend on the city); ranked with a nudge for pieces nearby. */
-async function search(env: Env, ctx: Ctx, q: string): Promise<{ picks: Piece[]; fallback: boolean }> {
+export async function search(env: Env, ctx: Ctx, q: string): Promise<{ picks: Piece[]; fallback: boolean }> {
   const key = `circulei:q:v1:${await sha(q.toLowerCase().trim())}`;
   let scores = await env.KV.get<Record<string, number>>(key, "json");
   let fallback = false;
@@ -119,6 +119,11 @@ export default {
         const t = Date.now();
         const { picks, fallback } = await search(env, ctx, q);
         ectx.waitUntil(log(env, req, "circulei.search", { q, hub: ctx.hub?.city ?? "brasil", n: picks.length, fallback, ms: Date.now() - t }));
+        // The TanStack version renders cards itself: same results, as data.
+        if (url.searchParams.get("format") === "json") {
+          const near = ctx.hub ? picks.filter((p) => p.hub === ctx.hub!.city).length : 0;
+          return Response.json({ picks: picks.map((p) => ({ ...p, text: undefined, reach: reach(p, ctx) })), near, fallback, hub: ctx.hub?.city ?? null });
+        }
         return html(resultsFragment(q, picks, ctx, fallback));
       }
       if (path === "/api/nota") {
