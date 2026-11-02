@@ -43,7 +43,7 @@ function assertCleanMarkdown(body, path) {
 
 const VTEX_PDP =
   "/farmrio.com.br/copo-quencher-stanley-destiny-x-farm-rio-887ml-multicolorido-374774-2276/p";
-const SHOPIFY_PDP = "/allbirds.com/products/mens-strider-explore";
+const SHOPIFY_PDP = "/allbirds.com/products/mens-tree-runners-jet-black";
 
 await check("landing page renders", async () => {
   const { res, body } = await get("/");

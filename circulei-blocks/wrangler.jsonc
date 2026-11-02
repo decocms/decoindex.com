@@ -6,8 +6,9 @@
   "compatibility_flags": ["nodejs_compat", "no_handle_cross_request_promise_resolution"],
   "observability": { "enabled": true },
 
-  // The TanStack Start + deco blocks version of circulei/, deployed side by side to compare.
-  // Same bindings as circulei/: same KV snapshot, same search cache, same events table.
+  // circulei.decoindex.com. The TanStack Start + deco blocks version of circulei/, with the same
+  // bindings: same KV snapshot (rebuilt by circulei/'s cron), same search cache, same events table.
+  "routes": [{ "pattern": "circulei.decoindex.com", "custom_domain": true }],
   "workers_dev": true,
   "services": [{ "binding": "INDEX", "service": "decoindex", "entrypoint": "FirstParty", "remote": true }],
   "kv_namespaces": [{ "binding": "KV", "id": "56ff82663dd749efb3b4c653cbfa3fbf" }],

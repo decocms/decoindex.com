@@ -1,6 +1,9 @@
 # circulei — a storefront proposal for circulei.co
 
-`circulei.decoindex.com`: a city-first storefront for Circulei (peer-to-peer
+`circulei.decoindex.com` is now served by `../circulei-blocks/` (TanStack + deco blocks), which
+imports this code. This Worker keeps the hourly catalog cron and lives at decoindex-circulei.deco-ceo.workers.dev.
+
+Originally: a city-first storefront for Circulei (peer-to-peer
 fashion rental, Shopify) built on decoindex. A proposal for the founders, not
 their production site: `noindex`, every rental goes to circulei.co with
 `?ref=decoindex`.
