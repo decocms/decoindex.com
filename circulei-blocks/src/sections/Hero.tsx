@@ -188,6 +188,8 @@ export default function Hero({
             role="search"
             onSubmit={(e) => {
               e.preventDefault();
+              // Close the phone keyboard first: the page resizing under a smooth scroll is what jumped.
+              input.current?.blur();
               run(q);
             }}
           >
