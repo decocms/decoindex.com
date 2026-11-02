@@ -1,8 +1,11 @@
 # circulei-blocks: circulei/ on TanStack Start + deco blocks
 
 The same storefront as `circulei/` (read that AGENTS.md first), rebuilt the way deco sites are
-built, so Circulei can edit it in deco Studio. Deployed side by side for comparison:
-https://decoindex-circulei-blocks.deco-ceo.workers.dev (no custom domain yet).
+built, so Circulei can edit it in deco Studio. **This is circulei.decoindex.com** since Nov 1 2026.
+The plain Worker (`circulei/`) still runs the hourly catalog cron and stays up for comparison at
+https://decoindex-circulei.deco-ceo.workers.dev.
+
+Not on Workers Builds: `npm run build && npx wrangler deploy` from this folder.
 
 ## What is shared and what is not
 

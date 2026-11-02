@@ -3011,6 +3011,32 @@
             "nullable": true,
             "hide": "true",
             "title": "Cards"
+          },
+          "selected": {
+            "type": "object",
+            "properties": {
+              "sizes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "title": "Sizes"
+              },
+              "heights": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "title": "Heights"
+              }
+            },
+            "required": [
+              "sizes",
+              "heights"
+            ],
+            "nullable": true,
+            "hide": "true",
+            "title": "Selected"
           }
         }
       },
