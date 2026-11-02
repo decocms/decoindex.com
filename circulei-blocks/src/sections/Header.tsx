@@ -3,9 +3,9 @@ import { Logo, Pin } from "~/components/ui";
 import type { HubLink, Place } from "~/types";
 
 export interface Props {
-  /** @title Texto do botão */
+  /** @title Texto do link */
   cta?: string;
-  /** @title Link do botão */
+  /** @title Link */
   ctaHref?: string;
   /** @hide */
   place?: Place;
@@ -13,6 +13,7 @@ export interface Props {
   hubs?: HubLink[];
 }
 
+/** Quiet bar, as on circulei.co: city on the left, wordmark centered, one text link on the right. */
 export default function Header({ cta = "Quero circular", ctaHref = "/seja-locadora", place, hubs = [] }: Props) {
   const label = place?.hub ? place.hub.city : "Brasil todo";
   const pop = useRef<HTMLDivElement>(null);
@@ -26,13 +27,13 @@ export default function Header({ cta = "Quero circular", ctaHref = "/seja-locado
   }, []);
   return (
     <header className="top">
-      <a className="logo" href="/" aria-label="Circulei, início">
-        <Logo />
-      </a>
       <button className="city" popoverTarget="cities" aria-label={`Cidade: ${label}. Trocar`}>
         <Pin />
         <span>{label}</span>
       </button>
+      <a className="logo" href="/" aria-label="Circulei, início">
+        <Logo />
+      </a>
       <nav>
         <a href={ctaHref} className="lend">
           {cta}

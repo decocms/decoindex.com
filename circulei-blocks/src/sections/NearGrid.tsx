@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Card, Hb, Kick } from "~/components/ui";
+import { Card } from "~/components/ui";
 import type { CardData, Place } from "~/types";
 
 export interface Props {
-  /** @title Rótulo */
-  kicker?: string;
+  /** @title Peças por vez */
+  pageSize?: number;
   /** @hide */
   place?: Place;
   /** @hide */
@@ -13,32 +13,41 @@ export interface Props {
   cards?: CardData[];
   /** @hide */
   selected?: { sizes: string[]; heights: string[] };
+  /** @hide */
+  shown?: number;
 }
 
 const HEIGHTS: [string, string][] = [["a", "até 1,59"], ["b", "1,60–1,64"], ["c", "1,65–1,69"], ["d", "1,70+"]];
 
-/** The pieces in the city on screen, with size and height filters. */
-export default function NearGrid({ kicker = "Perto de você", place, sizes = [], cards = [], selected }: Props) {
+/** The pieces in the city on screen: big photos, a few at a time, size and height filters kept in the URL. */
+export default function NearGrid({ pageSize = 12, place, sizes = [], cards = [], selected, shown: shown0 }: Props) {
   const hub = place?.hub ?? null;
   const [sz, setSz] = useState<string[]>(selected?.sizes ?? []);
   const [hs, setHs] = useState<string[]>(selected?.heights ?? []);
+  const [limit, setLimit] = useState(Math.max(pageSize, shown0 ?? 0));
+  const setUrl = (key: string, v: string | null) => {
+    const u = new URL(location.href);
+    if (v) u.searchParams.set(key, v);
+    else u.searchParams.delete(key);
+    history.replaceState(history.state, "", u);
+  };
   // Kept in the URL, so a piece's page and back (or a shared link) keep the same list.
   const toggle = (list: string[], set: (v: string[]) => void, v: string, key: string) => {
     const next = list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
     set(next);
-    const u = new URL(location.href);
-    if (next.length) u.searchParams.set(key, next.join(","));
-    else u.searchParams.delete(key);
-    history.replaceState(history.state, "", u);
+    setLimit(pageSize);
+    setUrl(key, next.length ? next.join(",") : null);
+    setUrl("mais", null);
   };
-  const shown = cards.filter((c) => (!sz.length || sz.some((s) => c.sizes.split(",").includes(s))) && (!hs.length || hs.includes(c.h)));
+  const match = cards.filter((c) => (!sz.length || sz.some((s) => c.sizes.split(",").includes(s))) && (!hs.length || hs.includes(c.h)));
+  const visible = match.slice(0, limit);
   return (
     <section className="near wrap" id="perto">
-      <div className="sec-head">
-        <Kick>{kicker}</Kick>
-        <Hb dim={!hub ? "Escolha uma cidade pra ver o que está perto." : place?.here ? "Pra provar e receber aqui perto." : `Motoboy dentro de ${hub.city}. Pra você, enviamos.`}>
-          {hub ? `Nos closets de ${hub.city}.` : "Nos closets do Brasil."}
-        </Hb>
+      <div className="bar">
+        <h2>{hub ? `Nos closets de ${hub.city}` : "Nos closets do Brasil"}</h2>
+        <span className="count" aria-live="polite">
+          {match.length} {match.length === 1 ? "peça" : "peças"}
+        </span>
       </div>
       <div className="filters" role="group" aria-label="Filtrar">
         <span className="fl">Tamanho</span>
@@ -53,16 +62,28 @@ export default function NearGrid({ kicker = "Perto de você", place, sizes = [],
             {l}
           </button>
         ))}
-        <output className="count" aria-live="polite">
-          {shown.length} {shown.length === 1 ? "peça" : "peças"}
-        </output>
       </div>
       <div className="grid" id="grid">
-        {shown.map((c, i) => (
+        {visible.map((c, i) => (
           <Card key={c.handle} c={c} i={i} />
         ))}
       </div>
-      {shown.length ? null : (
+      {match.length > limit ? (
+        <p className="more-wrap">
+          <button
+            type="button"
+            className="btn line"
+            onClick={() => {
+              const next = limit + pageSize;
+              setLimit(next);
+              setUrl("mais", String(next));
+            }}
+          >
+            Ver mais peças
+          </button>
+        </p>
+      ) : null}
+      {match.length ? null : (
         <p className="empty">
           Nenhuma peça com esse filtro aqui. <a href="/?cidade=brasil#perto">Ver o Brasil todo</a>: tudo chega por envio.
         </p>

@@ -50,21 +50,22 @@ export function Card({ c, i = 0 }: { c: CardData; i?: number }) {
         <img
           src={img(c.img, 540)}
           srcSet={srcset(c.img)}
-          sizes="(min-width: 1100px) 22vw, (min-width: 700px) 30vw, 46vw"
+          sizes="(min-width: 1100px) 24vw, (min-width: 700px) 32vw, 48vw"
           alt={`${c.title}, ${c.brand}`}
           loading={i < 4 ? "eager" : "lazy"}
           decoding="async"
         />
         {c.alt ? <img className="alt" src={img(c.alt, 540)} alt="" loading="lazy" decoding="async" /> : null}
-        {c.tag ? <span className={`tag${c.tag.near ? " near" : ""}`}>{c.tag.label}</span> : null}
       </span>
       <span className="meta">
-        <span className="brand">{c.brand}</span>
         <span className="title">{c.title}</span>
         <span className="row">
-          <b>{brl(c.price4)}</b>
-          <span>4 dias</span>
-          {c.size ? <span className="size">{c.size}</span> : null}
+          {c.brand} · {brl(c.price4)} / 4 dias
+        </span>
+        <span className="loc">
+          {c.size ? `Tam. ${c.size}` : ""}
+          {c.size && c.tag ? " · " : ""}
+          {c.tag?.label ?? ""}
         </span>
       </span>
     </a>

@@ -1,7 +1,7 @@
 :root{
   --ink:oklch(0.13 0 0);--ink-2:oklch(0.44 0 0);--dim:oklch(0.64 0 0);--bg:oklch(1 0 0);--stone:oklch(0.96 0.004 85);--line:oklch(0.88 0 0);
   --black:oklch(0.08 0 0);--on-black-2:oklch(0.72 0 0);--on-black-dim:oklch(0.52 0 0);--rule-dark:oklch(0.3 0 0);
-  --orange:oklch(0.63 0.19 42);
+  --accent:oklch(0.34 0 0);
   --sans:Archivo,ui-sans-serif,system-ui,sans-serif;
   --gut:clamp(16px,4vw,56px);--ease:cubic-bezier(.22,1,.36,1);
   color-scheme:light;
@@ -15,29 +15,30 @@ h1,h2,h3{text-wrap:balance;margin:0}
 p{text-wrap:pretty}
 svg{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .wrap{max-width:1360px;margin:0 auto;padding:0 var(--gut)}
-.k{display:flex;align-items:center;gap:10px;margin:0 0 18px;font:600 12px/1 var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
-.k i{width:9px;height:9px;background:var(--orange);flex:none}
+.k{display:flex;align-items:center;gap:10px;margin:0 0 14px;font:500 11px/1 var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2)}
+.k i{display:none}
 .hero-copy,.wrap{container-type:inline-size}
 .hw{font:500 clamp(1.5rem,8cqi,3.7rem)/1.04 var(--sans);font-stretch:125%;letter-spacing:.01em;text-transform:uppercase}
-.hb{font:800 clamp(1.9rem,3.6vw,3.3rem)/1.02 var(--sans);letter-spacing:-.025em;text-transform:uppercase}
+.hb{font:500 clamp(1.25rem,2.1vw,1.75rem)/1.2 var(--sans);font-stretch:112%;letter-spacing:.04em;text-transform:uppercase}
 .hb .dim{display:block;color:var(--dim)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:52px;padding:0 24px;font:600 14px var(--sans);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;border:1px solid transparent;cursor:pointer;transition:background .2s,color .2s,border-color .2s}
 .btn svg{width:18px;height:18px;stroke-width:2;transition:transform .3s var(--ease)}
 .btn:hover svg{transform:translateX(3px)}
-.btn.dark{background:var(--ink);color:#fff}.btn.dark:hover{background:var(--orange)}
-.btn.light{background:#fff;color:var(--ink)}.btn.light:hover{background:var(--orange);color:#fff}
+.btn.dark{background:var(--ink);color:#fff}.btn.dark:hover{background:var(--accent)}
+.btn.light{background:#fff;color:var(--ink)}.btn.light:hover{background:var(--accent);color:#fff}
 .btn.ghost{border-color:currentColor;color:#fff}.btn.ghost:hover{background:#fff;color:var(--ink)}
 .btn.line{border-color:var(--ink)}.btn.line:hover{background:var(--ink);color:#fff}
 .fine{font-size:13px;color:var(--ink-2)}
 
 /* header */
-.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;padding:0 var(--gut);height:68px;background:#fff;border-bottom:1px solid var(--line)}
-.logo img{width:132px;height:auto}
-.city{display:inline-flex;align-items:center;gap:8px;margin-left:auto;height:40px;padding:0 14px;border:1px solid var(--line);background:#fff;color:var(--ink);font:600 12px var(--sans);letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
-.city:hover{border-color:var(--ink)}
+.top{position:sticky;top:0;z-index:20;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;padding:0 var(--gut);height:72px;background:#fff;border-bottom:1px solid var(--line)}
+.top nav{justify-self:end}
+.logo img{width:150px;height:auto}
+.city{justify-self:start;display:inline-flex;align-items:center;gap:8px;height:40px;padding:0;border:0;background:none;color:var(--ink);font:600 12px var(--sans);letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+.city:hover span{text-decoration:underline;text-underline-offset:4px}
 .city svg{width:16px;height:16px}
-.top nav a{display:inline-flex;align-items:center;height:40px;padding:0 16px;font:600 12px var(--sans);letter-spacing:.12em;text-transform:uppercase;text-decoration:none;background:var(--ink);color:#fff;white-space:nowrap}
-.top nav a:hover{background:var(--orange)}
+.top nav a{display:inline-flex;align-items:center;height:40px;font:600 12px var(--sans);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--ink);white-space:nowrap}
+.top nav a:hover{text-decoration:underline;text-underline-offset:4px}
 .cities{margin:0;inset:auto;top:76px;right:var(--gut);left:auto;position:fixed;width:min(380px,calc(100vw - 2*var(--gut)));max-height:min(72vh,600px);overflow:auto;padding:8px;border:1px solid var(--ink);background:#fff;color:var(--ink);box-shadow:0 30px 60px -20px oklch(0 0 0/.3)}
 .cities .hint{margin:8px 12px 12px;font-size:13px;color:var(--ink-2)}
 .cities a{display:flex;justify-content:space-between;gap:12px;padding:12px;text-decoration:none;font-weight:600;border-top:1px solid var(--line)}
@@ -55,14 +56,14 @@ svg{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-l
 .lede b{color:#fff;font-weight:600}
 .stylist{margin-top:clamp(28px,4vw,44px);padding-top:clamp(22px,3vw,30px);border-top:1px solid var(--rule-dark);max-width:600px}
 .stylist label{display:flex;align-items:center;gap:10px;font:600 12px var(--sans);letter-spacing:.16em;text-transform:uppercase;margin-bottom:12px}
-.new{font:700 10px var(--sans);font-style:normal;letter-spacing:.1em;background:var(--orange);color:#fff;padding:3px 6px}
+.new{font:700 10px var(--sans);font-style:normal;letter-spacing:.1em;background:var(--accent);color:#fff;padding:3px 6px}
 .ask{display:flex;align-items:stretch;background:#fff}
 .ask input{flex:1;min-width:0;border:0;outline:0;font:500 17px var(--sans);color:var(--ink);background:transparent;height:58px;padding:0 18px}
 .ask input::placeholder{color:var(--ink-2)}
-.ask button{flex:none;width:58px;border:0;background:var(--orange);color:#fff;cursor:pointer;display:grid;place-items:center}
+.ask button{flex:none;width:58px;border:0;background:var(--accent);color:#fff;cursor:pointer;display:grid;place-items:center}
 .ask button svg{width:22px;height:22px;stroke-width:2.2;transition:transform .3s var(--ease)}
 .ask button:hover svg{transform:translateX(3px)}
-.ask:focus-within{outline:2px solid var(--orange);outline-offset:3px}
+.ask:focus-within{outline:2px solid var(--accent);outline-offset:3px}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 .chips button{font:500 14px var(--sans);color:#fff;background:transparent;border:1px solid var(--rule-dark);padding:8px 12px;cursor:pointer;transition:border-color .2s,background .2s}
 .chips button:hover{border-color:#fff}
@@ -89,7 +90,7 @@ section{scroll-margin-top:76px}
 .filters button:hover{border-color:var(--ink)}
 .filters button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
 .filters .count{margin-left:auto;font:600 11px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,44vw),1fr));gap:clamp(20px,2.4vw,36px) clamp(10px,1.4vw,20px)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,42vw),1fr));gap:clamp(32px,4vw,64px) clamp(12px,2.6vw,40px)}
 .card{text-decoration:none;display:block;animation:rise .7s var(--ease) backwards;animation-delay:calc(var(--i)*35ms)}
 .ph{position:relative;display:block;aspect-ratio:3/4;overflow:hidden;background:var(--stone)}
 .ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 15%;transition:opacity .5s var(--ease),transform 1.2s var(--ease)}
@@ -97,11 +98,12 @@ section{scroll-margin-top:76px}
 @media (hover:hover){.card:hover .ph .alt{opacity:1}.card:hover .ph img{transform:scale(1.03)}}
 .tag{position:absolute;left:0;top:0;font:600 10.5px var(--sans);letter-spacing:.12em;text-transform:uppercase;padding:7px 10px;background:#fff;color:var(--ink)}
 .tag.near{background:var(--ink);color:#fff}
-.tag.near::before{content:"";display:inline-block;width:7px;height:7px;background:var(--orange);margin-right:7px;vertical-align:1px}
-.meta{display:grid;gap:3px;padding:12px 0 0}
+.tag.near::before{content:"";display:inline-block;width:7px;height:7px;background:var(--accent);margin-right:7px;vertical-align:1px}
+.meta{display:grid;gap:4px;padding:16px 4px 0;text-align:center}
 .brand{font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
-.title{font-size:15px;line-height:1.3}
-.row{display:flex;align-items:baseline;gap:6px;font-size:14px;color:var(--ink-2)}
+.title{font:600 12px/1.4 var(--sans);letter-spacing:.08em;text-transform:uppercase}
+.row{font-size:13px;color:var(--ink-2)}
+.meta .loc{font-size:12px;color:var(--dim);min-height:1.4em}
 .row b{color:var(--ink);font-weight:700;font-size:15px}
 .row .size{margin-left:auto;font-weight:600;color:var(--ink);border:1px solid var(--ink);padding:0 6px;font-size:12px}
 .card[hidden]{display:none}
@@ -113,13 +115,13 @@ section{scroll-margin-top:76px}
 .rail>*{scroll-snap-align:start}
 .rail .more{display:flex;align-items:flex-end;aspect-ratio:3/4;padding:20px;background:var(--ink);color:#fff;font:800 22px/1.1 var(--sans);text-transform:uppercase;letter-spacing:-.01em;text-decoration:none}
 .rail .more svg{width:22px;height:22px;flex:none}
-.rail .more:hover{background:var(--orange)}
+.rail .more:hover{background:var(--accent)}
 
 /* results */
 .results{padding:clamp(40px,5vw,72px) var(--gut) 0;max-width:1360px;margin:0 auto}
 .results .hb{max-width:24ch}
 .note{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;max-width:72ch;margin:26px 0 30px;padding:20px 22px;background:var(--black);color:#fff;font:400 18px/1.5 var(--sans)}
-.note::before{content:"";width:9px;height:9px;background:var(--orange);margin-top:9px;grid-row:1/3}
+.note::before{content:none}
 .note .by{font:600 11px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--on-black-2)}
 .note .tx:empty::before{content:"Olhando as peças com você…";color:var(--on-black-dim)}
 .results .meta-line{font:600 12px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin:14px 0 0}
@@ -128,7 +130,7 @@ section{scroll-margin-top:76px}
 .skel i{aspect-ratio:3/4;background:linear-gradient(100deg,var(--stone) 40%,#fff 50%,var(--stone) 60%) 0/300% 100%;animation:sh 1.2s linear infinite}
 @keyframes sh{to{background-position:-150% 0}}
 .thinking{display:flex;align-items:center;gap:10px;color:var(--ink-2);margin:16px 0 0;font-weight:500}
-.thinking::before{content:"";width:9px;height:9px;background:var(--orange);animation:blink .8s steps(2) infinite}
+.thinking::before{content:"";width:9px;height:9px;background:var(--accent);animation:blink .8s steps(2) infinite}
 @keyframes blink{50%{opacity:0}}
 
 /* lender band */
@@ -140,9 +142,9 @@ section{scroll-margin-top:76px}
 .calc{background:#fff;color:var(--ink);padding:clamp(24px,3vw,40px);border:1px solid var(--ink)}
 .calc label{font:600 12px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
 .calc .worth{display:block;font:800 clamp(2.6rem,4.6vw,4rem)/1.05 var(--sans);letter-spacing:-.03em;margin:8px 0 16px}
-.calc input{width:100%;accent-color:var(--orange);height:28px}
+.calc input{width:100%;accent-color:var(--accent);height:28px}
 .calc .res{font-size:17px;margin:18px 0 12px;padding-top:16px;border-top:1px solid var(--line)}
-.calc .res b{color:var(--orange)}
+.calc .res b{color:var(--accent)}
 .calc .fine{margin:0}
 
 /* timeline, after the deck */
@@ -150,7 +152,7 @@ section{scroll-margin-top:76px}
 .tl{list-style:none;padding:0;margin:44px 0 0;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:28px}
 .tl li{position:relative;padding-top:30px;border-top:1px solid var(--ink);color:var(--ink-2)}
 .tl li i{position:absolute;top:-7px;left:0;width:13px;height:13px;background:var(--ink)}
-.tl li:last-child i{background:var(--orange)}
+.tl li:last-child i{background:var(--accent)}
 .tl .n{display:block;font:600 13px var(--sans);color:var(--dim);margin-bottom:6px}
 .tl b{display:block;font:700 21px/1.2 var(--sans);color:var(--ink);margin-bottom:6px}
 .tl p{margin:0;font-size:16px;max-width:28ch}
@@ -167,8 +169,8 @@ section{scroll-margin-top:76px}
 .cc-t{position:absolute;z-index:1;left:0;right:0;bottom:0;padding:18px;display:grid;gap:4px}
 .cc-t b{font:500 clamp(18px,1.7vw,24px)/1.1 var(--sans);font-stretch:125%;text-transform:uppercase;letter-spacing:.01em}
 .cc-t span{font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:oklch(0.85 0 0)}
-.cc[aria-current]{outline:3px solid var(--orange);outline-offset:-3px}
-.cc.all{background:var(--orange)}
+.cc[aria-current]{outline:3px solid var(--accent);outline-offset:-3px}
+.cc.all{background:var(--accent)}
 .cc.all::after{display:none}
 .cc.all:hover{background:var(--ink)}
 
@@ -196,14 +198,14 @@ section{scroll-margin-top:76px}
 .where{display:grid;grid-template-columns:20px 1fr;gap:10px;align-items:start;margin:0;padding:16px;background:var(--stone);font-size:15px}
 .where.near{background:var(--ink);color:#fff}
 .where.near small{color:var(--on-black-2)}
-.where svg{width:20px;height:20px;margin-top:1px;color:var(--orange)}
+.where svg{width:20px;height:20px;margin-top:1px;color:var(--accent)}
 .where small{display:block;font-size:14px;color:var(--ink-2);margin-top:2px}
 .info dl{margin:16px 0 24px}
 .info dl div{display:grid;grid-template-columns:150px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
 .info dt{font:600 11px/1.9 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
 .info dd{margin:0;font-weight:500}
 .btn.rent{width:100%;background:var(--ink);color:#fff;min-height:60px}
-.btn.rent:hover{background:var(--orange)}
+.btn.rent:hover{background:var(--accent)}
 .buybar{display:none}
 .similar{margin:clamp(64px,8vw,112px) auto}
 .similar .hb{margin-bottom:28px}
@@ -231,12 +233,12 @@ section{scroll-margin-top:76px}
 .bars .y-avg th{color:var(--ink);font-weight:700}.bars .y-avg i{background:var(--ink)}
 .bars .y-top th,.bars .y-top td{border-top:1px solid var(--ink)}
 .bars .y-top th{color:var(--ink);font-weight:800}
-.bars .y-top i{background:var(--orange);height:26px}
+.bars .y-top i{background:var(--accent);height:26px}
 .bars .y-top .v{font-size:28px;font-weight:600}
 .brands{background:var(--black);color:#fff;padding:clamp(56px,8vw,104px) 0}
 .brands .k{color:var(--on-black-2)}
 .brand-list{margin:0;font:500 clamp(22px,2.8vw,40px)/1.35 var(--sans);font-stretch:125%;text-transform:uppercase}
-.brand-list i{display:inline-block;width:.32em;height:.32em;background:var(--orange);margin:0 .5em;vertical-align:.18em}
+.brand-list i{display:inline-block;width:.32em;height:.32em;background:var(--accent);margin:0 .5em;vertical-align:.18em}
 .lender-page .explore{border-top:0}
 .nf{min-height:60vh;padding-top:80px}.nf .btn{margin-top:32px}
 
@@ -289,3 +291,53 @@ section{scroll-margin-top:76px}
   .bars th{width:52%;font-size:14px}
 }
 @media (prefers-reduced-motion:reduce){*,*::before{animation:none!important;transition:none!important}}
+
+/* Quiet intro: short, white, centered, so the photos start right below it. */
+.intro{max-width:760px;margin:0 auto;padding:clamp(40px,6vw,80px) var(--gut) clamp(24px,3vw,40px);text-align:center}
+.intro .hw{font-size:clamp(1.4rem,3.2cqi,2.3rem);letter-spacing:.06em;line-height:1.15}
+.intro{container-type:inline-size}
+.intro .lede{margin:16px auto 0;color:var(--ink-2);font-size:16px;max-width:48ch}
+.intro .ask{margin:30px auto 0;max-width:520px;background:none;border-bottom:1px solid var(--ink)}
+.intro .ask input{padding:0 4px;height:48px;font-size:16px}
+.intro .ask button{width:44px;background:none;color:var(--ink)}
+.intro .ask:focus-within{outline:none;border-bottom-width:2px}
+.intro .chips{display:block;margin:14px 0 0;font-size:14px;color:var(--dim)}
+.intro .chips button{border:0;background:none;padding:2px 0;font:inherit;color:var(--ink-2);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:4px;cursor:pointer}
+.intro .chips button:hover{color:var(--ink);text-decoration-color:var(--ink)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.near .bar{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:18px 0;border-top:1px solid var(--line)}
+.near .bar h2{font:600 12px var(--sans);letter-spacing:.16em;text-transform:uppercase}
+.near .bar .count{font:500 12px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+.near .filters{border-top:1px solid var(--line);margin-bottom:clamp(28px,3vw,44px)}
+.filters button{border:0;background:none;min-width:0;padding:0 8px;color:var(--ink-2)}
+.filters button[aria-pressed=true]{background:none;color:var(--ink);font-weight:700;text-decoration:underline;text-underline-offset:5px}
+.filters button:hover{color:var(--ink)}
+.more-wrap{text-align:center;margin:clamp(40px,5vw,64px) 0 0}
+.near{margin-top:0}
+/* The lender band, light like the rest of the page rather than a black slab. */
+.lend-cta{background:var(--stone);color:var(--ink)}
+.lend-cta .k{color:var(--ink-2)}
+.lend-cta .hb .dim{color:var(--dim)}
+.lend-cta .lede{color:var(--ink-2)}.lend-cta .lede b{color:var(--ink)}
+.calc{border-color:var(--line)}
+/* Hero: one photo, the words beside it, the stylist as a quiet line. */
+.feature{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:clamp(24px,5vw,96px);max-width:1360px;margin:0 auto;padding:clamp(24px,3vw,48px) var(--gut) clamp(48px,6vw,96px)}
+.feature-img{display:block;aspect-ratio:4/5;max-height:calc(100svh - 140px);overflow:hidden;background:var(--stone)}
+.feature-img img{width:100%;height:100%;object-fit:cover;object-position:50% 15%;transition:transform 1.4s var(--ease)}
+.feature-img:hover img{transform:scale(1.02)}
+.feature-copy{container-type:inline-size;max-width:520px}
+.feature-copy .hw{font-size:clamp(1.6rem,7.4cqi,2.6rem);letter-spacing:.05em;line-height:1.12}
+.feature-copy .lede{margin:18px 0 28px;color:var(--ink-2);font-size:17px;max-width:40ch}
+.feature-cap{margin:18px 0 0;font-size:12px;color:var(--dim)}
+.feature-copy .ask{display:block;margin-top:clamp(40px,6vw,72px);background:none}
+.feature-copy .ask label{display:block;font:500 11px var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+.feature-copy .ask span{display:flex;border-bottom:1px solid var(--line)}
+.feature-copy .ask:focus-within span{border-bottom-color:var(--ink)}
+.feature-copy .ask:focus-within{outline:none}
+.feature-copy .ask input{height:42px;padding:0;font-size:15px}
+.feature-copy .ask button{width:36px;background:none;color:var(--ink-2)}
+@media (max-width:900px){
+  .feature{grid-template-columns:1fr;padding-top:0}
+  .feature-img{margin:0 calc(-1*var(--gut));max-height:none;aspect-ratio:4/5}
+}
+.filters .fl{white-space:nowrap}

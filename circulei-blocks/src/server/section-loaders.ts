@@ -12,13 +12,15 @@ const add =
 
 registerSectionLoaders({
   "site/sections/Header.tsx": add((c) => ({ place: v.place(c), hubs: v.hubs(c) })),
-  "site/sections/Hero.tsx": add(v.hero),
+  "site/sections/Hero.tsx": async (props, req) => ({ ...props, ...v.hero(await v.ctxFor(req), (props.featured as string[] | undefined) ?? []) }),
   // The filters live in the URL (?tam=36,38&alt=b): the server renders the filtered grid, so coming
   // back from a piece shows the same list at the same scroll, before hydration.
   "site/sections/NearGrid.tsx": async (props, req) => {
     const u = new URL(req.url);
     const list = (k: string) => (u.searchParams.get(k) ?? "").split(",").filter((x) => /^[\w]{1,3}$/.test(x));
-    return { ...props, ...v.near(await v.ctxFor(req)), selected: { sizes: list("tam"), heights: list("alt") } };
+    // `mais`: how many were open, so back from a piece shows the same rows.
+    const shown = Math.min(240, Number(u.searchParams.get("mais")) || 0);
+    return { ...props, ...v.near(await v.ctxFor(req)), selected: { sizes: list("tam"), heights: list("alt") }, shown };
   },
   "site/sections/AwayRail.tsx": add(v.rail),
   "site/sections/LenderBand.tsx": add((c) => ({ ratio: c.snap.rentRatio })),
