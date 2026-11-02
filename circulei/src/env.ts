@@ -1,5 +1,7 @@
 export interface Env {
   KV: KVNamespace;
+  ASSETS: Fetcher;
+  DECK_PASSWORD?: string;
   DB?: D1Database;
   INDEX?: Fetcher;
   SEARCH_LIMIT?: RateLimit;

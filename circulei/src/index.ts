@@ -1,7 +1,7 @@
 import { rebuild, snapshot, type Piece, type Snapshot } from "./catalog";
 import type { Env } from "./env";
 import { km } from "./geo";
-import { deck } from "./deck";
+import { deck, deckLogin } from "./deck";
 import { home, lender, notFound, pdp, resultsFragment, type Ctx } from "./html";
 import { keywordScores, scoreAll, sha, stylistNote } from "./search";
 
@@ -22,8 +22,9 @@ function context(req: Request, snap: Snapshot): Ctx {
   return { snap, hub: nearest ?? snap.hubs[0] ?? null, here, chosen: false };
 }
 
-const html = (body: string, extra: Record<string, string> = {}) =>
+const html = (body: string, extra: Record<string, string> = {}, status = 200) =>
   new Response(body, {
+    status,
     headers: { "content-type": "text/html; charset=utf-8", "x-robots-tag": "noindex", "cache-control": "private, max-age=0", ...extra },
   });
 
@@ -61,10 +62,40 @@ async function search(env: Env, ctx: Ctx, q: string): Promise<{ picks: Piece[]; 
   return { picks, fallback };
 }
 
+const DECK_COOKIE = "circulei_deck";
+const deckToken = async (env: Env) => (env.DECK_PASSWORD ? sha(`deck:${env.DECK_PASSWORD}`) : null);
+
+/** No DECK_PASSWORD configured means the deck stays closed, never open. */
+async function deckGate(req: Request, env: Env, ectx: ExecutionContext, path: string): Promise<Response> {
+  const token = await deckToken(env);
+  const has = !!token && req.headers.get("cookie")?.match(new RegExp(`${DECK_COOKIE}=([\\w]+)`))?.[1] === token;
+  if (req.method === "POST" && (path === "/deck" || path === "/deck/")) {
+    const ip = req.headers.get("cf-connecting-ip") ?? "?";
+    if (env.SEARCH_LIMIT && !(await env.SEARCH_LIMIT.limit({ key: `deck:${ip}` })).success) return html(deckLogin(true), {}, 429);
+    const typed = String((await req.formData()).get("senha") ?? "").trim();
+    if (!token || typed !== env.DECK_PASSWORD) return html(deckLogin(true), {}, 401);
+    ectx.waitUntil(log(env, req, "circulei.deck.unlock", {}));
+    return new Response(null, {
+      status: 303,
+      headers: { location: "/deck", "set-cookie": `${DECK_COOKIE}=${token}; Path=/deck; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax` },
+    });
+  }
+  if (req.method !== "GET" && req.method !== "HEAD") return new Response("method not allowed", { status: 405 });
+  if (!has) return path.startsWith("/deck/") && path.length > 6 ? new Response("not found", { status: 404 }) : html(deckLogin(false));
+  if (path === "/deck" || path === "/deck/") {
+    ectx.waitUntil(log(env, req, "circulei.view", { page: "deck" }));
+    return html(deck());
+  }
+  const res = await env.ASSETS.fetch(req);
+  return new Response(res.body, { status: res.status, headers: { ...Object.fromEntries(res.headers), "cache-control": "private, max-age=86400", "x-robots-tag": "noindex" } });
+}
+
 export default {
   async fetch(req: Request, env: Env, ectx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
     const path = url.pathname;
+    // The deck sits behind a password: its HTML and its images, before anything else runs.
+    if (path === "/deck" || path === "/deck/" || path.startsWith("/deck/")) return deckGate(req, env, ectx, path);
     if (req.method !== "GET" && req.method !== "HEAD") return new Response("method not allowed", { status: 405 });
     if (path === "/robots.txt") return new Response("User-agent: *\nDisallow: /\n");
     if (path === "/favicon.ico") return new Response(null, { status: 204 });
@@ -105,10 +136,6 @@ export default {
     if (path === "/") {
       ectx.waitUntil(log(env, req, "circulei.view", { page: "home", hub: ctx.hub?.city ?? "brasil", here: ctx.here?.city ?? null, chosen: ctx.chosen }));
       return html(home(ctx), setCookie);
-    }
-    if (path === "/deck" || path === "/deck/") {
-      ectx.waitUntil(log(env, req, "circulei.view", { page: "deck" }));
-      return html(deck());
     }
     if (path === "/seja-locadora") {
       ectx.waitUntil(log(env, req, "circulei.view", { page: "lender", here: ctx.here?.city ?? null }));

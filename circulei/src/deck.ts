@@ -39,6 +39,25 @@ const FALL: [string, string, number, number, string][] = [
   ["Fica com a Circulei", "take efetivo", 0, 410, "o"],
 ];
 
+export function deckLogin(wrong: boolean): string {
+  return `${head("Circulei · Deck", "Acesso restrito.")}
+<body class="deck">
+<main class="hero d-lock">
+  <div class="hero-copy">
+    ${logo(true)}
+    ${kick("Acesso restrito")}
+    <h1 class="hw">Deck pré-seed</h1>
+    <form method="post" action="/deck" class="lock">
+      <label for="senha">Senha</label>
+      <div class="ask"><input id="senha" name="senha" type="password" autocomplete="current-password" required autofocus><button aria-label="Entrar">${ARROW}</button></div>
+      ${wrong ? '<p class="err" role="alert">Senha incorreta.</p>' : ""}
+    </form>
+  </div>
+</main>
+<style>.d-lock{min-height:100svh;grid-template-columns:1fr}.d-lock .hero-copy{max-width:640px}.d-lock .hero-copy>img{width:150px;height:auto;margin-bottom:64px}.lock{margin-top:36px}.lock label{display:block;font:600 12px var(--sans);letter-spacing:.16em;text-transform:uppercase;margin-bottom:12px}.err{color:var(--orange);font-weight:600;margin:12px 0 0}</style>
+</body></html>`;
+}
+
 export function deck(): string {
   return `${head("Circulei · A plataforma de investimento em moda", "O closet parado vira renda, e a peça vira ativo. Pré-seed, outubro de 2026.", "/deck/rack.jpg")}
 <body class="deck">
