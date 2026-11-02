@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Logo, Pin } from "~/components/ui";
+import { FavoritesButton } from "~/components/Favorites";
 import type { HubLink, Place } from "~/types";
 
 export interface Props {
@@ -38,6 +39,7 @@ export default function Header({ cta = "Quero circular", ctaHref = "/seja-locado
         <a href={ctaHref} className="lend">
           {cta}
         </a>
+        <FavoritesButton />
       </nav>
       {/* Picking a city opens that city's home, from any page: a piece belongs to one city. */}
       <div id="cities" popover="auto" className="cities" ref={pop}>

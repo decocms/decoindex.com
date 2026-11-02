@@ -67,8 +67,16 @@ export default function Hero({
       const data = (await r.json()) as Result;
       setRes(data);
       if (data.fallback || !data.picks.length) return setNote(null);
-      const n = await fetch(`/api/nota?${qs}`).then((x) => (x.ok ? x.text() : "")).catch(() => "");
-      if (my === seq.current) setNote(n || null);
+      const n = (await fetch(`/api/nota?${qs}&format=json`)
+        .then((x) => (x.status === 200 ? x.json() : null))
+        .catch(() => null)) as { text: string; cited: string[] } | null;
+      if (my !== seq.current) return;
+      setNote(n?.text || null);
+      // The pieces the note names go first, in the order it names them.
+      if (n?.cited.length) {
+        const rank = (h: string) => (n.cited.includes(h) ? n.cited.indexOf(h) : n.cited.length);
+        setRes({ ...data, picks: [...data.picks].sort((a, b) => rank(a.handle) - rank(b.handle)) });
+      }
     } catch {
       if (my === seq.current) setRes("error");
     }
@@ -99,7 +107,7 @@ export default function Hero({
             onClick={(e) => {
               if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
               const c = { ...feature, sizes: "", size: "", h: "", tag: null };
-              if (openPiece(c)) e.preventDefault();
+              if (openPiece(c, hub ? `Peças em ${hub.city}` : "Favoritos")) e.preventDefault();
             }}
           >
             <img src={img(feature.img, 1100)} srcSet={srcset(feature.img)} sizes="(min-width: 900px) 46vw, 100vw" alt={`${feature.title}, ${feature.brand}`} fetchPriority="high" decoding="async" />
@@ -189,7 +197,7 @@ export default function Hero({
                 ) : null}
                 <div className="grid">
                   {res.picks.map((c, i) => (
-                    <Card key={c.handle} c={c} i={i} />
+                    <Card key={c.handle} c={c} i={i} list={asked} />
                   ))}
                 </div>
               </>

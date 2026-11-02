@@ -388,3 +388,67 @@ section{scroll-margin-top:76px}
 .near .grid,.results .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (min-width:700px){.near .grid,.results .grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (min-width:1100px){.near .grid,.results .grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+/* Everything uses the full width now, so headings line up with the grids and rails. */
+.wrap{max-width:none}
+.feature{max-width:none}
+/* Rails: cards as big as the grid's (4 per screen on a desktop, 3 tablet, ~2 phone). */
+.rail{padding:0 var(--gut) 12px;scroll-padding-inline:var(--gut);gap:clamp(12px,2.6vw,40px);grid-auto-columns:calc((100vw - 2*var(--gut) - 3*clamp(12px,2.6vw,40px))/4)}
+.cities-rail{grid-auto-columns:calc((100vw - 2*var(--gut) - 3*clamp(12px,2.6vw,40px))/4)}
+@media (max-width:1099px){.rail,.cities-rail{grid-auto-columns:calc((100vw - 2*var(--gut) - 2*clamp(12px,2.6vw,40px))/3)}}
+@media (max-width:699px){.rail,.cities-rail{grid-auto-columns:44vw}}
+.cc-t b{font-size:clamp(18px,2vw,30px)}
+/* Card: the link and the heart side by side (a button can't live inside a link). */
+.card{position:relative}
+.card-link{display:block;text-decoration:none;color:inherit}
+.heart{position:absolute;top:10px;right:10px;width:34px;height:34px;display:grid;place-items:center;border:0;border-radius:50%;background:oklch(1 0 0/.92);color:var(--ink);cursor:pointer;opacity:0;transition:opacity .2s}
+.heart svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+.heart.on{opacity:1}.heart.on svg{fill:currentColor}
+.card:hover .heart,.heart:focus-visible{opacity:1}
+@media (hover:none){.heart{opacity:1}}
+.btn.fav{width:100%;margin-top:10px}
+.btn.fav.on{background:var(--ink);color:#fff}
+/* Header favorites button. */
+.top nav{display:flex;align-items:center;gap:18px}
+.fav-btn{position:relative;display:grid;place-items:center;width:36px;height:36px;border:0;background:none;color:var(--ink);cursor:pointer}
+.fav-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round}
+.fav-n{position:absolute;top:2px;right:0;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--ink);color:#fff;font:600 10px/16px var(--sans);text-align:center}
+/* Favorites drawer: the piece drawer's panel, lists of thumbnails. */
+.drawer-panel.favs .fine{margin:6px 0 20px;text-align:left}
+.favs-empty{color:var(--ink-2);margin:32px 0}
+.favs-list{border-top:1px solid var(--line);padding:18px 0}
+.favs-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px}
+.favs-head h3{font:600 12px var(--sans);letter-spacing:.12em;text-transform:uppercase}
+.favs-head button{border:0;background:none;font-size:12px;color:var(--ink-2);text-decoration:underline;cursor:pointer}
+.favs-list ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.favs-list li{position:relative}
+.favs-list a{display:grid;gap:2px;text-decoration:none;color:var(--ink);font-size:12px}
+.favs-list img{width:100%;aspect-ratio:3/4;object-fit:cover;object-position:50% 15%;background:var(--stone);margin-bottom:6px}
+.favs-list .b{font:600 10px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.favs-x{position:absolute;top:4px;right:4px;width:24px;height:24px;border:0;border-radius:50%;background:oklch(1 0 0/.92);cursor:pointer}
+@media (max-width:560px){.top nav{gap:8px}.top nav .lend{display:none}}
+.favs-list ul{grid-template-columns:repeat(3,minmax(0,1fr))}
+.favs-list a{min-width:0}
+.favs-list a span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Hero photo sized by the screen's height, not its width: on a big monitor the products still
+   start above the fold. Its width follows the 4:5 photo; the words take the rest. */
+@media (min-width:901px){
+  .feature{grid-template-columns:auto minmax(0,1fr);padding-bottom:clamp(32px,4vw,56px)}
+  .feature-img{height:min(calc(100svh - 260px),860px);min-height:420px;width:auto;max-height:none;aspect-ratio:4/5}
+  .feature-copy{max-width:560px}
+}
+/* The grid's single header row. */
+.near .filters{padding:14px 0;margin-bottom:clamp(20px,2.4vw,36px);border-top:1px solid var(--line);border-bottom:1px solid var(--line);flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.near .filters h2{font:600 12px var(--sans);letter-spacing:.16em;text-transform:uppercase;white-space:nowrap;margin-right:clamp(12px,2vw,32px)}
+.near .filters .count{display:inline;margin-left:auto;padding-left:24px;font:500 12px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);white-space:nowrap}
+.near .filters button{flex:none}
+@media (min-width:901px){
+  .feature{padding-top:clamp(20px,2.4vw,36px);padding-bottom:clamp(28px,3vw,44px)}
+  .feature-img{height:clamp(380px,calc(100svh - 430px),860px)}
+}
+@media (max-width:900px){.near .filters h2{display:none}}
+@media (min-width:901px){.feature-img{min-height:0;height:clamp(340px,calc(100svh - 430px),860px)}}
+@media (min-width:901px){.feature-copy .ask{margin-top:clamp(24px,3vw,44px)}.feature-copy .lede{margin:14px 0 22px}}
+.favs-list a{display:block}
+.favs-list a span{display:block}
+.favs-list img{display:block;width:100%;height:auto;aspect-ratio:3/4}
+.favs-list li{min-width:0;overflow:hidden}

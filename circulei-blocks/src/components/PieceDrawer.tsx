@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Arrow, Pin, brl, img } from "~/components/ui";
+import { toggleFav, useIsFav } from "~/sdk/favorites";
 import { useQuietHistory } from "~/components/quietHistory";
 import type { CardData } from "~/types";
 
@@ -19,10 +20,10 @@ interface Detail {
 }
 
 /** Set while a drawer is mounted (after hydration): a card click opens the piece here, not on a new page. */
-let opener: ((c: CardData) => void) | null = null;
-export function openPiece(c: CardData): boolean {
+let opener: ((c: CardData, list: string) => void) | null = null;
+export function openPiece(c: CardData, list = "Favoritos"): boolean {
   if (!opener) return false;
-  opener(c);
+  opener(c, list);
   return true;
 }
 
@@ -42,8 +43,10 @@ export function PieceDrawer() {
   const current = useRef<string | null>(null);
   const quiet = useQuietHistory();
 
-  const open = useCallback((c: CardData) => {
+  const [list, setList] = useState("Favoritos");
+  const open = useCallback((c: CardData, l: string) => {
     current.current = c.handle;
+    setList(l);
     setCard(c);
     setDetail(null);
     setStage(0);
@@ -164,10 +167,20 @@ export function PieceDrawer() {
         <a className="btn rent" href={outbound(card.handle)}>
           Escolher datas na Circulei <Arrow />
         </a>
+        <FavButton c={card} list={list} />
         <p className="fine">
           Reserva, pagamento e entrega acontecem em circulei.co · <a href={`/p/${card.handle}`}>página da peça</a>
         </p>
       </aside>
     </div>
+  );
+}
+
+function FavButton({ c, list }: { c: CardData; list: string }) {
+  const on = useIsFav(c.handle);
+  return (
+    <button type="button" className={`btn line fav${on ? " on" : ""}`} aria-pressed={on} onClick={() => toggleFav(c, list)}>
+      {on ? "♥ Nos favoritos" : "♡ Favoritar"}
+    </button>
   );
 }

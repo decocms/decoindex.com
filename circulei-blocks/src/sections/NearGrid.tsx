@@ -45,29 +45,28 @@ export default function NearGrid({ pageSize = 12, place, sizes = [], cards = [],
   const visible = match.slice(0, limit);
   return (
     <section className="near wrap" id="perto">
-      <div className="bar">
-        <h2>{hub ? `Nos closets de ${hub.city}` : "Nos closets do Brasil"}</h2>
-        <span className="count" aria-live="polite">
-          {match.length} {match.length === 1 ? "peça" : "peças"}
-        </span>
-      </div>
+      {/* One row: what this is, the filters, how many. Kept short so the photos start high. */}
       <div className="filters" role="group" aria-label="Filtrar">
+        <h2>{hub ? `Nos closets de ${hub.city}` : "Nos closets do Brasil"}</h2>
         <span className="fl">Tamanho</span>
         {sizes.map((s) => (
           <button key={s} type="button" aria-pressed={sz.includes(s)} onClick={() => toggle(sz, setSz, s, "tam")}>
             {s}
           </button>
         ))}
-        <span className="fl">Sua altura</span>
+        <span className="fl">Altura</span>
         {HEIGHTS.map(([v, l]) => (
           <button key={v} type="button" aria-pressed={hs.includes(v)} onClick={() => toggle(hs, setHs, v, "alt")}>
             {l}
           </button>
         ))}
+        <span className="count" aria-live="polite">
+          {match.length} {match.length === 1 ? "peça" : "peças"}
+        </span>
       </div>
       <div className="grid" id="grid">
         {visible.map((c, i) => (
-          <Card key={c.handle} c={c} i={i} />
+          <Card key={c.handle} c={c} i={i} list={hub ? `Peças em ${hub.city}` : "Peças do Brasil"} />
         ))}
       </div>
       {match.length > limit ? (

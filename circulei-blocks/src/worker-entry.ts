@@ -13,7 +13,7 @@ import "./server/section-loaders";
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
 import { createDecoWorkerEntry } from "@decocms/tanstack";
 import { handleMeta, handleDecofileRead, handleDecofileReload, handleRender, corsHeaders } from "@decocms/blocks-admin";
-import circulei, { search } from "../../circulei/src/index";
+import circulei, { log, search } from "../../circulei/src/index";
 import type { Env } from "../../circulei/src/env";
 import { card, ctxFor, pdp } from "./server/view.server";
 
@@ -51,6 +51,15 @@ export default {
       const { picks, fallback } = await search(env, c, q);
       const near = c.hub ? picks.filter((p) => p.hub === c.hub!.city).length : 0;
       return Response.json({ picks: picks.map((p) => card(p, c)), near, fallback, hub: c.hub?.city ?? null }, { headers: { "cache-control": "private, no-store" } });
+    }
+    // Small client events (favorites), into decoindex's events table like every other circulei.* event.
+    if (path === "/api/event" && req.method === "POST") {
+      const site = req.headers.get("sec-fetch-site");
+      if (site && site !== "same-origin") return new Response("forbidden", { status: 403 });
+      const e = (await req.json().catch(() => null)) as { name?: string; meta?: Record<string, unknown> } | null;
+      if (e?.name !== "circulei.fav") return new Response(null, { status: 400 });
+      ctx.waitUntil(log(env, req, e.name, e.meta ?? {}));
+      return new Response(null, { status: 204 });
     }
     // A piece's details for the drawer (the list stays on screen underneath).
     if (path === "/api/peca") {

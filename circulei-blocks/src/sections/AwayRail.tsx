@@ -27,7 +27,7 @@ export default function AwayRail({ kicker = "Envio pra todo o Brasil", title = "
       </div>
       <div className="rail">
         {cards.map((c, i) => (
-          <Card key={c.handle} c={c} i={i + 8} />
+          <Card key={c.handle} c={c} i={i + 8} list="De outros closets" />
         ))}
         <a className="more" href="/?cidade=brasil#perto">
           Ver todas as {total} peças <Arrow />
