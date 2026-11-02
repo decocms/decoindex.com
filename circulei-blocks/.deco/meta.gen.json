@@ -1,0 +1,3293 @@
+{
+  "major": 1,
+  "version": "1.0.0",
+  "namespace": "site",
+  "site": "circulei",
+  "manifest": {
+    "blocks": {
+      "sections": {
+        "site/sections/Yield.tsx": {
+          "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9ZaWVsZC50c3g=",
+          "namespace": "site"
+        },
+        "site/sections/Roles.tsx": {
+          "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Sb2xlcy50c3g=",
+          "namespace": "site"
+        },
+        "site/sections/Hero.tsx": {
+          "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9IZXJvLnRzeA==",
+          "namespace": "site"
+        },
+        "site/sections/Brands.tsx": {
+          "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZHMudHN4",
+          "namespace": "site"
+        },
+        "site/sections/AwayRail.tsx": {
+          "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Bd2F5UmFpbC50c3g=",
+          "namespace": "site"
+        },
+        "site/sections/HowItWorks.tsx": {
+          "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Ib3dJdFdvcmtzLnRzeA==",
+          "namespace": "site"
+        },
+        "site/sections/ExploreCities.tsx": {
+          "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9FeHBsb3JlQ2l0aWVzLnRzeA==",
+          "namespace": "site"
+        },
+        "site/sections/LenderHero.tsx": {
+          "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9MZW5kZXJIZXJvLnRzeA==",
+          "namespace": "site"
+        },
+        "site/sections/LenderBand.tsx": {
+          "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9MZW5kZXJCYW5kLnRzeA==",
+          "namespace": "site"
+        },
+        "site/sections/Footer.tsx": {
+          "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Gb290ZXIudHN4",
+          "namespace": "site"
+        },
+        "site/sections/Header.tsx": {
+          "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9IZWFkZXIudHN4",
+          "namespace": "site"
+        },
+        "site/sections/NearGrid.tsx": {
+          "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9OZWFyR3JpZC50c3g=",
+          "namespace": "site"
+        },
+        "website/sections/Rendering/Lazy.tsx": {
+          "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g=",
+          "namespace": "website"
+        },
+        "website/sections/Seo/Seo.tsx": {
+          "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9TZW8vU2VvLnRzeA==",
+          "namespace": "website"
+        },
+        "website/sections/Seo/SeoV2.tsx": {
+          "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9TZW8vU2VvVjIudHN4",
+          "namespace": "website"
+        },
+        "commerce/sections/Seo/SeoPLPV2.tsx": {
+          "$ref": "#/definitions/Y29tbWVyY2Uvc2VjdGlvbnMvU2VvL1Nlb1BMUFYyLnRzeA==",
+          "namespace": "commerce"
+        },
+        "commerce/sections/Seo/SeoPDPV2.tsx": {
+          "$ref": "#/definitions/Y29tbWVyY2Uvc2VjdGlvbnMvU2VvL1Nlb1BEUFYyLnRzeA==",
+          "namespace": "commerce"
+        },
+        "website/flags/multivariate/section.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9mbGFncy9tdWx0aXZhcmlhdGUvc2VjdGlvbi50cw==",
+          "namespace": "website"
+        }
+      },
+      "loaders": {},
+      "flags": {
+        "website/flags/multivariate/image.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9mbGFncy9tdWx0aXZhcmlhdGUvaW1hZ2UudHM=",
+          "namespace": "website"
+        }
+      },
+      "matchers": {
+        "website/matchers/always.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9hbHdheXMudHM=",
+          "namespace": "website"
+        },
+        "website/matchers/never.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9uZXZlci50cw==",
+          "namespace": "website"
+        },
+        "website/matchers/device.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9kZXZpY2UudHM=",
+          "namespace": "website"
+        },
+        "website/matchers/date.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9kYXRlLnRz",
+          "namespace": "website"
+        },
+        "website/matchers/cron.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9jcm9uLnRz",
+          "namespace": "website"
+        },
+        "website/matchers/cookie.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9jb29raWUudHM=",
+          "namespace": "website"
+        },
+        "website/matchers/host.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9ob3N0LnRz",
+          "namespace": "website"
+        },
+        "website/matchers/pathname.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9wYXRobmFtZS50cw==",
+          "namespace": "website"
+        },
+        "website/matchers/queryString.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9xdWVyeVN0cmluZy50cw==",
+          "namespace": "website"
+        },
+        "website/matchers/random.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9yYW5kb20udHM=",
+          "namespace": "website"
+        },
+        "website/matchers/location.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9sb2NhdGlvbi50cw==",
+          "namespace": "website"
+        },
+        "website/matchers/userAgent.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy91c2VyQWdlbnQudHM=",
+          "namespace": "website"
+        },
+        "website/matchers/environment.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9lbnZpcm9ubWVudC50cw==",
+          "namespace": "website"
+        },
+        "website/matchers/multi.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9tdWx0aS50cw==",
+          "namespace": "website"
+        },
+        "website/matchers/negate.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9uZWdhdGUudHM=",
+          "namespace": "website"
+        }
+      },
+      "apps": {},
+      "pages": {
+        "website/pages/Page.tsx": {
+          "$ref": "#/definitions/d2Vic2l0ZS9wYWdlcy9QYWdlLnRzeA==",
+          "namespace": "website"
+        }
+      },
+      "actions": {},
+      "functions": {
+        "website/functions/requestToParam.ts": {
+          "$ref": "#/definitions/d2Vic2l0ZS9mdW5jdGlvbnMvcmVxdWVzdFRvUGFyYW0udHM=",
+          "namespace": "website"
+        }
+      }
+    }
+  },
+  "schema": {
+    "definitions": {
+      "d2Vic2l0ZS9tYXRjaGVycy9hbHdheXMudHM=": {
+        "title": "Always",
+        "description": "Target all users",
+        "icon": "eye",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/matchers/always.ts"
+            ],
+            "default": "website/matchers/always.ts"
+          }
+        }
+      },
+      "d2Vic2l0ZS9tYXRjaGVycy9uZXZlci50cw==": {
+        "title": "Never",
+        "description": "Hide from all users",
+        "icon": "eye-off",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/matchers/never.ts"
+            ],
+            "default": "website/matchers/never.ts"
+          }
+        }
+      },
+      "d2Vic2l0ZS9tYXRjaGVycy9kZXZpY2UudHM=": {
+        "title": "Device",
+        "description": "Target users based on their device type, such as desktop, tablet, or mobile",
+        "icon": "device-mobile",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/matchers/device.ts"
+            ],
+            "default": "website/matchers/device.ts"
+          },
+          "mobile": {
+            "type": "boolean",
+            "title": "Mobile"
+          },
+          "tablet": {
+            "type": "boolean",
+            "title": "Tablet"
+          },
+          "desktop": {
+            "type": "boolean",
+            "title": "Desktop"
+          }
+        }
+      },
+      "d2Vic2l0ZS9tYXRjaGVycy9kYXRlLnRz": {
+        "title": "Date and Time",
+        "description": "Target users based on specific dates or date ranges, including specific times",
+        "icon": "calendar-event",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/matchers/date.ts"
+            ],
+            "default": "website/matchers/date.ts"
+          },
+          "start": {
+            "type": "string",
+            "title": "Start Date",
+            "format": "date-time"
+          },
+          "end": {
+            "type": "string",
+            "title": "End Date",
+            "format": "date-time"
+          }
+        }
+      },
+      "d2Vic2l0ZS9tYXRjaGVycy9jcm9uLnRz": {
+        "title": "Cron",
+        "description": "Target users with precision using recurring schedules",
+        "icon": "refresh",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/matchers/cron.ts"
+            ],
+            "default": "website/matchers/cron.ts"
+          },
+          "start": {
+            "type": "string",
+            "title": "Start",
+            "format": "date-time"
+          },
+          "end": {
+            "type": "string",
+            "title": "End",
+            "format": "date-time"
+          }
+        }
+      },
+      "d2Vic2l0ZS9tYXRjaGVycy9jb29raWUudHM=": {
+        "title": "Cookie",
+        "description": "Target users that have a specific cookie",
+        "icon": "cookie",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/matchers/cookie.ts"
+            ],
+            "default": "website/matchers/cookie.ts"
+          },
+          "name": {
+            "type": "string",
+            "title": "Cookie Name"
+          },
+          "value": {
+            "type": "string",
+            "title": "Cookie Value"
+          }
+        }
+      },
+      "d2Vic2l0ZS9tYXRjaGVycy9ob3N0LnRz": {
+        "title": "Host",
+        "description": "Target users based on the domain or subdomain they are accessing your site from",
+        "icon": "world-www",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/matchers/host.ts"
+            ],
+            "default": "website/matchers/host.ts"
+          },
+          "includes": {
+            "type": "string",
+            "title": "Includes"
+          },
+          "match": {
+            "type": "string",
+            "title": "Match"
+          },
+          "host": {
+            "type": "string",
+            "title": "Hostname",
+            "hide": "true"
+          }
+        }
+      },
+      "d2Vic2l0ZS9tYXRjaGVycy9wYXRobmFtZS50cw==": {
+        "title": "Pathname",
+        "description": "Target users based on the pathname",
+        "icon": "world-www",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/matchers/pathname.ts"
+            ],
+            "default": "website/matchers/pathname.ts"
+          },
+          "case": {
+            "title": "Operation",
+            "anyOf": [
+              {
+                "title": "Equals",
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "pathname": {
+                    "type": "string",
+                    "title": "Pathname",
+                    "description": "Must start with \"/\""
+                  },
+                  "negate": {
+                    "type": "boolean",
+                    "title": "Negate",
+                    "description": "Inverts the match result (NOT)",
+                    "default": false
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "Equals",
+                    "default": "Equals",
+                    "readonly": "*",
+                    "hide": "true",
+                    "title": "Type"
+                  }
+                }
+              },
+              {
+                "title": "Includes",
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "pathname": {
+                    "type": "string",
+                    "title": "Pathname",
+                    "description": "Must start with \"/\""
+                  },
+                  "negate": {
+                    "type": "boolean",
+                    "title": "Negate",
+                    "description": "Inverts the match result (NOT)",
+                    "default": false
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "Includes",
+                    "default": "Includes",
+                    "readonly": "*",
+                    "hide": "true",
+                    "title": "Type"
+                  }
+                }
+              },
+              {
+                "title": "Template",
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "pathname": {
+                    "type": "string",
+                    "title": "Pathname",
+                    "description": "Must start with \"/\""
+                  },
+                  "negate": {
+                    "type": "boolean",
+                    "title": "Negate",
+                    "description": "Inverts the match result (NOT)",
+                    "default": false
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "Template",
+                    "default": "Template",
+                    "readonly": "*",
+                    "hide": "true",
+                    "title": "Type"
+                  }
+                }
+              }
+            ]
+          },
+          "pattern": {
+            "type": "string",
+            "title": "Regex Pattern",
+            "hide": "true"
+          },
+          "includes": {
+            "type": "array",
+            "title": "Includes",
+            "items": {
+              "type": "string"
+            },
+            "hide": "true"
+          },
+          "excludes": {
+            "type": "array",
+            "title": "Excludes",
+            "items": {
+              "type": "string"
+            },
+            "hide": "true"
+          }
+        }
+      },
+      "d2Vic2l0ZS9tYXRjaGVycy9xdWVyeVN0cmluZy50cw==": {
+        "title": "Query String",
+        "description": "Match with a specific querystring",
+        "icon": "question-mark",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/matchers/queryString.ts"
+            ],
+            "default": "website/matchers/queryString.ts"
+          },
+          "conditions": {
+            "type": "array",
+            "title": "Conditions",
+            "items": {
+              "type": "object",
+              "title": "{{{param}}} {{{case.type}}} {{{case.value}}}",
+              "required": [
+                "param",
+                "case"
+              ],
+              "properties": {
+                "param": {
+                  "type": "string",
+                  "title": "Param"
+                },
+                "case": {
+                  "title": "Case",
+                  "anyOf": [
+                    {
+                      "title": "Equals",
+                      "type": "object",
+                      "required": [
+                        "value",
+                        "type"
+                      ],
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "title": "Value"
+                        },
+                        "type": {
+                          "type": "string",
+                          "const": "Equals",
+                          "default": "Equals",
+                          "readonly": "*",
+                          "hide": "true",
+                          "title": "Type"
+                        }
+                      }
+                    },
+                    {
+                      "title": "Greater",
+                      "type": "object",
+                      "required": [
+                        "value",
+                        "type"
+                      ],
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "title": "Value"
+                        },
+                        "type": {
+                          "type": "string",
+                          "const": "Greater",
+                          "default": "Greater",
+                          "readonly": "*",
+                          "hide": "true",
+                          "title": "Type"
+                        }
+                      }
+                    },
+                    {
+                      "title": "Lesser",
+                      "type": "object",
+                      "required": [
+                        "value",
+                        "type"
+                      ],
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "title": "Value"
+                        },
+                        "type": {
+                          "type": "string",
+                          "const": "Lesser",
+                          "default": "Lesser",
+                          "readonly": "*",
+                          "hide": "true",
+                          "title": "Type"
+                        }
+                      }
+                    },
+                    {
+                      "title": "GreaterOrEquals",
+                      "type": "object",
+                      "required": [
+                        "value",
+                        "type"
+                      ],
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "title": "Value"
+                        },
+                        "type": {
+                          "type": "string",
+                          "const": "GreaterOrEquals",
+                          "default": "GreaterOrEquals",
+                          "readonly": "*",
+                          "hide": "true",
+                          "title": "Type"
+                        }
+                      }
+                    },
+                    {
+                      "title": "LesserOrEquals",
+                      "type": "object",
+                      "required": [
+                        "value",
+                        "type"
+                      ],
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "title": "Value"
+                        },
+                        "type": {
+                          "type": "string",
+                          "const": "LesserOrEquals",
+                          "default": "LesserOrEquals",
+                          "readonly": "*",
+                          "hide": "true",
+                          "title": "Type"
+                        }
+                      }
+                    },
+                    {
+                      "title": "Includes",
+                      "type": "object",
+                      "required": [
+                        "value",
+                        "type"
+                      ],
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "title": "Value"
+                        },
+                        "type": {
+                          "type": "string",
+                          "const": "Includes",
+                          "default": "Includes",
+                          "readonly": "*",
+                          "hide": "true",
+                          "title": "Type"
+                        }
+                      }
+                    },
+                    {
+                      "title": "Exists",
+                      "type": "object",
+                      "required": [
+                        "type"
+                      ],
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "Exists",
+                          "default": "Exists",
+                          "readonly": "*",
+                          "hide": "true",
+                          "title": "Type"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "key": {
+            "type": "string",
+            "title": "Parameter Name",
+            "hide": "true"
+          },
+          "value": {
+            "type": "string",
+            "title": "Parameter Value",
+            "hide": "true"
+          }
+        }
+      },
+      "d2Vic2l0ZS9tYXRjaGVycy9yYW5kb20udHM=": {
+        "title": "Random",
+        "description": "Target a percentage of the total traffic to do an A/B test",
+        "icon": "arrow-split",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/matchers/random.ts"
+            ],
+            "default": "website/matchers/random.ts"
+          },
+          "traffic": {
+            "type": "number",
+            "title": "Traffic Percentage (0–1)",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      },
+      "d2Vic2l0ZS9tYXRjaGVycy9sb2NhdGlvbi50cw==": {
+        "title": "Location",
+        "description": "Target users based on their geographical location, such as country, city, or region",
+        "icon": "map-2",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/matchers/location.ts"
+            ],
+            "default": "website/matchers/location.ts"
+          },
+          "includeLocations": {
+            "type": "array",
+            "title": "Include Locations",
+            "items": {
+              "title": "{{{city}}} {{{regionCode}}} {{{country}}} {{{coordinates}}}",
+              "anyOf": [
+                {
+                  "type": "object",
+                  "title": "Location",
+                  "properties": {
+                    "city": {
+                      "type": "string",
+                      "title": "City",
+                      "examples": [
+                        "São Paulo"
+                      ],
+                      "description": "Exact city name (case-insensitive) as returned by Cloudflare's cf-ipcity header."
+                    },
+                    "regionCode": {
+                      "type": "string",
+                      "title": "Region Code",
+                      "examples": [
+                        "SP",
+                        "RJ",
+                        "MG",
+                        "47"
+                      ],
+                      "description": "Matches Cloudflare's cf-region-code header. Usually the ISO 3166-2 subdivision code (SP, RJ, MG, …); for some regions Cloudflare returns numeric codes (e.g. 47). Use the same value cf-region-code returns for your audience — full region names like \"São Paulo\" are NOT matched."
+                    },
+                    "country": {
+                      "type": "string",
+                      "title": "Country",
+                      "examples": [
+                        "BR",
+                        "Brasil",
+                        "US"
+                      ],
+                      "description": "ISO 3166-1 alpha-2 code (BR, US, AR, …) or a full country name (Brasil, United States) — the matcher resolves common aliases."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "title": "Map",
+                  "properties": {
+                    "coordinates": {
+                      "type": "string",
+                      "title": "Area selection",
+                      "format": "map",
+                      "examples": [
+                        "-23.5505,-46.6333,5000"
+                      ],
+                      "description": "\"latitude,longitude,radius_in_meters\" for haversine-radius matching. Set this for the Map mode."
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "excludeLocations": {
+            "type": "array",
+            "title": "Exclude Locations",
+            "items": {
+              "title": "{{{city}}} {{{regionCode}}} {{{country}}} {{{coordinates}}}",
+              "anyOf": [
+                {
+                  "type": "object",
+                  "title": "Location",
+                  "properties": {
+                    "city": {
+                      "type": "string",
+                      "title": "City",
+                      "examples": [
+                        "São Paulo"
+                      ],
+                      "description": "Exact city name (case-insensitive) as returned by Cloudflare's cf-ipcity header."
+                    },
+                    "regionCode": {
+                      "type": "string",
+                      "title": "Region Code",
+                      "examples": [
+                        "SP",
+                        "RJ",
+                        "MG",
+                        "47"
+                      ],
+                      "description": "Matches Cloudflare's cf-region-code header. Usually the ISO 3166-2 subdivision code (SP, RJ, MG, …); for some regions Cloudflare returns numeric codes (e.g. 47). Use the same value cf-region-code returns for your audience — full region names like \"São Paulo\" are NOT matched."
+                    },
+                    "country": {
+                      "type": "string",
+                      "title": "Country",
+                      "examples": [
+                        "BR",
+                        "Brasil",
+                        "US"
+                      ],
+                      "description": "ISO 3166-1 alpha-2 code (BR, US, AR, …) or a full country name (Brasil, United States) — the matcher resolves common aliases."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "title": "Map",
+                  "properties": {
+                    "coordinates": {
+                      "type": "string",
+                      "title": "Area selection",
+                      "format": "map",
+                      "examples": [
+                        "-23.5505,-46.6333,5000"
+                      ],
+                      "description": "\"latitude,longitude,radius_in_meters\" for haversine-radius matching. Set this for the Map mode."
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "d2Vic2l0ZS9tYXRjaGVycy91c2VyQWdlbnQudHM=": {
+        "title": "User Agent",
+        "description": "Target users based on their web browser or operational system",
+        "icon": "world",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/matchers/userAgent.ts"
+            ],
+            "default": "website/matchers/userAgent.ts"
+          },
+          "includes": {
+            "type": "string",
+            "title": "Includes (substring)"
+          },
+          "match": {
+            "type": "string",
+            "title": "Match (regex)"
+          }
+        }
+      },
+      "d2Vic2l0ZS9tYXRjaGVycy9lbnZpcm9ubWVudC50cw==": {
+        "title": "Environment",
+        "description": "Target users based from where they are accessing your site (development, testing, or production)",
+        "icon": "code",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/matchers/environment.ts"
+            ],
+            "default": "website/matchers/environment.ts"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment",
+            "enum": [
+              "production",
+              "development"
+            ]
+          }
+        }
+      },
+      "d2Vic2l0ZS9tYXRjaGVycy9tdWx0aS50cw==": {
+        "title": "Multi",
+        "description": "Create more complex conditions by combining multiple matchers",
+        "icon": "plus",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/matchers/multi.ts"
+            ],
+            "default": "website/matchers/multi.ts"
+          },
+          "op": {
+            "type": "string",
+            "title": "Operator",
+            "enum": [
+              "and",
+              "or"
+            ],
+            "default": "and"
+          },
+          "matchers": {
+            "type": "array",
+            "title": "Matchers",
+            "items": {
+              "$ref": "#/root/matchers"
+            }
+          }
+        }
+      },
+      "d2Vic2l0ZS9tYXRjaGVycy9uZWdhdGUudHM=": {
+        "title": "Negates",
+        "description": "Create conditions that target users who do not meet certain criteria",
+        "icon": "minus",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/matchers/negate.ts"
+            ],
+            "default": "website/matchers/negate.ts"
+          },
+          "matcher": {
+            "$ref": "#/root/matchers",
+            "title": "Matcher"
+          }
+        }
+      },
+      "d2Vic2l0ZS9mdW5jdGlvbnMvcmVxdWVzdFRvUGFyYW0udHM=": {
+        "title": "Get params from request parameters",
+        "description": "Set param to slug for routes of type /:slug",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9mdW5jdGlvbnMvcmVxdWVzdFRvUGFyYW0udHM=@Props"
+          }
+        ],
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/functions/requestToParam.ts"
+            ],
+            "default": "website/functions/requestToParam.ts"
+          }
+        }
+      },
+      "d2Vic2l0ZS9mdW5jdGlvbnMvcmVxdWVzdFRvUGFyYW0udHM=@Props": {
+        "type": "object",
+        "properties": {
+          "param": {
+            "type": "string",
+            "default": "slug",
+            "description": "Param name to extract from the Request URL",
+            "title": "Param"
+          }
+        },
+        "required": [
+          "param"
+        ]
+      },
+      "d2Vic2l0ZS9mdW5jdGlvbnMvcmVxdWVzdFRvUGFyYW0udHM=@RequestURLParam": {
+        "anyOf": [
+          {
+            "type": "string",
+            "title": "Force param"
+          },
+          {
+            "title": "Get params from request parameters",
+            "description": "Set param to slug for routes of type /:slug",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/definitions/d2Vic2l0ZS9mdW5jdGlvbnMvcmVxdWVzdFRvUGFyYW0udHM=@Props"
+              }
+            ],
+            "required": [
+              "__resolveType"
+            ],
+            "properties": {
+              "__resolveType": {
+                "type": "string",
+                "enum": [
+                  "website/functions/requestToParam.ts"
+                ],
+                "default": "website/functions/requestToParam.ts"
+              }
+            }
+          }
+        ]
+      },
+      "d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g=": {
+        "title": "website/sections/Rendering/Lazy.tsx",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/sections/Rendering/Lazy.tsx"
+            ],
+            "default": "website/sections/Rendering/Lazy.tsx"
+          },
+          "section": {
+            "title": "Section",
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Resolvable"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9ZaWVsZC50c3g=",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1lpZWxkLnRzeA==@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Sb2xlcy50c3g=",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1JvbGVzLnRzeA==@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9IZXJvLnRzeA==",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hlcm8udHN4@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZHMudHN4",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kcy50c3g=@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Bd2F5UmFpbC50c3g=",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0F3YXlSYWlsLnRzeA==@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Ib3dJdFdvcmtzLnRzeA==",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hvd0l0V29ya3MudHN4@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9FeHBsb3JlQ2l0aWVzLnRzeA==",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0V4cGxvcmVDaXRpZXMudHN4@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9MZW5kZXJIZXJvLnRzeA==",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0xlbmRlckhlcm8udHN4@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9MZW5kZXJCYW5kLnRzeA==",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0xlbmRlckJhbmQudHN4@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Gb290ZXIudHN4",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0Zvb3Rlci50c3g=@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9IZWFkZXIudHN4",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hlYWRlci50c3g=@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9OZWFyR3JpZC50c3g=",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL05lYXJHcmlkLnRzeA==@Props"
+              }
+            ]
+          }
+        }
+      },
+      "d2Vic2l0ZS9zZWN0aW9ucy9TZW8vU2VvLnRzeA==": {
+        "title": "website/sections/Seo/Seo.tsx",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/sections/Seo/Seo.tsx"
+            ],
+            "default": "website/sections/Seo/Seo.tsx"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "canonical": {
+            "type": "string",
+            "title": "Canonical URL"
+          },
+          "favicon": {
+            "type": "string",
+            "title": "Favicon",
+            "format": "image-uri"
+          },
+          "noIndexing": {
+            "type": "boolean",
+            "title": "No Indexing"
+          },
+          "titleTemplate": {
+            "type": "string",
+            "title": "Title Template"
+          },
+          "descriptionTemplate": {
+            "type": "string",
+            "title": "Description Template"
+          },
+          "type": {
+            "type": "string",
+            "title": "Page Type"
+          },
+          "image": {
+            "type": "string",
+            "title": "OG Image",
+            "format": "image-uri"
+          },
+          "themeColor": {
+            "type": "string",
+            "title": "Theme Color",
+            "format": "color"
+          },
+          "jsonLDs": {
+            "type": "array",
+            "title": "JSON-LD Structured Data",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "d2Vic2l0ZS9zZWN0aW9ucy9TZW8vU2VvVjIudHN4": {
+        "title": "website/sections/Seo/SeoV2.tsx",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/sections/Seo/SeoV2.tsx"
+            ],
+            "default": "website/sections/Seo/SeoV2.tsx"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "canonical": {
+            "type": "string",
+            "title": "Canonical URL"
+          },
+          "favicon": {
+            "type": "string",
+            "title": "Favicon",
+            "format": "image-uri"
+          },
+          "noIndexing": {
+            "type": "boolean",
+            "title": "No Indexing"
+          },
+          "titleTemplate": {
+            "type": "string",
+            "title": "Title Template"
+          },
+          "descriptionTemplate": {
+            "type": "string",
+            "title": "Description Template"
+          },
+          "type": {
+            "type": "string",
+            "title": "Page Type"
+          },
+          "image": {
+            "type": "string",
+            "title": "OG Image",
+            "format": "image-uri"
+          },
+          "themeColor": {
+            "type": "string",
+            "title": "Theme Color",
+            "format": "color"
+          },
+          "jsonLDs": {
+            "type": "array",
+            "title": "JSON-LD Structured Data",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "Y29tbWVyY2Uvc2VjdGlvbnMvU2VvL1Nlb1BMUFYyLnRzeA==": {
+        "title": "commerce/sections/Seo/SeoPLPV2.tsx",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "commerce/sections/Seo/SeoPLPV2.tsx"
+            ],
+            "default": "commerce/sections/Seo/SeoPLPV2.tsx"
+          },
+          "jsonLD": {
+            "title": "Data Source",
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Resolvable"
+              }
+            ]
+          },
+          "title": {
+            "type": "string",
+            "title": "Title Override"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description Override"
+          },
+          "noIndexing": {
+            "type": "boolean",
+            "title": "Disable indexing"
+          },
+          "configJsonLD": {
+            "type": "object",
+            "title": "Structured Data",
+            "properties": {
+              "removeVideos": {
+                "type": "boolean",
+                "title": "Remove videos (deprecated)",
+                "description": "No effect: listing structured data is an ItemList, which carries no videos."
+              },
+              "ignoreStructuredData": {
+                "type": "boolean",
+                "title": "Ignore Structured Data",
+                "description": "By default, Structured Data (JSON-LD) is sent to everyone. Turn this on to omit it for regular visitors while crawlers and bots still receive the full Structured Data. When this block is the page's SEO source, the product fetch is also skipped for visitors, so the page loads faster. Some integrations may rely on Structured Data being present for all users."
+              }
+            }
+          }
+        }
+      },
+      "Y29tbWVyY2Uvc2VjdGlvbnMvU2VvL1Nlb1BEUFYyLnRzeA==": {
+        "title": "commerce/sections/Seo/SeoPDPV2.tsx",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "commerce/sections/Seo/SeoPDPV2.tsx"
+            ],
+            "default": "commerce/sections/Seo/SeoPDPV2.tsx"
+          },
+          "jsonLD": {
+            "title": "Data Source",
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Resolvable"
+              }
+            ]
+          },
+          "omitVariants": {
+            "type": "boolean",
+            "title": "Omit variants"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title Override"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description Override"
+          },
+          "noIndexing": {
+            "type": "boolean",
+            "title": "Disable indexing"
+          },
+          "ignoreStructuredData": {
+            "type": "boolean",
+            "title": "Ignore Structured Data",
+            "description": "By default, Structured Data (JSON-LD) is sent to everyone. Turn this on to omit it for regular visitors while crawlers and bots still receive the full Structured Data. When this block is the page's SEO source, the product fetch is also skipped for visitors, so the page loads faster. Some integrations may rely on Structured Data being present for all users."
+          }
+        }
+      },
+      "d2Vic2l0ZS9mbGFncy9tdWx0aXZhcmlhdGUvc2VjdGlvbi50cw==": {
+        "title": "website/flags/multivariate/section.ts",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/flags/multivariate/section.ts"
+            ],
+            "default": "website/flags/multivariate/section.ts"
+          },
+          "variants": {
+            "type": "array",
+            "title": "Variants",
+            "items": {
+              "type": "object",
+              "properties": {
+                "rule": {
+                  "title": "Rule",
+                  "type": "object",
+                  "required": [
+                    "__resolveType"
+                  ],
+                  "properties": {
+                    "__resolveType": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "value": {
+                  "title": "Section",
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/Resolvable"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9ZaWVsZC50c3g=",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1lpZWxkLnRzeA==@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Sb2xlcy50c3g=",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1JvbGVzLnRzeA==@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9IZXJvLnRzeA==",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hlcm8udHN4@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZHMudHN4",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kcy50c3g=@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Bd2F5UmFpbC50c3g=",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0F3YXlSYWlsLnRzeA==@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Ib3dJdFdvcmtzLnRzeA==",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hvd0l0V29ya3MudHN4@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9FeHBsb3JlQ2l0aWVzLnRzeA==",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0V4cGxvcmVDaXRpZXMudHN4@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9MZW5kZXJIZXJvLnRzeA==",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0xlbmRlckhlcm8udHN4@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9MZW5kZXJCYW5kLnRzeA==",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0xlbmRlckJhbmQudHN4@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Gb290ZXIudHN4",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0Zvb3Rlci50c3g=@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9IZWFkZXIudHN4",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hlYWRlci50c3g=@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9OZWFyR3JpZC50c3g=",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL05lYXJHcmlkLnRzeA==@Props"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "d2Vic2l0ZS9wYWdlcy9QYWdlLnRzeA==": {
+        "title": "website/pages/Page.tsx",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/pages/Page.tsx"
+            ],
+            "default": "website/pages/Page.tsx"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "seo": {
+            "title": "SEO",
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Resolvable"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9ZaWVsZC50c3g=",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1lpZWxkLnRzeA==@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Sb2xlcy50c3g=",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1JvbGVzLnRzeA==@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9IZXJvLnRzeA==",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hlcm8udHN4@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZHMudHN4",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kcy50c3g=@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Bd2F5UmFpbC50c3g=",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0F3YXlSYWlsLnRzeA==@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Ib3dJdFdvcmtzLnRzeA==",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hvd0l0V29ya3MudHN4@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9FeHBsb3JlQ2l0aWVzLnRzeA==",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0V4cGxvcmVDaXRpZXMudHN4@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9MZW5kZXJIZXJvLnRzeA==",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0xlbmRlckhlcm8udHN4@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9MZW5kZXJCYW5kLnRzeA==",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0xlbmRlckJhbmQudHN4@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Gb290ZXIudHN4",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0Zvb3Rlci50c3g=@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9IZWFkZXIudHN4",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hlYWRlci50c3g=@Props"
+              },
+              {
+                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9OZWFyR3JpZC50c3g=",
+                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL05lYXJHcmlkLnRzeA==@Props"
+              },
+              {
+                "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g="
+              },
+              {
+                "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9TZW8vU2VvLnRzeA=="
+              },
+              {
+                "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9TZW8vU2VvVjIudHN4"
+              },
+              {
+                "$ref": "#/definitions/Y29tbWVyY2Uvc2VjdGlvbnMvU2VvL1Nlb1BMUFYyLnRzeA=="
+              },
+              {
+                "$ref": "#/definitions/Y29tbWVyY2Uvc2VjdGlvbnMvU2VvL1Nlb1BEUFYyLnRzeA=="
+              },
+              {
+                "$ref": "#/definitions/d2Vic2l0ZS9mbGFncy9tdWx0aXZhcmlhdGUvc2VjdGlvbi50cw=="
+              }
+            ]
+          },
+          "sections": {
+            "title": "Sections",
+            "anyOf": [
+              {
+                "type": "array",
+                "title": "Sections",
+                "items": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/Resolvable"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9ZaWVsZC50c3g=",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1lpZWxkLnRzeA==@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Sb2xlcy50c3g=",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1JvbGVzLnRzeA==@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9IZXJvLnRzeA==",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hlcm8udHN4@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZHMudHN4",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kcy50c3g=@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Bd2F5UmFpbC50c3g=",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0F3YXlSYWlsLnRzeA==@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Ib3dJdFdvcmtzLnRzeA==",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hvd0l0V29ya3MudHN4@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9FeHBsb3JlQ2l0aWVzLnRzeA==",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0V4cGxvcmVDaXRpZXMudHN4@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9MZW5kZXJIZXJvLnRzeA==",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0xlbmRlckhlcm8udHN4@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9MZW5kZXJCYW5kLnRzeA==",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0xlbmRlckJhbmQudHN4@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Gb290ZXIudHN4",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0Zvb3Rlci50c3g=@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9IZWFkZXIudHN4",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hlYWRlci50c3g=@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9OZWFyR3JpZC50c3g=",
+                      "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL05lYXJHcmlkLnRzeA==@Props"
+                    },
+                    {
+                      "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g="
+                    },
+                    {
+                      "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9TZW8vU2VvLnRzeA=="
+                    },
+                    {
+                      "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9TZW8vU2VvVjIudHN4"
+                    },
+                    {
+                      "$ref": "#/definitions/Y29tbWVyY2Uvc2VjdGlvbnMvU2VvL1Nlb1BMUFYyLnRzeA=="
+                    },
+                    {
+                      "$ref": "#/definitions/Y29tbWVyY2Uvc2VjdGlvbnMvU2VvL1Nlb1BEUFYyLnRzeA=="
+                    },
+                    {
+                      "$ref": "#/definitions/d2Vic2l0ZS9mbGFncy9tdWx0aXZhcmlhdGUvc2VjdGlvbi50cw=="
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "__resolveType"
+                ],
+                "properties": {
+                  "__resolveType": {
+                    "type": "string",
+                    "enum": [
+                      "website/flags/multivariate.ts",
+                      "website/flags/multivariate/section.ts"
+                    ]
+                  },
+                  "variants": {
+                    "type": "array",
+                    "title": "Variants",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "rule": {
+                          "title": "Rule",
+                          "type": "object",
+                          "required": [
+                            "__resolveType"
+                          ],
+                          "properties": {
+                            "__resolveType": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": true
+                        },
+                        "value": {
+                          "type": "array",
+                          "title": "Sections",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "$ref": "#/definitions/Resolvable"
+                              },
+                              {
+                                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9ZaWVsZC50c3g=",
+                                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1lpZWxkLnRzeA==@Props"
+                              },
+                              {
+                                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Sb2xlcy50c3g=",
+                                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1JvbGVzLnRzeA==@Props"
+                              },
+                              {
+                                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9IZXJvLnRzeA==",
+                                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hlcm8udHN4@Props"
+                              },
+                              {
+                                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZHMudHN4",
+                                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kcy50c3g=@Props"
+                              },
+                              {
+                                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Bd2F5UmFpbC50c3g=",
+                                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0F3YXlSYWlsLnRzeA==@Props"
+                              },
+                              {
+                                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Ib3dJdFdvcmtzLnRzeA==",
+                                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hvd0l0V29ya3MudHN4@Props"
+                              },
+                              {
+                                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9FeHBsb3JlQ2l0aWVzLnRzeA==",
+                                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0V4cGxvcmVDaXRpZXMudHN4@Props"
+                              },
+                              {
+                                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9MZW5kZXJIZXJvLnRzeA==",
+                                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0xlbmRlckhlcm8udHN4@Props"
+                              },
+                              {
+                                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9MZW5kZXJCYW5kLnRzeA==",
+                                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0xlbmRlckJhbmQudHN4@Props"
+                              },
+                              {
+                                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Gb290ZXIudHN4",
+                                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0Zvb3Rlci50c3g=@Props"
+                              },
+                              {
+                                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9IZWFkZXIudHN4",
+                                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hlYWRlci50c3g=@Props"
+                              },
+                              {
+                                "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9OZWFyR3JpZC50c3g=",
+                                "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL05lYXJHcmlkLnRzeA==@Props"
+                              },
+                              {
+                                "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g="
+                              },
+                              {
+                                "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9TZW8vU2VvLnRzeA=="
+                              },
+                              {
+                                "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9TZW8vU2VvVjIudHN4"
+                              },
+                              {
+                                "$ref": "#/definitions/Y29tbWVyY2Uvc2VjdGlvbnMvU2VvL1Nlb1BMUFYyLnRzeA=="
+                              },
+                              {
+                                "$ref": "#/definitions/Y29tbWVyY2Uvc2VjdGlvbnMvU2VvL1Nlb1BEUFYyLnRzeA=="
+                              },
+                              {
+                                "$ref": "#/definitions/d2Vic2l0ZS9mbGFncy9tdWx0aXZhcmlhdGUvc2VjdGlvbi50cw=="
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "Resolvable": {
+        "title": "Select from saved",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "__resolveType": {
+            "type": "string"
+          }
+        }
+      },
+      "UmVzb2x2YWJsZQ==": {
+        "title": "Select from saved",
+        "type": "object",
+        "required": [
+          "__resolveType"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "__resolveType": {
+            "type": "string"
+          }
+        }
+      },
+      "d2Vic2l0ZS9mbGFncy9tdWx0aXZhcmlhdGUvaW1hZ2UudHM=@Props": {
+        "title": "Multivariate",
+        "type": "object",
+        "required": [
+          "variants"
+        ],
+        "properties": {
+          "variants": {
+            "type": "array",
+            "title": "Variants",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "rule",
+                "value"
+              ],
+              "properties": {
+                "rule": {
+                  "title": "Rule",
+                  "type": "object",
+                  "required": [
+                    "__resolveType"
+                  ],
+                  "properties": {
+                    "__resolveType": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "value": {
+                  "type": "string",
+                  "format": "image-uri",
+                  "title": "Content"
+                }
+              }
+            }
+          }
+        }
+      },
+      "d2Vic2l0ZS9mbGFncy9tdWx0aXZhcmlhdGUvaW1hZ2UudHM=": {
+        "title": "Image Variants",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9mbGFncy9tdWx0aXZhcmlhdGUvaW1hZ2UudHM=@Props"
+          }
+        ],
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "website/flags/multivariate/image.ts"
+            ],
+            "default": "website/flags/multivariate/image.ts"
+          }
+        }
+      },
+      "c3JjL3NlY3Rpb25zL1lpZWxkLnRzeA==@Props": {
+        "type": "object",
+        "properties": {
+          "kicker": {
+            "type": "string",
+            "nullable": true,
+            "title": "Rótulo"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "title": "Título"
+          },
+          "dim": {
+            "type": "string",
+            "nullable": true,
+            "title": "Segunda linha (cinza)"
+          },
+          "caption": {
+            "type": "string",
+            "nullable": true,
+            "title": "Legenda da tabela"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "title": "Investimento"
+                },
+                "value": {
+                  "type": "number",
+                  "title": "Rendimento anual (%)"
+                },
+                "emphasis": {
+                  "type": "string",
+                  "enum": [
+                    "nenhum",
+                    "média",
+                    "principal"
+                  ],
+                  "nullable": true,
+                  "title": "Destaque"
+                }
+              },
+              "required": [
+                "label",
+                "value"
+              ],
+              "titleBy": "label"
+            },
+            "nullable": true,
+            "title": "Linhas"
+          },
+          "fine": {
+            "type": "string",
+            "nullable": true,
+            "title": "Nota"
+          },
+          "ratio": {
+            "type": "number",
+            "nullable": true,
+            "hide": "true",
+            "title": "Ratio"
+          }
+        }
+      },
+      "c2l0ZS9zZWN0aW9ucy9ZaWVsZC50c3g=": {
+        "title": "site/sections/Yield.tsx",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/definitions/c3JjL3NlY3Rpb25zL1lpZWxkLnRzeA==@Props"
+          }
+        ],
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "site/sections/Yield.tsx"
+            ],
+            "default": "site/sections/Yield.tsx"
+          }
+        }
+      },
+      "c3JjL3NlY3Rpb25zL1JvbGVzLnRzeA==@Props": {
+        "type": "object",
+        "properties": {
+          "kicker": {
+            "type": "string",
+            "nullable": true,
+            "title": "Rótulo"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "title": "Título"
+          },
+          "dim": {
+            "type": "string",
+            "nullable": true,
+            "title": "Segunda linha (cinza)"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "title": "Rótulo"
+                },
+                "text": {
+                  "type": "string",
+                  "title": "Frase"
+                },
+                "icon": {
+                  "type": "string",
+                  "enum": [
+                    "carteira",
+                    "sacola",
+                    "grafico"
+                  ],
+                  "title": "Ícone"
+                }
+              },
+              "required": [
+                "label",
+                "text",
+                "icon"
+              ],
+              "titleBy": "label"
+            },
+            "nullable": true,
+            "title": "Colunas"
+          }
+        }
+      },
+      "c2l0ZS9zZWN0aW9ucy9Sb2xlcy50c3g=": {
+        "title": "site/sections/Roles.tsx",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/definitions/c3JjL3NlY3Rpb25zL1JvbGVzLnRzeA==@Props"
+          }
+        ],
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "site/sections/Roles.tsx"
+            ],
+            "default": "site/sections/Roles.tsx"
+          }
+        }
+      },
+      "c3JjL3NlY3Rpb25zL0hlcm8udHN4@Props": {
+        "type": "object",
+        "properties": {
+          "headline": {
+            "type": "string",
+            "nullable": true,
+            "title": "Título"
+          },
+          "stylistLabel": {
+            "type": "string",
+            "nullable": true,
+            "title": "Rótulo da busca"
+          },
+          "occasions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "title": "Ocasiões",
+            "description": "A primeira vira o exemplo da busca; as outras, botões."
+          },
+          "place": {
+            "type": "object",
+            "properties": {
+              "hub": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string",
+                    "title": "Slug"
+                  },
+                  "city": {
+                    "type": "string",
+                    "title": "City"
+                  },
+                  "uf": {
+                    "type": "string",
+                    "title": "Uf"
+                  }
+                },
+                "required": [
+                  "slug",
+                  "city",
+                  "uf"
+                ],
+                "nullable": true,
+                "description": "null = Brasil todo.",
+                "title": "Hub"
+              },
+              "here": {
+                "type": "boolean",
+                "description": "The visitor is really in (or next to) the city on screen.",
+                "title": "Here"
+              },
+              "visitorCity": {
+                "type": "string",
+                "nullable": true,
+                "description": "Cloudflare's city, when it differs from the one on screen and we picked it.",
+                "title": "Visitor City"
+              },
+              "total": {
+                "type": "number",
+                "title": "Total"
+              }
+            },
+            "required": [
+              "hub",
+              "here",
+              "visitorCity",
+              "total"
+            ],
+            "nullable": true,
+            "hide": "true",
+            "title": "Place"
+          },
+          "count": {
+            "type": "number",
+            "nullable": true,
+            "hide": "true",
+            "title": "Count"
+          },
+          "fromRent": {
+            "type": "number",
+            "nullable": true,
+            "hide": "true",
+            "title": "From Rent"
+          },
+          "picks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "handle": {
+                  "type": "string",
+                  "title": "Handle"
+                },
+                "title": {
+                  "type": "string",
+                  "title": "Title"
+                },
+                "brand": {
+                  "type": "string",
+                  "title": "Brand"
+                },
+                "img": {
+                  "type": "string",
+                  "title": "Img"
+                },
+                "price4": {
+                  "type": "number",
+                  "title": "Price4"
+                }
+              },
+              "required": [
+                "handle",
+                "title",
+                "brand",
+                "img",
+                "price4"
+              ]
+            },
+            "nullable": true,
+            "hide": "true",
+            "title": "Picks"
+          }
+        }
+      },
+      "c2l0ZS9zZWN0aW9ucy9IZXJvLnRzeA==": {
+        "title": "site/sections/Hero.tsx",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/definitions/c3JjL3NlY3Rpb25zL0hlcm8udHN4@Props"
+          }
+        ],
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "site/sections/Hero.tsx"
+            ],
+            "default": "site/sections/Hero.tsx"
+          }
+        }
+      },
+      "c3JjL3NlY3Rpb25zL0JyYW5kcy50c3g=@Props": {
+        "type": "object",
+        "properties": {
+          "kicker": {
+            "type": "string",
+            "nullable": true,
+            "title": "Rótulo"
+          },
+          "brands": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "hide": "true",
+            "title": "Brands"
+          }
+        }
+      },
+      "c2l0ZS9zZWN0aW9ucy9CcmFuZHMudHN4": {
+        "title": "site/sections/Brands.tsx",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kcy50c3g=@Props"
+          }
+        ],
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "site/sections/Brands.tsx"
+            ],
+            "default": "site/sections/Brands.tsx"
+          }
+        }
+      },
+      "c3JjL3NlY3Rpb25zL0F3YXlSYWlsLnRzeA==@Props": {
+        "type": "object",
+        "properties": {
+          "kicker": {
+            "type": "string",
+            "nullable": true,
+            "title": "Rótulo"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "title": "Título"
+          },
+          "total": {
+            "type": "number",
+            "nullable": true,
+            "hide": "true",
+            "title": "Total"
+          },
+          "count": {
+            "type": "number",
+            "nullable": true,
+            "hide": "true",
+            "title": "Count"
+          },
+          "cities": {
+            "type": "number",
+            "nullable": true,
+            "hide": "true",
+            "title": "Cities"
+          },
+          "cards": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "handle": {
+                  "type": "string",
+                  "title": "Handle"
+                },
+                "title": {
+                  "type": "string",
+                  "title": "Title"
+                },
+                "brand": {
+                  "type": "string",
+                  "title": "Brand"
+                },
+                "img": {
+                  "type": "string",
+                  "title": "Img"
+                },
+                "alt": {
+                  "type": "string",
+                  "nullable": true,
+                  "title": "Alt"
+                },
+                "price4": {
+                  "type": "number",
+                  "title": "Price4"
+                },
+                "size": {
+                  "type": "string",
+                  "title": "Size"
+                },
+                "sizes": {
+                  "type": "string",
+                  "description": "Sizes for the filter, comma-separated, no spaces.",
+                  "title": "Sizes"
+                },
+                "h": {
+                  "type": "string",
+                  "description": "Height band for the filter: a ≤1,59 · b 1,60–1,64 · c 1,65–1,69 · d 1,70+.",
+                  "title": "H"
+                },
+                "tag": {
+                  "type": "object",
+                  "properties": {
+                    "near": {
+                      "type": "boolean",
+                      "title": "Near"
+                    },
+                    "label": {
+                      "type": "string",
+                      "title": "Label"
+                    }
+                  },
+                  "required": [
+                    "near",
+                    "label"
+                  ],
+                  "nullable": true,
+                  "title": "Tag"
+                }
+              },
+              "required": [
+                "handle",
+                "title",
+                "brand",
+                "img",
+                "price4",
+                "size",
+                "sizes",
+                "h",
+                "tag"
+              ],
+              "description": "What reaches the browser: only the fields a component renders, never the catalog."
+            },
+            "nullable": true,
+            "hide": "true",
+            "title": "Cards"
+          }
+        }
+      },
+      "c2l0ZS9zZWN0aW9ucy9Bd2F5UmFpbC50c3g=": {
+        "title": "site/sections/AwayRail.tsx",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/definitions/c3JjL3NlY3Rpb25zL0F3YXlSYWlsLnRzeA==@Props"
+          }
+        ],
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "site/sections/AwayRail.tsx"
+            ],
+            "default": "site/sections/AwayRail.tsx"
+          }
+        }
+      },
+      "c3JjL3NlY3Rpb25zL0hvd0l0V29ya3MudHN4@Props": {
+        "type": "object",
+        "properties": {
+          "kicker": {
+            "type": "string",
+            "nullable": true,
+            "title": "Rótulo"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "title": "Título"
+          },
+          "dim": {
+            "type": "string",
+            "nullable": true,
+            "title": "Segunda linha (cinza)"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "title": "Passo"
+                },
+                "text": {
+                  "type": "string",
+                  "title": "Descrição"
+                }
+              },
+              "required": [
+                "title",
+                "text"
+              ],
+              "titleBy": "title"
+            },
+            "nullable": true,
+            "title": "Passos"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "title": "Texto"
+                },
+                "href": {
+                  "type": "string",
+                  "title": "Link"
+                },
+                "style": {
+                  "type": "string",
+                  "enum": [
+                    "dark",
+                    "line"
+                  ],
+                  "nullable": true,
+                  "title": "Estilo"
+                }
+              },
+              "required": [
+                "label",
+                "href"
+              ],
+              "titleBy": "label"
+            },
+            "nullable": true,
+            "title": "Botões"
+          }
+        }
+      },
+      "c2l0ZS9zZWN0aW9ucy9Ib3dJdFdvcmtzLnRzeA==": {
+        "title": "site/sections/HowItWorks.tsx",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/definitions/c3JjL3NlY3Rpb25zL0hvd0l0V29ya3MudHN4@Props"
+          }
+        ],
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "site/sections/HowItWorks.tsx"
+            ],
+            "default": "site/sections/HowItWorks.tsx"
+          }
+        }
+      },
+      "c3JjL3NlY3Rpb25zL0V4cGxvcmVDaXRpZXMudHN4@Props": {
+        "type": "object",
+        "properties": {
+          "kicker": {
+            "type": "string",
+            "nullable": true,
+            "title": "Rótulo"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "title": "Título"
+          },
+          "hubs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "slug": {
+                  "type": "string",
+                  "title": "Slug"
+                },
+                "city": {
+                  "type": "string",
+                  "title": "City"
+                },
+                "uf": {
+                  "type": "string",
+                  "title": "Uf"
+                },
+                "count": {
+                  "type": "number",
+                  "title": "Count"
+                },
+                "dist": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "\"aqui\", \"359 km\", or null when we don't know where the visitor is.",
+                  "title": "Dist"
+                },
+                "current": {
+                  "type": "boolean",
+                  "title": "Current"
+                },
+                "cover": {
+                  "type": "string",
+                  "nullable": true,
+                  "title": "Cover"
+                }
+              },
+              "required": [
+                "slug",
+                "city",
+                "uf",
+                "count",
+                "dist",
+                "current"
+              ]
+            },
+            "nullable": true,
+            "hide": "true",
+            "title": "Hubs"
+          },
+          "cities": {
+            "type": "number",
+            "nullable": true,
+            "hide": "true",
+            "title": "Cities"
+          },
+          "total": {
+            "type": "number",
+            "nullable": true,
+            "hide": "true",
+            "title": "Total"
+          }
+        }
+      },
+      "c2l0ZS9zZWN0aW9ucy9FeHBsb3JlQ2l0aWVzLnRzeA==": {
+        "title": "site/sections/ExploreCities.tsx",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/definitions/c3JjL3NlY3Rpb25zL0V4cGxvcmVDaXRpZXMudHN4@Props"
+          }
+        ],
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "site/sections/ExploreCities.tsx"
+            ],
+            "default": "site/sections/ExploreCities.tsx"
+          }
+        }
+      },
+      "c3JjL3NlY3Rpb25zL0xlbmRlckhlcm8udHN4@Props": {
+        "type": "object",
+        "properties": {
+          "kicker": {
+            "type": "string",
+            "nullable": true,
+            "title": "Rótulo"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "title": "Título"
+          },
+          "ledeStrong": {
+            "type": "string",
+            "nullable": true,
+            "title": "Frase em destaque"
+          },
+          "lede": {
+            "type": "string",
+            "nullable": true,
+            "title": "Frase"
+          },
+          "cta": {
+            "type": "string",
+            "nullable": true,
+            "title": "Botão principal"
+          },
+          "ctaHref": {
+            "type": "string",
+            "nullable": true,
+            "title": "Link do botão principal"
+          },
+          "cta2": {
+            "type": "string",
+            "nullable": true,
+            "title": "Botão secundário"
+          },
+          "cta2Href": {
+            "type": "string",
+            "nullable": true,
+            "title": "Link do botão secundário"
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "owners": {
+                "type": "number",
+                "title": "Owners"
+              },
+              "cities": {
+                "type": "number",
+                "title": "Cities"
+              },
+              "pieces": {
+                "type": "number",
+                "title": "Pieces"
+              }
+            },
+            "required": [
+              "owners",
+              "cities",
+              "pieces"
+            ],
+            "nullable": true,
+            "hide": "true",
+            "title": "Stats"
+          },
+          "cover": {
+            "type": "object",
+            "properties": {
+              "img": {
+                "type": "string",
+                "title": "Img"
+              },
+              "title": {
+                "type": "string",
+                "title": "Title"
+              },
+              "brand": {
+                "type": "string",
+                "title": "Brand"
+              },
+              "owner": {
+                "type": "string",
+                "title": "Owner"
+              }
+            },
+            "required": [
+              "img",
+              "title",
+              "brand",
+              "owner"
+            ],
+            "nullable": true,
+            "hide": "true",
+            "title": "Cover"
+          }
+        }
+      },
+      "c2l0ZS9zZWN0aW9ucy9MZW5kZXJIZXJvLnRzeA==": {
+        "title": "site/sections/LenderHero.tsx",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/definitions/c3JjL3NlY3Rpb25zL0xlbmRlckhlcm8udHN4@Props"
+          }
+        ],
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "site/sections/LenderHero.tsx"
+            ],
+            "default": "site/sections/LenderHero.tsx"
+          }
+        }
+      },
+      "c3JjL3NlY3Rpb25zL0xlbmRlckJhbmQudHN4@Props": {
+        "type": "object",
+        "properties": {
+          "kicker": {
+            "type": "string",
+            "nullable": true,
+            "title": "Rótulo"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "title": "Título"
+          },
+          "dim": {
+            "type": "string",
+            "nullable": true,
+            "title": "Segunda linha (cinza)"
+          },
+          "ledeStrong": {
+            "type": "string",
+            "nullable": true,
+            "title": "Texto em destaque"
+          },
+          "lede": {
+            "type": "string",
+            "nullable": true,
+            "title": "Texto"
+          },
+          "cta": {
+            "type": "string",
+            "nullable": true,
+            "title": "Botão"
+          },
+          "ctaHref": {
+            "type": "string",
+            "nullable": true,
+            "title": "Link do botão"
+          },
+          "ratio": {
+            "type": "number",
+            "nullable": true,
+            "hide": "true",
+            "title": "Ratio"
+          }
+        }
+      },
+      "c2l0ZS9zZWN0aW9ucy9MZW5kZXJCYW5kLnRzeA==": {
+        "title": "site/sections/LenderBand.tsx",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/definitions/c3JjL3NlY3Rpb25zL0xlbmRlckJhbmQudHN4@Props"
+          }
+        ],
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "site/sections/LenderBand.tsx"
+            ],
+            "default": "site/sections/LenderBand.tsx"
+          }
+        }
+      },
+      "c3JjL3NlY3Rpb25zL0Zvb3Rlci50c3g=@Props": {
+        "type": "object",
+        "properties": {
+          "taglineStrong": {
+            "type": "string",
+            "nullable": true,
+            "title": "Frase em destaque"
+          },
+          "tagline": {
+            "type": "string",
+            "nullable": true,
+            "title": "Frase"
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "title": "Texto"
+                },
+                "href": {
+                  "type": "string",
+                  "title": "Link"
+                }
+              },
+              "required": [
+                "label",
+                "href"
+              ],
+              "titleBy": "label"
+            },
+            "nullable": true,
+            "title": "Links"
+          },
+          "fine": {
+            "type": "string",
+            "nullable": true,
+            "title": "Nota de rodapé"
+          }
+        }
+      },
+      "c2l0ZS9zZWN0aW9ucy9Gb290ZXIudHN4": {
+        "title": "site/sections/Footer.tsx",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/definitions/c3JjL3NlY3Rpb25zL0Zvb3Rlci50c3g=@Props"
+          }
+        ],
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "site/sections/Footer.tsx"
+            ],
+            "default": "site/sections/Footer.tsx"
+          }
+        }
+      },
+      "c3JjL3NlY3Rpb25zL0hlYWRlci50c3g=@Props": {
+        "type": "object",
+        "properties": {
+          "cta": {
+            "type": "string",
+            "nullable": true,
+            "title": "Texto do botão"
+          },
+          "ctaHref": {
+            "type": "string",
+            "nullable": true,
+            "title": "Link do botão"
+          },
+          "place": {
+            "type": "object",
+            "properties": {
+              "hub": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string",
+                    "title": "Slug"
+                  },
+                  "city": {
+                    "type": "string",
+                    "title": "City"
+                  },
+                  "uf": {
+                    "type": "string",
+                    "title": "Uf"
+                  }
+                },
+                "required": [
+                  "slug",
+                  "city",
+                  "uf"
+                ],
+                "nullable": true,
+                "description": "null = Brasil todo.",
+                "title": "Hub"
+              },
+              "here": {
+                "type": "boolean",
+                "description": "The visitor is really in (or next to) the city on screen.",
+                "title": "Here"
+              },
+              "visitorCity": {
+                "type": "string",
+                "nullable": true,
+                "description": "Cloudflare's city, when it differs from the one on screen and we picked it.",
+                "title": "Visitor City"
+              },
+              "total": {
+                "type": "number",
+                "title": "Total"
+              }
+            },
+            "required": [
+              "hub",
+              "here",
+              "visitorCity",
+              "total"
+            ],
+            "nullable": true,
+            "hide": "true",
+            "title": "Place"
+          },
+          "hubs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "slug": {
+                  "type": "string",
+                  "title": "Slug"
+                },
+                "city": {
+                  "type": "string",
+                  "title": "City"
+                },
+                "uf": {
+                  "type": "string",
+                  "title": "Uf"
+                },
+                "count": {
+                  "type": "number",
+                  "title": "Count"
+                },
+                "dist": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "\"aqui\", \"359 km\", or null when we don't know where the visitor is.",
+                  "title": "Dist"
+                },
+                "current": {
+                  "type": "boolean",
+                  "title": "Current"
+                },
+                "cover": {
+                  "type": "string",
+                  "nullable": true,
+                  "title": "Cover"
+                }
+              },
+              "required": [
+                "slug",
+                "city",
+                "uf",
+                "count",
+                "dist",
+                "current"
+              ]
+            },
+            "nullable": true,
+            "hide": "true",
+            "title": "Hubs"
+          }
+        }
+      },
+      "c2l0ZS9zZWN0aW9ucy9IZWFkZXIudHN4": {
+        "title": "site/sections/Header.tsx",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/definitions/c3JjL3NlY3Rpb25zL0hlYWRlci50c3g=@Props"
+          }
+        ],
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "site/sections/Header.tsx"
+            ],
+            "default": "site/sections/Header.tsx"
+          }
+        }
+      },
+      "c3JjL3NlY3Rpb25zL05lYXJHcmlkLnRzeA==@Props": {
+        "type": "object",
+        "properties": {
+          "kicker": {
+            "type": "string",
+            "nullable": true,
+            "title": "Rótulo"
+          },
+          "place": {
+            "type": "object",
+            "properties": {
+              "hub": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string",
+                    "title": "Slug"
+                  },
+                  "city": {
+                    "type": "string",
+                    "title": "City"
+                  },
+                  "uf": {
+                    "type": "string",
+                    "title": "Uf"
+                  }
+                },
+                "required": [
+                  "slug",
+                  "city",
+                  "uf"
+                ],
+                "nullable": true,
+                "description": "null = Brasil todo.",
+                "title": "Hub"
+              },
+              "here": {
+                "type": "boolean",
+                "description": "The visitor is really in (or next to) the city on screen.",
+                "title": "Here"
+              },
+              "visitorCity": {
+                "type": "string",
+                "nullable": true,
+                "description": "Cloudflare's city, when it differs from the one on screen and we picked it.",
+                "title": "Visitor City"
+              },
+              "total": {
+                "type": "number",
+                "title": "Total"
+              }
+            },
+            "required": [
+              "hub",
+              "here",
+              "visitorCity",
+              "total"
+            ],
+            "nullable": true,
+            "hide": "true",
+            "title": "Place"
+          },
+          "sizes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "hide": "true",
+            "title": "Sizes"
+          },
+          "cards": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "handle": {
+                  "type": "string",
+                  "title": "Handle"
+                },
+                "title": {
+                  "type": "string",
+                  "title": "Title"
+                },
+                "brand": {
+                  "type": "string",
+                  "title": "Brand"
+                },
+                "img": {
+                  "type": "string",
+                  "title": "Img"
+                },
+                "alt": {
+                  "type": "string",
+                  "nullable": true,
+                  "title": "Alt"
+                },
+                "price4": {
+                  "type": "number",
+                  "title": "Price4"
+                },
+                "size": {
+                  "type": "string",
+                  "title": "Size"
+                },
+                "sizes": {
+                  "type": "string",
+                  "description": "Sizes for the filter, comma-separated, no spaces.",
+                  "title": "Sizes"
+                },
+                "h": {
+                  "type": "string",
+                  "description": "Height band for the filter: a ≤1,59 · b 1,60–1,64 · c 1,65–1,69 · d 1,70+.",
+                  "title": "H"
+                },
+                "tag": {
+                  "type": "object",
+                  "properties": {
+                    "near": {
+                      "type": "boolean",
+                      "title": "Near"
+                    },
+                    "label": {
+                      "type": "string",
+                      "title": "Label"
+                    }
+                  },
+                  "required": [
+                    "near",
+                    "label"
+                  ],
+                  "nullable": true,
+                  "title": "Tag"
+                }
+              },
+              "required": [
+                "handle",
+                "title",
+                "brand",
+                "img",
+                "price4",
+                "size",
+                "sizes",
+                "h",
+                "tag"
+              ],
+              "description": "What reaches the browser: only the fields a component renders, never the catalog."
+            },
+            "nullable": true,
+            "hide": "true",
+            "title": "Cards"
+          }
+        }
+      },
+      "c2l0ZS9zZWN0aW9ucy9OZWFyR3JpZC50c3g=": {
+        "title": "site/sections/NearGrid.tsx",
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/definitions/c3JjL3NlY3Rpb25zL05lYXJHcmlkLnRzeA==@Props"
+          }
+        ],
+        "required": [
+          "__resolveType"
+        ],
+        "properties": {
+          "__resolveType": {
+            "type": "string",
+            "enum": [
+              "site/sections/NearGrid.tsx"
+            ],
+            "default": "site/sections/NearGrid.tsx"
+          }
+        }
+      },
+      "__SECTION_REF__": {
+        "title": "Section",
+        "anyOf": [
+          {
+            "$ref": "#/definitions/Resolvable"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9ZaWVsZC50c3g=",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1lpZWxkLnRzeA==@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Sb2xlcy50c3g=",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1JvbGVzLnRzeA==@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9IZXJvLnRzeA==",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hlcm8udHN4@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZHMudHN4",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kcy50c3g=@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Bd2F5UmFpbC50c3g=",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0F3YXlSYWlsLnRzeA==@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Ib3dJdFdvcmtzLnRzeA==",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hvd0l0V29ya3MudHN4@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9FeHBsb3JlQ2l0aWVzLnRzeA==",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0V4cGxvcmVDaXRpZXMudHN4@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9MZW5kZXJIZXJvLnRzeA==",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0xlbmRlckhlcm8udHN4@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9MZW5kZXJCYW5kLnRzeA==",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0xlbmRlckJhbmQudHN4@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Gb290ZXIudHN4",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0Zvb3Rlci50c3g=@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9IZWFkZXIudHN4",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hlYWRlci50c3g=@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9OZWFyR3JpZC50c3g=",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL05lYXJHcmlkLnRzeA==@Props"
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g="
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9TZW8vU2VvLnRzeA=="
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9TZW8vU2VvVjIudHN4"
+          },
+          {
+            "$ref": "#/definitions/Y29tbWVyY2Uvc2VjdGlvbnMvU2VvL1Nlb1BMUFYyLnRzeA=="
+          },
+          {
+            "$ref": "#/definitions/Y29tbWVyY2Uvc2VjdGlvbnMvU2VvL1Nlb1BEUFYyLnRzeA=="
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9mbGFncy9tdWx0aXZhcmlhdGUvc2VjdGlvbi50cw=="
+          }
+        ]
+      }
+    },
+    "root": {
+      "sections": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/Resolvable"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9ZaWVsZC50c3g=",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1lpZWxkLnRzeA==@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Sb2xlcy50c3g=",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL1JvbGVzLnRzeA==@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9IZXJvLnRzeA==",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hlcm8udHN4@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9CcmFuZHMudHN4",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0JyYW5kcy50c3g=@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Bd2F5UmFpbC50c3g=",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0F3YXlSYWlsLnRzeA==@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Ib3dJdFdvcmtzLnRzeA==",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hvd0l0V29ya3MudHN4@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9FeHBsb3JlQ2l0aWVzLnRzeA==",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0V4cGxvcmVDaXRpZXMudHN4@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9MZW5kZXJIZXJvLnRzeA==",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0xlbmRlckhlcm8udHN4@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9MZW5kZXJCYW5kLnRzeA==",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0xlbmRlckJhbmQudHN4@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9Gb290ZXIudHN4",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0Zvb3Rlci50c3g=@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9IZWFkZXIudHN4",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL0hlYWRlci50c3g=@Props"
+          },
+          {
+            "$ref": "#/definitions/c2l0ZS9zZWN0aW9ucy9OZWFyR3JpZC50c3g=",
+            "inputSchema": "#/definitions/c3JjL3NlY3Rpb25zL05lYXJHcmlkLnRzeA==@Props"
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9SZW5kZXJpbmcvTGF6eS50c3g="
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9TZW8vU2VvLnRzeA=="
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9zZWN0aW9ucy9TZW8vU2VvVjIudHN4"
+          },
+          {
+            "$ref": "#/definitions/Y29tbWVyY2Uvc2VjdGlvbnMvU2VvL1Nlb1BMUFYyLnRzeA=="
+          },
+          {
+            "$ref": "#/definitions/Y29tbWVyY2Uvc2VjdGlvbnMvU2VvL1Nlb1BEUFYyLnRzeA=="
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9mbGFncy9tdWx0aXZhcmlhdGUvc2VjdGlvbi50cw=="
+          }
+        ]
+      },
+      "loaders": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/Resolvable"
+          }
+        ]
+      },
+      "actions": {
+        "anyOf": []
+      },
+      "pages": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/Resolvable"
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9wYWdlcy9QYWdlLnRzeA=="
+          }
+        ]
+      },
+      "handlers": {
+        "anyOf": []
+      },
+      "matchers": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/Resolvable"
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9hbHdheXMudHM="
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9uZXZlci50cw=="
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9kZXZpY2UudHM="
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9kYXRlLnRz"
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9jcm9uLnRz"
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9jb29raWUudHM="
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9ob3N0LnRz"
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9wYXRobmFtZS50cw=="
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9xdWVyeVN0cmluZy50cw=="
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9yYW5kb20udHM="
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9sb2NhdGlvbi50cw=="
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy91c2VyQWdlbnQudHM="
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9lbnZpcm9ubWVudC50cw=="
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9tdWx0aS50cw=="
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9tYXRjaGVycy9uZWdhdGUudHM="
+          }
+        ]
+      },
+      "flags": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/Resolvable"
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9mbGFncy9tdWx0aXZhcmlhdGUvaW1hZ2UudHM=",
+            "inputSchema": "#/definitions/d2Vic2l0ZS9mbGFncy9tdWx0aXZhcmlhdGUvaW1hZ2UudHM=@Props"
+          }
+        ]
+      },
+      "functions": {
+        "title": "functions",
+        "anyOf": [
+          {
+            "$ref": "#/definitions/Resolvable"
+          },
+          {
+            "$ref": "#/definitions/d2Vic2l0ZS9mdW5jdGlvbnMvcmVxdWVzdFRvUGFyYW0udHM=",
+            "inputSchema": "#/definitions/d2Vic2l0ZS9mdW5jdGlvbnMvcmVxdWVzdFRvUGFyYW0udHM=@Props"
+          }
+        ]
+      },
+      "apps": {
+        "anyOf": []
+      }
+    }
+  },
+  "platform": "cloudflare",
+  "cloudProvider": "cloudflare",
+  "framework": "tanstack-start"
+}
