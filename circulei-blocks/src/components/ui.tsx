@@ -68,6 +68,8 @@ export function Heart({ c, list, className = "" }: { c: CardData; list: string; 
 }
 
 /** `list`: where a heart pressed here saves the piece (the search, or the city on screen). */
+export const CARD_SIZES = "(min-width: 1100px) 24vw, (min-width: 700px) 32vw, 48vw";
+
 export function Card({ c, i = 0, list = "Favoritos" }: { c: CardData; i?: number; list?: string }) {
   return (
     <div className="card" style={{ ["--i" as string]: i % 12 }}>
@@ -84,7 +86,7 @@ export function Card({ c, i = 0, list = "Favoritos" }: { c: CardData; i?: number
           <img
             src={img(c.img, 540)}
             srcSet={srcset(c.img)}
-            sizes="(min-width: 1100px) 24vw, (min-width: 700px) 32vw, 48vw"
+            sizes={CARD_SIZES}
             alt={`${c.title}, ${c.brand}`}
             loading={i < 4 ? "eager" : "lazy"}
             decoding="async"

@@ -76,7 +76,7 @@ export async function stylistNote(env: Env, ask: string, city: string, picks: Pi
         messages: [
           {
             role: "user",
-            content: `Você é a curadora da Circulei, aluguel de roupas entre mulheres. Uma cliente em ${city} pediu: "${ask.slice(0, 300)}".\nEstas são as peças que separei:\n${list}\n\nEscreva no máximo 2 frases curtas (até 45 palavras no total), calorosas e específicas, em português do Brasil, comentando a escolha: cite 1 ou 2 peças pelo nome e por que funcionam pra ocasião. Sem saudação, sem emoji, sem preço, sem markdown.\nResponda só JSON: {"nota":"...","citadas":[números das peças citadas, na ordem em que aparecem na nota]}`,
+            content: `Você é a curadora da Circulei, aluguel de roupas entre mulheres. Uma cliente em ${city} pediu: "${ask.slice(0, 300)}".\nEstas são as peças que separei:\n${list}\n\nEscreva no máximo 2 frases curtas (até 45 palavras no total), calorosas e específicas, em português do Brasil, comentando a escolha: cite 1 ou 2 peças pelo nome (nunca pelo número da lista) e por que funcionam pra ocasião. Sem saudação, sem emoji, sem preço, sem markdown.\nResponda só JSON: {"nota":"...","citadas":[números das peças citadas, na ordem em que aparecem na nota]}`,
           },
         ],
       }),
@@ -86,7 +86,8 @@ export async function stylistNote(env: Env, ask: string, city: string, picks: Pi
     const out = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const raw = out.choices?.[0]?.message?.content?.trim() ?? "";
     const json = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "null") as { nota?: unknown; citadas?: unknown } | null;
-    const text = typeof json?.nota === "string" ? json.nota.trim() : "";
+    // The list numbers are for "citadas" only; one that slips into the prose ("(peça 1)") is cut.
+    const text = typeof json?.nota === "string" ? json.nota.replace(/\s*\((?:peças?|n[ºo°.]*)\s*[\d\s,e]+\)/gi, "").trim() : "";
     if (!text) return null;
     const cited = (Array.isArray(json?.citadas) ? json.citadas : [])
       .map((n) => top[Number(n) - 1]?.handle)
