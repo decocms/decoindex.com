@@ -2,7 +2,7 @@ import { rebuild, snapshot, type Piece, type Snapshot } from "./catalog";
 import type { Env } from "./env";
 import { km } from "./geo";
 import { deck, deckLogin } from "./deck";
-import { home, lender, notFound, pdp, reach, resultsFragment, type Ctx } from "./html";
+import { home, lender, notFound, pdp, resultsFragment, type Ctx } from "./html";
 import { keywordScores, scoreAll, sha, stylistNote } from "./search";
 
 const COOKIE = "circulei_cidade";
@@ -99,6 +99,11 @@ export default {
     if (req.method !== "GET" && req.method !== "HEAD") return new Response("method not allowed", { status: 405 });
     if (path === "/robots.txt") return new Response("User-agent: *\nDisallow: /\n");
     if (path === "/favicon.ico") return new Response(null, { status: 204 });
+    // Self-hosted Archivo (OFL): one same-origin font instead of two Google origins blocking first paint.
+    if (path.startsWith("/fonts/")) {
+      const res = await env.ASSETS.fetch(req);
+      return new Response(res.body, { status: res.status, headers: { ...Object.fromEntries(res.headers), "cache-control": "public, max-age=31536000, immutable" } });
+    }
 
     const snap = await snapshot(env, ectx);
     const ctx = context(req, snap);
@@ -119,11 +124,6 @@ export default {
         const t = Date.now();
         const { picks, fallback } = await search(env, ctx, q);
         ectx.waitUntil(log(env, req, "circulei.search", { q, hub: ctx.hub?.city ?? "brasil", n: picks.length, fallback, ms: Date.now() - t }));
-        // The TanStack version renders cards itself: same results, as data.
-        if (url.searchParams.get("format") === "json") {
-          const near = ctx.hub ? picks.filter((p) => p.hub === ctx.hub!.city).length : 0;
-          return Response.json({ picks: picks.map((p) => ({ ...p, text: undefined, reach: reach(p, ctx) })), near, fallback, hub: ctx.hub?.city ?? null });
-        }
         return html(resultsFragment(q, picks, ctx, fallback));
       }
       if (path === "/api/nota") {
