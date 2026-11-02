@@ -364,7 +364,20 @@ section{scroll-margin-top:76px}
 @media (max-width:900px){
   .drawer-stage{display:none}
   .drawer-panel{width:100%}
-  .drawer-thumbs{grid-template-columns:repeat(2,1fr)}
+  /* The photos lead the panel as a swipeable row (the next one peeks); a tap opens one full screen. */
+  .drawer-panel{padding-top:0}
+  .drawer-thumbs{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:86%;gap:4px;margin:0 calc(-1*clamp(20px,2.4vw,36px)) 22px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none}
+  .drawer-thumbs::-webkit-scrollbar{display:none}
+  .drawer-thumbs button{opacity:1;scroll-snap-align:start;cursor:zoom-in}
+  .drawer-thumbs button[aria-current=true]{outline:none}
+  .drawer-x{z-index:1;background:#fff;border-radius:50%;top:10px;right:10px}
+  .drawer.zoom .drawer-stage{display:flex;position:fixed;inset:0;z-index:2;padding:0;background:#000;pointer-events:auto;animation:fade .25s var(--ease) backwards}
+  .drawer.zoom .stage-frame{height:auto;width:100%;max-height:100%;background:none;box-shadow:none;animation:none}
+  .drawer.zoom .stage-frame img{object-fit:contain}
+  .drawer.zoom .stage-nav{width:40px;height:40px;background:oklch(1 0 0/.85)}
+  .drawer.zoom .stage-nav.prev{left:10px}.drawer.zoom .stage-nav.next{right:10px}
+  .stage-x{position:absolute;top:12px;right:12px;z-index:1;width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:oklch(1 0 0/.85);cursor:pointer}
+  .stage-x svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2}
 }
 /* The city menu opens under the city picker (now on the left), as quiet as the header. */
 .cities{left:var(--gut);right:auto;top:64px;border:1px solid var(--line);padding:6px 0;box-shadow:0 24px 48px -24px oklch(0 0 0/.18);width:min(340px,calc(100vw - 2*var(--gut)))}

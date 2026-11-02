@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Arrow, Pin, brl, img } from "~/components/ui";
+import { Arrow, Pin, brl, img, srcset } from "~/components/ui";
 import { toggleFav, useIsFav } from "~/sdk/favorites";
 import { useQuietHistory } from "~/components/quietHistory";
 import type { CardData } from "~/types";
@@ -39,6 +39,8 @@ export function PieceDrawer() {
   const [card, setCard] = useState<CardData | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [stage, setStage] = useState(0);
+  // Phones have no room for the stage beside the panel: a tapped photo opens it full screen instead.
+  const [zoom, setZoom] = useState(false);
   const [big, setBig] = useState<Set<string>>(new Set());
   const current = useRef<string | null>(null);
   const quiet = useQuietHistory();
@@ -50,6 +52,7 @@ export function PieceDrawer() {
     setCard(c);
     setDetail(null);
     setStage(0);
+    setZoom(false);
     quiet(() => history.pushState({ ...history.state, piece: c.handle }, "", `/p/${c.handle}`));
     fetch(`/api/peca?handle=${encodeURIComponent(c.handle)}`)
       .then((r) => (r.ok ? r.json() : null))
@@ -92,7 +95,7 @@ export function PieceDrawer() {
     const root = document.documentElement;
     root.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape") zoom ? setZoom(false) : close();
       if (images.length > 1 && (e.key === "ArrowRight" || e.key === "ArrowLeft")) setStage((i) => (i + (e.key === "ArrowRight" ? 1 : -1) + images.length) % images.length);
     };
     addEventListener("keydown", onKey);
@@ -100,17 +103,33 @@ export function PieceDrawer() {
       root.style.overflow = "";
       removeEventListener("keydown", onKey);
     };
-  }, [card, close, images.length]);
+  }, [card, close, images.length, zoom]);
 
   if (!card) return null;
   const d = detail;
   const src = images[stage] ?? card.img;
   return (
-    <div className="drawer" role="dialog" aria-modal="true" aria-label={card.title}>
+    <div className={`drawer${zoom ? " zoom" : ""}`} role="dialog" aria-modal="true" aria-label={card.title}>
       <button type="button" className="drawer-scrim" aria-label="Fechar" onClick={close} />
       <div className="drawer-stage">
         {/* A fixed frame: the small copy and the large one fill the same box, so nothing jumps when
             the large one lands. Keyed by position, not file, so the swap doesn't replay the entrance. */}
+        {zoom ? (
+          <button
+            type="button"
+            className="stage-x"
+            aria-label="Fechar foto"
+            onClick={() => {
+              setZoom(false);
+              // Back on the row, at the photo she was looking at.
+              document.querySelectorAll(".drawer-thumbs button")[stage]?.scrollIntoView({ inline: "start", block: "nearest" });
+            }}
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        ) : null}
         <span className="stage-frame" key={stage}>
           <img src={img(src, big.has(src) ? 1100 : 540)} alt={card.title} />
         </span>
@@ -130,8 +149,12 @@ export function PieceDrawer() {
         </button>
         <div className="drawer-thumbs">
           {images.map((s, i) => (
-            <button key={s} type="button" aria-label={`Foto ${i + 1} de ${images.length}`} aria-current={stage === i} onClick={() => setStage(i)}>
-              <img src={img(s, 540)} alt="" />
+            <button key={s} type="button" aria-label={`Foto ${i + 1} de ${images.length}`} aria-current={stage === i} onClick={() => {
+                setStage(i);
+                if (matchMedia("(max-width: 900px)").matches) setZoom(true);
+              }}
+            >
+              <img src={img(s, 540)} srcSet={srcset(s)} sizes="(max-width: 900px) 86vw, 110px" alt="" />
             </button>
           ))}
         </div>
