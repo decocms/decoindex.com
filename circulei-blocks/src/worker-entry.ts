@@ -59,6 +59,12 @@ export default {
     // phone it competes with the hero photo. The page is fully server-rendered and works before
     // hydration, so the JS can wait: it still loads, from the module script at the end of <body>.
     if ((res.headers.get("content-type") ?? "").includes("text/html")) {
+      // The framework's "private" profile says no-store, which keeps the page out of the browser's
+      // back/forward cache: going back from a piece re-rendered the whole list. Still never shared.
+      res = new Response(res.body, res);
+      res.headers.set("cache-control", "private, max-age=0");
+      // deco adds `Link: <admin css>; rel=preload` to every page; the page's CSS is inline here.
+      res.headers.delete("link");
       // Hydration itself waits for the window's load event (the photos above the fold) and then for an
       // idle moment, so its script evaluation never delays painting the hero photo. Until then the page is server HTML: links and the search form's GET submit work.
       res = new HTMLRewriter()

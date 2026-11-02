@@ -5,12 +5,14 @@
  */
 import { createAdminSetup } from "@decocms/blocks-admin/setup";
 import { PreviewProviders } from "@decocms/tanstack";
-// @ts-ignore Vite ?url import
-import appCss from "../styles/app.css?url";
+// A data: URL, not `?url`: a `?url` import emits an asset that TanStack lists in the page manifest,
+// and the browser then fetched it on every page (404: it only exists in the server build).
+// @ts-ignore Vite ?inline import
+import appCss from "../styles/app.css?inline";
 
 createAdminSetup({
   meta: () => import("../../.deco/meta.gen.json").then((m) => m.default),
-  css: appCss,
+  css: `data:text/css,${encodeURIComponent(appCss)}`,
   fonts: [],
   previewWrapper: PreviewProviders,
 });

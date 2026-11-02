@@ -38,12 +38,13 @@ export default function Header({ cta = "Quero circular", ctaHref = "/seja-locado
           {cta}
         </a>
       </nav>
+      {/* Picking a city opens that city's home, from any page: a piece belongs to one city. */}
       <div id="cities" popover="auto" className="cities" ref={pop}>
         <p className="hint">
           {place?.visitorCity ? `Você está em ${place.visitorCity}. ` : ""}Mostramos primeiro as peças da cidade mais perto de você. Tudo também chega por envio, pra todo o Brasil.
         </p>
         {hubs.map((h) => (
-          <a key={h.slug} href={`?cidade=${h.slug}`} aria-current={h.current ? "true" : undefined}>
+          <a key={h.slug} href={`/?cidade=${h.slug}`} aria-current={h.current ? "true" : undefined}>
             <span>
               {h.city} <small>{h.uf}</small>
             </span>
@@ -52,7 +53,7 @@ export default function Header({ cta = "Quero circular", ctaHref = "/seja-locado
             </span>
           </a>
         ))}
-        <a href="?cidade=brasil" aria-current={place?.hub ? undefined : "true"}>
+        <a href="/?cidade=brasil" aria-current={place?.hub ? undefined : "true"}>
           <span>Brasil todo</span>
           <span className="n">{place?.total ?? 0} peças</span>
         </a>

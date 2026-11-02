@@ -9,6 +9,11 @@ import appCss from "../styles/app.css?inline";
 // SSR build chokes on a public-dir path there.
 const FONT = '@font-face{font-family:Archivo;font-style:normal;font-weight:300 900;font-stretch:62% 125%;font-display:swap;src:url(/fonts/archivo-latin.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}';
 
+// Entrance motion is for arriving. Coming back to a list (or reloading it), the layout appears as it
+// was, without every card rising again. A <style> in <head> rather than a class on <html>, which
+// React owns and would flag as a hydration mismatch.
+const STILL = `try{var n=performance.getEntriesByType("navigation")[0];var s=function(){document.head.insertAdjacentHTML("beforeend","<style>.card,.hero-art .f img,.cc{animation:none!important}</style>")};if(n&&n.type!=="navigate")s();addEventListener("pageshow",function(e){if(e.persisted)s()});addEventListener("pagehide",function(){history.scrollRestoration="auto"})}catch(e){}`;
+
 const TITLE = "Circulei · Alugue roupas incríveis perto de você";
 const DESCRIPTION = "Peças de closets de mulheres de 40 cidades, pra alugar por 4 dias. A dona ganha a cada aluguel.";
 
@@ -34,6 +39,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
     ],
     styles: [{ children: FONT + appCss }],
+    scripts: [{ children: STILL }],
   }),
-  component: () => <DecoRootLayout siteName="circulei" lang="pt-BR" />,
+  component: Root,
 });
+
+// The router sets history.scrollRestoration = "manual" even with its own restoration off, so going
+// back from a piece landed at the top of the list. Every link here is a full page load, so the
+// browser's own restoration is the right one: STILL puts it back to "auto" on pagehide, which is when
+// the browser records it for the entry being left.
+function Root() {
+  return <DecoRootLayout siteName="circulei" lang="pt-BR" />;
+}
