@@ -45,7 +45,10 @@ const decoWorker = createDecoWorkerEntry(createServerEntry({ fetch: handler.fetc
   },
 });
 
-const EVENT_NAMES = new Set(["shop.feedback", "shop.dismiss", "shop.open", "shop.share", "shop.refine", "shop.enrich.shown", "shop.enrich.search", "shop.enrich.inline", "shop.fav", "shop.vote"]);
+/** Missing pages one IP may hit per clock hour. A person with a typo or an old link stays far below. */
+const MISSES_PER_HOUR = 10;
+
+const EVENT_NAMES =new Set(["shop.feedback", "shop.dismiss", "shop.open", "shop.share", "shop.refine", "shop.enrich.shown", "shop.enrich.search", "shop.enrich.inline", "shop.fav", "shop.vote"]);
 
 export default {
   async fetch(request: Request, rawEnv: Env, ctx: ExecutionContext): Promise<Response> {
@@ -67,12 +70,18 @@ export default {
     if (SCAN.test(url.pathname)) return new Response("Not found", { status: 404, headers: { "cache-control": "public, max-age=86400" } });
 
     // A page that doesn't exist: fine once (a typo, an old link: the 404 page renders), but an IP
-    // walking dozens of them is a scanner. Past SCAN_LIMIT it is blocked for an hour, on every
-    // missing page; the block expires on its own and shows in the admin (shop.block).
+    // walking dozens of them is a scanner. Past SCAN_LIMIT (fast scanners), or past MISSES_PER_HOUR
+    // (slow ones, a page every minute or two), it is blocked for an hour on every missing page; the
+    // block expires on its own and shows in the admin (shop.block).
     if (request.method === "GET" && isMissingPage(url) && !env.DEV) {
       const ip = request.headers.get("cf-connecting-ip") ?? "local";
       if (await env.SHARES?.get(`block:${ip}`)) return new Response("Blocked", { status: 403 });
-      if (env.SCAN_LIMIT && !(await env.SCAN_LIMIT.limit({ key: ip })).success) {
+      // ponytail: KV read-then-write is not atomic and reads are cached per colo, so this undercounts
+      // a little; good enough for scanners. A Durable Object counter if it ever needs to be exact.
+      const missKey = `miss:${ip}:${new Date().toISOString().slice(0, 13)}`;
+      const misses = Number((await env.SHARES?.get(missKey)) ?? 0) + 1;
+      if (env.SHARES) ctx.waitUntil(env.SHARES.put(missKey, String(misses), { expirationTtl: 3600 }));
+      if (misses > MISSES_PER_HOUR || (env.SCAN_LIMIT && !(await env.SCAN_LIMIT.limit({ key: ip })).success)) {
         const cf = (request as Request & { cf?: { country?: string } }).cf;
         ctx.waitUntil(Promise.all([
           env.SHARES?.put(`block:${ip}`, "1", { expirationTtl: 3600 }),
