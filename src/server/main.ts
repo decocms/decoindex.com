@@ -4,10 +4,12 @@ import type { Env } from "./env";
 import { parsePath } from "./lib/url";
 import { classifyClient, track } from "./lib/registry";
 import { readDoc, docKey } from "./lib/store";
-import { classifySurface, readThrough } from "./lib/read";
+import { MARKDOWN_TYPE, classifySurface, readThrough } from "./lib/read";
 import { BadReport, submitFeedback } from "./lib/feedback";
 import { handleMcp } from "./mcp/server";
 import { isBlockedCrawler, robotsTxt } from "./lib/robots";
+import { checkTarget, checkThrough } from "./lib/check";
+import { renderCheck, renderProblem } from "./render/markdown";
 import { blockRuleFor, sweepScrapers } from "./lib/scrapers";
 import { SAMPLE, landingHtml } from "./render/landing";
 import {
@@ -152,6 +154,7 @@ app.get("/llms.txt", (c) => {
       `- \`${o}/{domain}/search?q={words}\` searches that storefront. \`/busca/{words}\``,
       "  works too — it is the search path the store itself uses.",
       "- Append `.json` to any of these for the same document, structured.",
+      `- \`${o}/check/{domain}\` — is any site ready for AI agents? Readable, allowed by robots.txt, understandable; scored out of 75.`,
       "",
       "## Storefronts that work today",
       "",
@@ -360,6 +363,47 @@ app.post("/e", async (c) => {
     });
   }
   return c.body(null, 204);
+});
+
+/**
+ * Agent-readiness report for any site: `/check/{domain}` (Markdown) or
+ * `/check/{domain}.json`. Not a storefront read — it has its own bound (four
+ * fetches, 6s each, 24h cache), documented in lib/check.ts and CLAUDE.md.
+ */
+app.get("/check/:target", async (c) => {
+  const started = Date.now();
+  const raw = c.req.param("target");
+  const ext = /\.json$/i.test(raw) ? "json" : "md";
+  const domain = checkTarget(raw.replace(/\.(md|json)$/i, ""));
+  const noindex = { "x-robots-tag": "noindex", "access-control-allow-origin": "*" };
+  if (!domain) {
+    return c.text(`Not a public domain: ${raw.slice(0, 100)}. Try ${c.env.PUBLIC_ORIGIN}/check/example.com.br\n`, 400, noindex);
+  }
+  const rctx = {
+    publicOrigin: c.env.PUBLIC_ORIGIN,
+    attribution: { param: c.env.ATTRIBUTION_PARAM, value: c.env.ATTRIBUTION_VALUE },
+  };
+  const { report, cache } = await checkThrough(c.env, c.executionCtx, domain, c.req.header("cf-connecting-ip"));
+  logRead(c.env, c.executionCtx, c.req.raw, {
+    domain,
+    surface: "check",
+    started,
+    cache,
+    ext,
+    status: report ? 200 : 429,
+  });
+  if (!report) {
+    return c.body(renderProblem(domain, "/check", "rate-limited", rctx), 429, {
+      ...noindex,
+      "content-type": MARKDOWN_TYPE,
+      "cache-control": "no-store",
+    });
+  }
+  return c.body(ext === "json" ? JSON.stringify(report, null, 2) : renderCheck(report, rctx), 200, {
+    ...noindex,
+    "content-type": ext === "json" ? "application/json; charset=utf-8" : MARKDOWN_TYPE,
+    "cache-control": "public, max-age=300, s-maxage=60",
+  });
 });
 
 /** Everything else is /{domain}/... */

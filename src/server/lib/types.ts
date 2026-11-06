@@ -147,3 +147,38 @@ export type Doc =
    * throttling us is not the same fact as a discontinued SKU.
    */
   | { kind: "upstream_error" };
+
+/**
+ * An agent-readiness report for any site (`/check/{domain}`). Not a catalog
+ * document: what an AI agent can read on the home, is allowed to read by
+ * robots.txt, and can understand from llms.txt, sitemap and JSON-LD.
+ */
+export interface CheckReport {
+  domain: string;
+  checked_at: string;
+  home: {
+    status: number;
+    final_url: string;
+    html_bytes: number;
+    text_chars: number;
+    title: string;
+    description: string;
+  };
+  robots: {
+    status: number;
+    /** Per bot group, the bots whose robots.txt group disallows the home ("/"). */
+    blocked: Record<string, string[]>;
+    noindex: boolean;
+    sitemaps: string[];
+  };
+  llms_txt: { status: number; bytes: number };
+  sitemap: { url: string; status: number };
+  json_ld_types: string[];
+  /** Pillar checks, each worth 5 points. */
+  legivel: Record<string, boolean>;
+  entendivel: Record<string, boolean>;
+  pillars: { legivel: number; permitido: number; entendivel: number };
+  /** Out of 75. The fourth pillar, Citado (25), needs an assistant to ask. */
+  subtotal: number;
+  not_verified: string[];
+}

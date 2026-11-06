@@ -1,4 +1,4 @@
-import type { CategoryRef, Product, Sort, Storefront } from "../lib/types";
+import type { CategoryRef, CheckReport, Product, Sort, Storefront } from "../lib/types";
 import { canonicalUrl } from "../lib/url";
 import { fromPrice } from "../platform/order";
 
@@ -726,6 +726,83 @@ export function renderProblem(
     }),
     `# ${title}\n`,
     ...lines,
+    "",
+  ].join("\n");
+}
+
+/**
+ * `/check/{domain}`: the agent-readiness report. A report about a site, not a
+ * mirror of it, so it carries no catalog facts and no evidence boundary — only
+ * what the four fetches saw, and what they could not see.
+ */
+export function renderCheck(r: CheckReport, ctx: RenderCtx): string {
+  const yn = (b: boolean) => (b ? "yes" : "no");
+  const rows = (o: Record<string, boolean>) =>
+    Object.entries(o).map(([k, v]) => `| ${k.replaceAll("_", " ")} | ${yn(v)} |`);
+  const bots = Object.entries(r.robots.blocked).map(
+    ([g, b]) => `| ${g.replaceAll("_", " ")} | ${b.length ? `blocks ${b.join(", ")}` : "allowed"} |`,
+  );
+  const home =
+    r.home.status === 200
+      ? []
+      : r.home.status === 0
+        ? ["", "**The home did not answer** (timeout, DNS or TLS failure). This report is retried in 10 minutes."]
+        : [
+            "",
+            `**The home refused a non-browser reader (HTTP ${r.home.status}).** That is a finding in itself: bot`,
+            "protection that refuses an honest user agent usually refuses AI agents the same way.",
+          ];
+  return [
+    frontmatter({
+      decoindex: "1.0",
+      type: "agent-readiness",
+      domain: r.domain,
+      checked_at: r.checked_at,
+      subtotal: r.subtotal,
+      out_of: 75,
+    }),
+    `# Agent readiness: ${r.domain}\n`,
+    `Subtotal: **${r.subtotal}/75** — Legível ${r.pillars.legivel}/25 · Permitido ${r.pillars.permitido}/25 · Entendível ${r.pillars.entendivel}/25.`,
+    "The fourth pillar, Citado (25), is whether assistants actually cite this site. It needs an",
+    "assistant to ask, so this deterministic check does not score it.",
+    "",
+    `Home: HTTP ${r.home.status} at ${r.home.final_url}, ${r.home.html_bytes} bytes of HTML, ${r.home.text_chars} characters of text without JavaScript.`,
+    ...home,
+    "",
+    `- Title: ${r.home.title || "(empty)"}`,
+    `- Description: ${r.home.description || "(empty)"}`,
+    "",
+    "## Legível — can an agent read the home without running JavaScript?",
+    "",
+    "| check | ok |",
+    "|---|---|",
+    ...rows(r.legivel),
+    "",
+    `## Permitido — robots.txt (HTTP ${r.robots.status})${r.robots.noindex ? ", **noindex on the home**" : ""}`,
+    "",
+    "Evaluated for the home (`/`), RFC 9309 longest match. Training crawlers are reported, not scored.",
+    "",
+    "| group | status |",
+    "|---|---|",
+    ...bots,
+    "",
+    "## Entendível — can an agent understand what the site is?",
+    "",
+    "| check | ok |",
+    "|---|---|",
+    ...rows(r.entendivel),
+    "",
+    `- JSON-LD types on the home: ${r.json_ld_types.join(", ") || "none"}`,
+    `- llms.txt: HTTP ${r.llms_txt.status}, ${r.llms_txt.bytes} bytes`,
+    `- Sitemap: HTTP ${r.sitemap.status} at ${r.sitemap.url}`,
+    "",
+    "## Not verified from here",
+    "",
+    ...r.not_verified.map((n) => `- ${n}`),
+    "",
+    "---",
+    "",
+    `Four fetches, no JavaScript, cached 24 hours. Structured: ${ctx.publicOrigin}/check/${r.domain}.json`,
     "",
   ].join("\n");
 }

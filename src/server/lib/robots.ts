@@ -21,6 +21,25 @@ const BLOCKED_RE = new RegExp(BLOCKED_CRAWLERS.join("|"), "i");
 export const isBlockedCrawler = (ua?: string) => !!ua && BLOCKED_RE.test(ua);
 
 /**
+ * Search engines get our own pages only (invariant 3). The first two are the
+ * indexes assistants search through, which is why /check reads them first.
+ */
+export const SEARCH_ENGINES = ["Googlebot", "bingbot", "DuckDuckBot", "Yandex", "Baiduspider"];
+
+/**
+ * The AI clients that matter, by what they do with a page. Named in our own
+ * robots.txt, and the same groups /check reports for any other site.
+ */
+export const AI_AGENTS = {
+  /** Index pages for an assistant's search answers. */
+  ai_search: ["OAI-SearchBot", "Claude-SearchBot", "PerplexityBot"],
+  /** Fetch one page because a person asked, right now. */
+  agents: ["ChatGPT-User", "Claude-User", "Perplexity-User"],
+  /** Collect training data. */
+  training: ["GPTBot", "ClaudeBot", "Google-Extended"],
+};
+
+/**
  * One source for robots.txt: served at /robots.txt and shown on the traffic
  * dashboard, so what the dashboard claims we allow is what crawlers actually read.
  */
@@ -37,11 +56,7 @@ export function robotsTxt(origin: string): string {
       // merchant's own PDP is the day the commercial conversation ends.
       // Everything under /{domain}/ is a mirror; the handful of paths above it
       // are ours to be found by. AI agents are unrestricted; they are the point.
-      "User-agent: Googlebot",
-      "User-agent: bingbot",
-      "User-agent: DuckDuckBot",
-      "User-agent: Yandex",
-      "User-agent: Baiduspider",
+      ...SEARCH_ENGINES.map((b) => `User-agent: ${b}`),
       "Allow: /$",
       "Allow: /about",
       "Allow: /benchmark",
@@ -51,15 +66,7 @@ export function robotsTxt(origin: string): string {
       "Disallow: /",
       "",
       // Named explicitly so there is no ambiguity for the clients that matter.
-      "User-agent: GPTBot",
-      "User-agent: ChatGPT-User",
-      "User-agent: OAI-SearchBot",
-      "User-agent: ClaudeBot",
-      "User-agent: Claude-User",
-      "User-agent: Claude-SearchBot",
-      "User-agent: PerplexityBot",
-      "User-agent: Perplexity-User",
-      "User-agent: Google-Extended",
+      ...Object.values(AI_AGENTS).flat().map((b) => `User-agent: ${b}`),
       "Allow: /",
       "",
       ...BLOCKED_CRAWLERS.map((b) => `User-agent: ${b}`),
