@@ -44,7 +44,7 @@ describe("isDev", () => {
 describe("scanners and missing pages", () => {
   test("scanner paths are recognised, real pages are not missing", async () => {
     const { SCAN, isMissingPage } = await import("./traffic");
-    for (const p of ["/.env", "/wp-login.php", "/wp-admin/", "/.git/config", "/phpmyadmin/", "/cgi-bin/x", "/backup.sql", "/admin"]) expect(SCAN.test(p)).toBe(true);
+    for (const p of ["/.env", "/wp-login.php", "/wp-admin/", "/.git/config", "/phpmyadmin/", "/cgi-bin/x", "/backup.sql", "/admin", "/.hg/dirstate", "/_next/static/", "/login", "/users/sign_in", "/auth/register", "/wp/", "/cms"]) expect(SCAN.test(p)).toBe(true);
     for (const p of ["/", "/c/AbCd1234", "/como-funciona", "/assets/app.css", "/deco-logo.png"]) expect(SCAN.test(p)).toBe(false);
     const u = (p: string) => new URL(`https://shop.decoindex.com${p}`);
     expect(isMissingPage(u("/"))).toBe(false);

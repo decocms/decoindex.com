@@ -82,7 +82,7 @@ function pageKind(url: URL): string {
  * logs: one German IP walked 86 of them in a minute and counted as 86 visitors.
  */
 export const SCAN =
-  /\.(php\d?|asp|aspx|jsp|cgi|env|ini|sql|bak|old|swp|git|svn|ds_store|log|yml|yaml|conf|config)(\/|$)|\/(wp-[\w-]*|wordpress|xmlrpc|phpmyadmin|pma|cgi-bin|vendor|node_modules|\.git|\.svn|\.aws|\.ssh|actuator|server-status|owa|boaform|hnap1|solr|telescope|debug|console|admin|administrator|backup|setup|install)(\/|$|\.)/i;
+  /\.(php\d?|asp|aspx|jsp|cgi|env|ini|sql|bak|old|swp|git|svn|hg|ds_store|log|yml|yaml|conf|config)(\/|$)|\/(wp|wp-[\w-]*|wordpress|_next|cms|login|logon|signin|sign-in|sign_in|signup|register|auth|password|forgot-password|two-factor-challenge|xmlrpc|phpmyadmin|pma|cgi-bin|vendor|node_modules|\.git|\.svn|\.aws|\.ssh|actuator|server-status|owa|boaform|hnap1|solr|telescope|debug|console|admin|administrator|backup|setup|install)(\/|$|\.)/i;
 
 /** Pages that exist. Anything else that asks for a document is a typo, an old link or a scanner. */
 export function isMissingPage(url: URL): boolean {
