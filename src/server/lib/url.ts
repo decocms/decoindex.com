@@ -156,3 +156,12 @@ export function cacheKey(
   const suffix = `${q ? `?${q}&` : "?"}v=${RENDER_VERSION}`;
   return `${origin}/${domain}${path}${ext === "md" ? "" : `.${ext}`}${suffix}`;
 }
+
+/**
+ * Cache identity for an agent-readiness report (`/check/{domain}`). One entry
+ * per domain: the `.md` and `.json` routes and the `check_site` tool all render
+ * from the same cached report, so none of them pays for a second check.
+ */
+export function checkCacheKey(origin: string, domain: string): string {
+  return `${origin}/check/${domain}.json?v=${RENDER_VERSION}`;
+}
